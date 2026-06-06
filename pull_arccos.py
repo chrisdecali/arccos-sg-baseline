@@ -507,7 +507,6 @@ ROUND_COLS = [
     "sg_total_broadie", "sg_off_tee_broadie", "sg_approach_broadie",
     "sg_short_broadie", "sg_putting_broadie",
     "user_hcp", "drive_hcp", "approach_hcp", "chip_hcp", "sand_hcp", "putt_hcp",
-    "pulled_at",
 ]
 HOLE_COLS = [
     "round_id", "date", "course", "hole_id", "par", "par_source", "shots", "net_score",
