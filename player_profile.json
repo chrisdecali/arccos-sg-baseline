@@ -1,0 +1,47 @@
+{
+  "userId": "c4b47c10450d11f19a642f37566c07f3",
+  "userVersion": 8,
+  "handicap": -15,
+  "isRightStance": "T",
+  "yearsPlaying": null,
+  "roundsInLastYear": 20,
+  "isMale": "T",
+  "weight": null,
+  "height": null,
+  "status": "active",
+  "bagId": 1030119,
+  "isMetricUser": "F",
+  "isCoach": "F",
+  "isGreenskeeper": "F",
+  "country": null,
+  "state_province": null,
+  "city": null,
+  "language": null,
+  "homeCourse": {
+    "name": "WindRose GC",
+    "city": "Spring",
+    "state": "TX",
+    "country": "US"
+  },
+  "preferredBall": {
+    "ballMakeId": 7,
+    "ballMakeName": "Maxfli",
+    "ballModelId": 30,
+    "ballModelName": "Tour X"
+  },
+  "bag": [
+    {
+      "bagId": 1030119,
+      "bagName": "flagship",
+      "startDate": "2026-05-23T22:45:11.320000Z",
+      "noOfClubs": 14,
+      "bagVersion": 29
+    }
+  ],
+  "subscription": {
+    "isAuthorized": "T",
+    "isActive": "T",
+    "expirationDate": null
+  },
+  "_note": "Redacted: email/name/DOB/token/coords removed. handicap/userHcp use Arccos' proprietary negative scale, not USGA index."
+}
