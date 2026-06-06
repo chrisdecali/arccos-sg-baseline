@@ -16,3 +16,5 @@ _cache*
 # --- misc ---
 __pycache__/
 *.pyc
+*.log
+_cron.log

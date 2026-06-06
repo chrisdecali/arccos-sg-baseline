@@ -190,25 +190,66 @@ def exp_strokes(lie: str, dist_yd: float) -> Optional[float]:
 # Credentials (read-only; never printed)
 # ---------------------------------------------------------------------------
 
+AUTH_BASE = "https://authentication.arccosgolf.com"
+
+
+def _strip_bearer(tok: Optional[str]) -> Optional[str]:
+    if not tok:
+        return tok
+    tok = tok.strip()
+    for prefix in ("Bearer:", "Bearer"):
+        if tok.startswith(prefix):
+            tok = tok[len(prefix):].strip()
+    return tok
+
+
+def _refresh_jwt(access_key: str, user_id: str) -> Optional[str]:
+    """Mint a fresh short-lived JWT from a long-lived accessKey (what the
+    dashboard does). POST /tokens {accessKey, userId} -> {token}. Enables
+    unattended cron: the accessKey never expires, the JWT is refreshed each run."""
+    body = json.dumps({"accessKey": access_key, "userId": user_id}).encode()
+    req = urllib.request.Request(f"{AUTH_BASE}/tokens", data=body, method="POST")
+    req.add_header("Content-Type", "application/json;charset=utf-8")
+    req.add_header("Accept", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            d = json.loads(r.read().decode("utf-8"))
+    except Exception as e:  # noqa: BLE001
+        print(f"Warning: accessKey refresh failed ({type(e).__name__}: {e})", file=sys.stderr)
+        return None
+    return _strip_bearer(d.get("token") or d.get("accessToken") or d.get("jwt"))
+
+
 def load_creds() -> tuple[str, str]:
-    token = os.environ.get("ARCCOS_BEARER_TOKEN")
+    """Return (jwt, user_id). Auto mode: an `access_key` in creds/env is refreshed
+    into a fresh JWT every call (no manual step → cron-friendly). Manual mode: a
+    pasted `bearer_token` is used as-is. accessKey is preferred when both exist."""
+    token = _strip_bearer(os.environ.get("ARCCOS_BEARER_TOKEN"))
+    access_key = os.environ.get("ARCCOS_ACCESS_KEY")
     user_id = os.environ.get("ARCCOS_USER_ID")
-    if (not token or not user_id) and os.path.exists(CREDS_PATH):
+    if (not user_id or not (token or access_key)) and os.path.exists(CREDS_PATH):
         try:
             with open(CREDS_PATH, encoding="utf-8") as f:
                 c = json.load(f)
         except (OSError, json.JSONDecodeError) as e:
             sys.exit(f"Error: could not read {CREDS_PATH}: {e}")
-        token = token or c.get("bearer_token") or c.get("token") or c.get("access_token")
+        access_key = access_key or c.get("access_key") or c.get("accessKey")
+        token = token or _strip_bearer(c.get("bearer_token") or c.get("token") or c.get("access_token"))
         user_id = user_id or c.get("user_id") or c.get("userId") or c.get("id")
-    if token:
-        token = token.strip()
-        for prefix in ("Bearer:", "Bearer"):
-            if token.startswith(prefix):
-                token = token[len(prefix):].strip()
-    if not token or not user_id:
-        sys.exit(f"Error: missing creds. Create {CREDS_PATH} with "
-                 f'{{"bearer_token":"...","user_id":"..."}}')
+
+    if not user_id:
+        sys.exit(f"Error: missing user_id. Put it in {CREDS_PATH}.")
+    # Prefer the long-lived accessKey (always mints a fresh JWT) over a stored token.
+    if access_key:
+        fresh = _refresh_jwt(access_key, str(user_id))
+        if fresh:
+            token = fresh
+        elif not token:
+            sys.exit("Error: accessKey refresh failed and no fallback bearer_token. "
+                     "Re-extract the accessKey from the dashboard.")
+    if not token:
+        sys.exit(f"Error: missing creds. Put EITHER an access_key (auto, recommended) "
+                 f'OR a bearer_token (manual) in {CREDS_PATH} with user_id.')
     return token, str(user_id)
 
 
