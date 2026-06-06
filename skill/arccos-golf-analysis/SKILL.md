@@ -1,17 +1,17 @@
 ---
 name: arccos-golf-analysis
-description: Analyze the player's Arccos golf data — strokes-gained, short game, scrambling, putting, club distances, where to improve. Use whenever the user asks about their golf game, stats, rounds, strokes gained, chipping/short game, putting, driving, or club gapping. Data is the public repo Colewinds/arccos-sg-baseline.
+description: Analyze the player's Arccos golf data — strokes-gained, short game, scrambling, putting, club distances, where to improve. Use whenever the user asks about their golf game, stats, rounds, strokes gained, chipping/short game, putting, driving, or club gapping. Data is the public repo chrisdecali/arccos-sg-baseline.
 ---
 
 # Arccos Golf Analysis
 
-The player's Arccos data lives in the **public** repo `Colewinds/arccos-sg-baseline`,
+The player's Arccos data lives in the **public** repo `chrisdecali/arccos-sg-baseline`,
 rebuilt weekly by `pull_arccos.py`. Reading needs **no credentials** — fetch the raw
 files and analyze.
 
 ## Get the data
 
-Base URL: `https://raw.githubusercontent.com/Colewinds/arccos-sg-baseline/main/`
+Base URL: `https://raw.githubusercontent.com/chrisdecali/arccos-sg-baseline/main/`
 
 Fetch (WebFetch, or in a sandbox `curl`/`requests`):
 1. **`career_stats.json`** — START HERE. Aggregate strokes-gained + chip/sand save
