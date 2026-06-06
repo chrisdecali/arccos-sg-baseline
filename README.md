@@ -55,6 +55,22 @@ mid-handicap.
 - **`clubs.csv`** names come from the paired sensors (make/model real); the generic
   type label (e.g. "Wedge") plus distance disambiguates lofts. Never fabricated.
 
+## Reproduce
+
+The full pipeline is `pull_arccos.py` (stdlib only + `openpyxl` for the xlsx):
+
+```bash
+pip install openpyxl
+# your own short-lived bearer token + user id from the Arccos web dashboard
+# (DevTools -> Network -> any api.arccosgolf.com GET -> Authorization value + URL id)
+echo '{"bearer_token":"...","user_id":"..."}' > ~/.arccos_creds.json && chmod 600 ~/.arccos_creds.json
+python3 pull_arccos.py            # --fetch (cache every endpoint) then --build (these files)
+python3 pull_arccos.py --discover # dump raw endpoint JSON structure
+```
+
+Writes outputs next to itself; the raw cache (`_cache_raw/`, contains GPS + PII) is
+gitignored. Unofficial API — your own account only, no aggressive polling.
+
 ## Provenance
 
 Source: unofficial reverse-engineered Arccos API (`api.arccosgolf.com`), pulled by
