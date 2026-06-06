@@ -1,0 +1,18 @@
+# --- credentials / tokens: NEVER commit ---
+.arccos_creds.json
+*arccos_creds*
+.env
+*.env
+*token*
+*.pem
+*.key
+*secret*
+
+# --- raw API dumps (contain GPS coordinates + userId) ---
+_discovery/
+_cache_courses.json
+_cache*
+
+# --- misc ---
+__pycache__/
+*.pyc

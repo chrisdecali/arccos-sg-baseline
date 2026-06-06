@@ -1,0 +1,2 @@
+round_id,date,course,tee_name,tee_yards,slope,rating,holes,score,par,score_to_par,putts,gir_hits,gir_pct,fairway_hits,fairway_chances_inferred,fairway_pct_inferred,scramble_chances_inferred,scramble_saves_inferred,scramble_pct_inferred,updown_chances_native,updowns_native,sand_save_chances_native,sand_saves_native,drive_hcp,approach_hcp,chip_hcp,sand_hcp,putt_hcp,par_inferred_sum,pulled_at
+27924130,2026-06-06,WindRose GC,Middle,6042,127,72.1,18,96,72,24,38,5,27.8,9,14,64.3,13,0,0.0,0,0,0,0,-7.49223,-30,-30,-4.95085,-10.2852,70,2026-06-06 22:59 UTC
