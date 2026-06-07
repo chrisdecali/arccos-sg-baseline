@@ -1,6 +1,8 @@
 # --- credentials / tokens: NEVER commit ---
 .arccos_creds.json
 *arccos_creds*
+.ghin_creds.json
+*ghin_creds*
 .env
 *.env
 *token*

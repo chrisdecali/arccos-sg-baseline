@@ -1,0 +1,15 @@
+{
+  "handicap_index": "NH",
+  "low_hi": "-",
+  "low_hi_date": null,
+  "rev_date": "2026-06-06",
+  "soft_cap": "false",
+  "hard_cap": "false",
+  "gender": "M",
+  "status": "Active",
+  "club_name": "USGA/Texas GC",
+  "association_name": "Texas Golf Association",
+  "state": "TX",
+  "country": "USA",
+  "_note": "Official USGA/GHIN. Redacted: name, email, GHIN number removed. Index is the WHS Handicap Index (NOT Arccos' proprietary scale)."
+}

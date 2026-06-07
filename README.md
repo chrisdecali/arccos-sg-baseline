@@ -71,6 +71,19 @@ python3 pull_arccos.py --discover # dump raw endpoint JSON structure
 Writes outputs next to itself; the raw cache (`_cache_raw/`, contains GPS + PII) is
 gitignored. Unofficial API — your own account only, no aggressive polling.
 
+## GHIN — official USGA handicap
+
+`ghin_scores.csv` / `ghin_handicap_history.csv` / `ghin_profile.json` = your official
+USGA record, pulled by `pull_ghin.py` (read-only; paste a ~12h GHIN Bearer from
+GHIN.com DevTools — never your password). This consolidates **every posted round**:
+Arccos auto-posts **plus** the 18Birdies rounds posted manually. It gives the real
+**WHS Handicap Index** (vs Arccos's proprietary `-20.x` scale).
+
+Current index: **NH** — Not enough scores yet (WHS establishes after 54 holes / 3
+scores; once enough post, the index appears here and `ghin_handicap_history.csv`
+fills in). Refresh anytime with `python3 pull_ghin.py`. Outputs are redacted —
+name, email, and GHIN number are stripped.
+
 ## 18Birdies → GHIN
 
 Getting 18Birdies-only rounds onto your USGA handicap: 18Birdies has no GHIN
