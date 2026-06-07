@@ -92,6 +92,10 @@ export into a GHIN-entry worksheet (dedupes against GHIN, fills rating/slope),
 then post the few missing rounds in the GHIN app. Read-only — never posts, never
 takes a password. Details + the optional auto-post recon: `docs/18birdies-to-ghin.md`.
 
+Raw 18Birdies rounds (native stats — fairways/GIR/putts/scoring distribution) live in
+`18birdies_rounds.csv`, produced by `pull_18birdies.py` from the same export. (18Birdies
+has no shot/GPS data and its strokes-gained is premium-gated, so neither is included.)
+
 ## Provenance
 
 Source: unofficial reverse-engineered Arccos API (`api.arccosgolf.com`), pulled by

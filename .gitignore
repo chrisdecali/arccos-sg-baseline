@@ -3,6 +3,11 @@
 *arccos_creds*
 .ghin_creds.json
 *ghin_creds*
+
+# --- 18Birdies raw export (contains email/name/friends/feed): keep the export out,
+#     only the parsed 18birdies_rounds.csv (no PII) is committed ---
+*18[Bb]irdies_archive*
+*account*data*.json
 .env
 *.env
 *token*
