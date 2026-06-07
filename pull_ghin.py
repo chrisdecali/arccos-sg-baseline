@@ -55,10 +55,61 @@ UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chr
 # Credentials (read-only; never printed)
 # ---------------------------------------------------------------------------
 
+AUTH_URL = f"{GHIN_BASE}/golfer_login.json"
+FIREBASE_URL = "https://firebaseinstallations.googleapis.com/v1/projects/ghin-mobile-app/installations"
+FIREBASE_KEY = "AIzaSyBxgTOAWxiud0HuaE5tN-5NTlzFnrtyz-I"
+FIREBASE_APPID = "1:884417644529:web:47fb315bc6c70242f72650"
+
+
+def _post(url: str, body: dict, headers: Optional[dict] = None) -> Optional[Any]:
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST")
+    req.add_header("Content-Type", "application/json")
+    req.add_header("User-Agent", UA)
+    for k, v in (headers or {}).items():
+        req.add_header(k, v)
+    try:
+        time.sleep(DELAY_S)
+        with urllib.request.urlopen(req, timeout=25) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        print(f"  POST {url.rsplit('/',1)[-1]} -> HTTP {e.code}", file=sys.stderr)
+    except Exception as e:  # noqa: BLE001
+        print(f"  POST {url.rsplit('/',1)[-1]} -> {type(e).__name__}", file=sys.stderr)
+    return None
+
+
+def _firebase_preauth() -> str:
+    """Pre-auth token GHIN's login wants. A literal placeholder usually passes; if
+    not, mint a Firebase Installations token (what the GHIN web app does)."""
+    import base64
+    fid = base64.urlsafe_b64encode(os.urandom(17)).decode().rstrip("=")[:22]
+    d = _post(FIREBASE_URL, {"appId": FIREBASE_APPID, "authVersion": "FIS_v2",
+                             "sdkVersion": "w:0.5.7", "fid": fid},
+              {"x-goog-api-key": FIREBASE_KEY})
+    return ((d or {}).get("authToken") or {}).get("token") or "nonblank"
+
+
+def ghin_login(email_or_ghin: str, password: str) -> tuple[Optional[str], Optional[str]]:
+    """Email/GHIN + password -> (golfer_user_token ~12h, golfer_id). Tries a
+    placeholder pre-auth token first, then a real Firebase token on failure."""
+    for preauth in ("nonblank", None):
+        tok = preauth if preauth else _firebase_preauth()
+        d = _post(AUTH_URL, {"token": tok, "user": {
+            "email_or_ghin": email_or_ghin, "password": password, "remember_me": True}})
+        gu = (d or {}).get("golfer_user") if isinstance(d, dict) else None
+        if gu and gu.get("golfer_user_token"):
+            return gu["golfer_user_token"], str(gu.get("golfer_id") or "")
+    return None, None
+
+
 def load_creds() -> tuple[str, str]:
+    """Return (jwt, ghin_id). Auto: email+password in creds/env -> fresh 12h JWT each
+    run (re-login, no manual paste). Manual fallback: a pasted bearer_token."""
     token = os.environ.get("GHIN_BEARER")
     ghin = os.environ.get("GHIN_ID")
-    if (not token or not ghin) and os.path.exists(CREDS_PATH):
+    email = os.environ.get("GHIN_EMAIL")
+    password = os.environ.get("GHIN_PASSWORD")
+    if os.path.exists(CREDS_PATH):
         try:
             with open(CREDS_PATH, encoding="utf-8") as f:
                 c = json.load(f)
@@ -66,14 +117,25 @@ def load_creds() -> tuple[str, str]:
             sys.exit(f"Error: could not read {CREDS_PATH}: {e}")
         token = token or c.get("bearer_token") or c.get("token")
         ghin = ghin or c.get("ghin_id") or c.get("ghin") or c.get("golfer_id")
+        email = email or c.get("email") or c.get("email_or_ghin") or c.get("username")
+        password = password or c.get("password")
     if token:
         token = token.strip()
         for pre in ("Bearer:", "Bearer"):
             if token.startswith(pre):
                 token = token[len(pre):].strip()
+    # Prefer auto re-login (always fresh) when email+password are present.
+    if email and password:
+        fresh, gid = ghin_login(email, password)
+        if fresh:
+            token = fresh
+            ghin = ghin or gid
+        elif not token:
+            sys.exit("Error: GHIN login failed and no fallback bearer_token. "
+                     "Check email/password in " + CREDS_PATH)
     if not token or not ghin:
-        sys.exit(f"Error: missing GHIN creds. Create {CREDS_PATH} with "
-                 f'{{"bearer_token":"...","ghin_id":"..."}} (token from GHIN.com DevTools).')
+        sys.exit(f"Error: missing GHIN creds. Put EITHER email+password (auto) OR a "
+                 f'bearer_token (manual) + ghin_id in {CREDS_PATH}.')
     return token, str(ghin)
 
 
