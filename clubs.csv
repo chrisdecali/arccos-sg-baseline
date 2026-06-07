@@ -1,14 +1,14 @@
 club,club_category,club_make,club_model,smart_distance_yd,normalized_yd,tee_yd,fairway_yd,rough_yd,sand_yd,longest_yd,range_low_yd,range_high_yd,dispersion_yd,gir_pct,usage_count
-Driver,Driver,Cobra,DS-ADAPT LS,262.8,262.8,266.8,,,,270.4,257.023,267.043,10.0,,12
-3 Wood,Wood,Cobra,DS-ADAPT,203.7,,,,,,239.8,,,,,2
-5 Wood,Wood,Cobra,DS-ADAPT,184.0,,,,,,,,,,,0
-Hybrid,Hybrid,Cobra,DS-ADAPT,172.9,,,,,,,,,,,0
-6 Iron,Iron,Srixon,ZX7 Mk II,155.8,155.8,161.9,151.5,126.7,,161.9,149.003,156.705,7.7,50.0,4
-5 Iron,Iron,Srixon,ZX7 Mk II,143.7,,,,,,160.3,,,,,2
-7 Iron,Iron,Srixon,ZX7 Mk II,133.6,,,,,,121.1,,,,100.0,1
-4 Iron,Iron,Srixon,ZX7 Mk II,126.2,126.2,,146.9,106.6,,153.5,117.015,136.906,19.9,33.3,9
-8 Iron,Iron,Srixon,ZX7 Mk II,122.0,,,,,,146.1,,,,50.0,2
-9 Iron,Iron,Srixon,ZX7 Mk II,108.1,108.1,,112.2,,,112.2,112.163,112.163,0.0,,3
-Wedge,Wedge,Cleveland,RTX 6 ZipCore,100.3,100.3,,98.0,104.5,,104.5,100.952,102.889,1.9,0.0,8
-Wedge,Wedge,Cleveland,RTX 6 ZipCore,86.8,,,,,,,,,,,0
-Wedge,Wedge,Cleveland,RTX 6 ZipCore,80.7,80.7,,,81.1,,90.8,72.9575,82.7062,9.7,,6
+Driver,Driver,,,262.8,262.8,266.8,,,,270.4,257.023,267.043,10.0,,12
+3 Wood,Wood,,,203.7,,,,,,239.8,,,,,2
+club3,?,,,184.0,,,,,,,,,,,0
+Hybrid,Hybrid,,,172.9,,,,,,,,,,,0
+6 Iron,Iron,,,155.8,155.8,161.9,151.5,126.7,,161.9,149.003,156.705,7.7,50.0,4
+5 Iron,Iron,,,143.7,,,,,,160.3,,,,,2
+7 Iron,Iron,,,133.6,,,,,,121.1,,,,100.0,1
+4 Iron,Iron,,,126.2,126.2,,146.9,106.6,,153.5,117.015,136.906,19.9,33.3,9
+8 Iron,Iron,,,122.0,,,,,,146.1,,,,50.0,2
+9 Iron,Iron,,,108.1,108.1,,112.2,,,112.2,112.163,112.163,0.0,,3
+Wedge,Wedge,,,100.3,100.3,,98.0,104.5,,104.5,100.952,102.889,1.9,0.0,8
+Wedge,Wedge,,,86.8,,,,,,,,,,,0
+Wedge,Wedge,,,80.7,80.7,,,81.1,,90.8,72.9575,82.7062,9.7,,6
