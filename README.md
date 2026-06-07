@@ -71,6 +71,14 @@ python3 pull_arccos.py --discover # dump raw endpoint JSON structure
 Writes outputs next to itself; the raw cache (`_cache_raw/`, contains GPS + PII) is
 gitignored. Unofficial API — your own account only, no aggressive polling.
 
+## 18Birdies → GHIN
+
+Getting 18Birdies-only rounds onto your USGA handicap: 18Birdies has no GHIN
+integration, so use `eighteenbirdies_to_ghin.py` to turn your 18Birdies data
+export into a GHIN-entry worksheet (dedupes against GHIN, fills rating/slope),
+then post the few missing rounds in the GHIN app. Read-only — never posts, never
+takes a password. Details + the optional auto-post recon: `docs/18birdies-to-ghin.md`.
+
 ## Provenance
 
 Source: unofficial reverse-engineered Arccos API (`api.arccosgolf.com`), pulled by
