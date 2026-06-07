@@ -20,6 +20,9 @@ _discovery/
 _cache_courses.json
 _cache*
 
+# --- shot GPS maps (KML/GeoJSON/CSV contain exact coordinates): LOCAL only ---
+maps/
+
 # --- misc ---
 __pycache__/
 *.pyc
