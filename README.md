@@ -3,8 +3,9 @@
 Comprehensive personal golf data pulled from the **unofficial, reverse-engineered
 Arccos Golf API** (owner's own account). Not affiliated with Arccos Golf LLC.
 Rebuilt by an idempotent weekly pipeline (`pull_arccos.py`): caches every reachable
-endpoint, then derives these public outputs. GPS coordinates, name, email and DOB
-are never included.
+endpoint, then derives these public outputs. Shot GPS coordinates ARE included
+(shots.csv/holes.csv + maps/); only identity (name, email, DOB, GHIN number) is
+kept out.
 
 Owner is a ~12 handicap; **biggest leak = chipping / short game** — the data confirms
 it (career chip-save 0/7, sand-save 0/3, SG short −6.1). Short-game columns are the
@@ -16,7 +17,8 @@ focus.
 |---|---|---|
 | `rounds_summary.csv` | round | scoring, pace, GIR/FW/scramble, putting, driving, **real Arccos strokes-gained + an independent Broadie reconstruction**, Arccos category handicaps |
 | `holes.csv` | hole | **real par** (from Arccos), net score, GIR/FW/putts, scramble, proximity, per-hole SG |
-| `shots.csv` | shot | club, shot distance, **distance-to-pin (start/end)**, approx lie, category, per-shot SG (no GPS) |
+| `shots.csv` | shot | club, shot distance, **distance-to-pin (start/end)**, **start/end GPS**, approx lie, category, per-shot SG |
+| `holes.csv` (geo) / `maps/` | — | per-hole **pin GPS**; `maps/round_*.kml` + `.geojson` + `shots_geo.csv` for Google Earth → PDF |
 | `clubs.csv` | club | **make/model**, smart distance, terrain splits (tee/fairway/rough/sand), GIR%, **dispersion** |
 | `handicap_history.csv` | round | Arccos category handicaps over time |
 | `career_stats.json` | aggregate | **Arccos career stats** — SG, chip/sand save %, GIR, fairways, putting, score-by-par, caddie insights |

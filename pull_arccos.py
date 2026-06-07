@@ -513,11 +513,12 @@ HOLE_COLS = [
     "score_to_par", "putts", "penalties", "gir", "fairway_hit", "fw_miss_left",
     "fw_miss_right", "updown_chance_native", "updown_native", "sand_chance_native",
     "sand_save_native", "hole_len_yd", "drive_yd", "approach_proximity_yd",
-    "scramble_chance", "scramble_save", "sg_hole_broadie",
+    "pin_lat", "pin_lng", "scramble_chance", "scramble_save", "sg_hole_broadie",
 ]
 SHOT_COLS = [
     "round_id", "date", "hole_id", "shot_num", "club", "club_category",
     "shot_distance_yd", "start_dist_to_pin_yd", "end_dist_to_pin_yd",
+    "start_lat", "start_lng", "end_lat", "end_lng",
     "lie_approx", "is_tee", "is_putt", "penalties", "category_approx", "sg_shot_approx",
 ]
 CLUB_COLS = [
@@ -638,6 +639,8 @@ def build_round(summary, detail, tee, hcp, clubid_map, rdash, pulled_at):
                 "shot_distance_yd": haversine_yd(s.get("startLat"), s.get("startLong"),
                                                  s.get("endLat"), s.get("endLong")),
                 "start_dist_to_pin_yd": sd, "end_dist_to_pin_yd": ed,
+                "start_lat": s.get("startLat"), "start_lng": s.get("startLong"),
+                "end_lat": s.get("endLat"), "end_lng": s.get("endLong"),
                 "lie_approx": lie, "is_tee": 1 if si == 0 else 0,
                 "is_putt": 1 if lie == "green" else 0, "penalties": pen,
                 "category_approx": cat, "sg_shot_approx": sg_shot,
@@ -662,6 +665,7 @@ def build_round(summary, detail, tee, hcp, clubid_map, rdash, pulled_at):
             "updown_chance_native": _tf(h.get("isUpDownChance")), "updown_native": _tf(h.get("isUpDown")),
             "sand_chance_native": _tf(h.get("isSandSaveChance")), "sand_save_native": _tf(h.get("isSandSave")),
             "hole_len_yd": yd, "drive_yd": drive_yd, "approach_proximity_yd": approach_prox,
+            "pin_lat": pin[0], "pin_lng": pin[1],
             "scramble_chance": scr_chance, "scramble_save": scr_save,
             "sg_hole_broadie": round(hole_sg, 3) if sg_have else None,
         })
@@ -1018,7 +1022,8 @@ def build_xlsx(rounds, holes, shots, clubs, hcps, career, pulled_at, counts):
         "- scramble_pct: missed GIR + holed out <= par_calibrated. Native isUpDown flags were",
         "  unpopulated at pull time (kept verbatim as *_native).",
         "- approach_proximity_yd: end distance-to-pin of the last non-putt shot.",
-        "GPS coordinates, names, email, DOB are EXCLUDED from all outputs.",
+        "Shot GPS coordinates ARE included (shots.csv/holes.csv/maps) per owner request.",
+        "Identity (name, email, DOB, GHIN#) is still excluded from all outputs.",
     ):
         ws.append([line])
     wb.save(os.path.join(OUT_DIR, "arccos_sg_baseline.xlsx"))

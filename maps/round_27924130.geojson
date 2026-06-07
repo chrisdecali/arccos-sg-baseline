@@ -1,0 +1,2191 @@
+{
+  "type": "FeatureCollection",
+  "round_id": 27924130,
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5136816,
+            30.0578524
+          ],
+          [
+            -95.5124879,
+            30.0567153
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 1,
+        "shot": 1,
+        "club": "Driver",
+        "distance_yd": 186.8,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5124879,
+            30.0567153
+          ],
+          [
+            -95.512355119298,
+            30.056481922807
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 1,
+        "shot": 2,
+        "club": "4 Iron",
+        "distance_yd": 31.6,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.512355119298,
+            30.056481922807
+          ],
+          [
+            -95.512136,
+            30.0554541
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 1,
+        "shot": 3,
+        "club": "6 Iron",
+        "distance_yd": 127.1,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.512136,
+            30.0554541
+          ],
+          [
+            -95.5119237,
+            30.0554316
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 1,
+        "shot": 4,
+        "club": "Wedge",
+        "distance_yd": 22.5,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5119237,
+            30.0554316
+          ],
+          [
+            -95.511914248564,
+            30.055430762071
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 1,
+        "shot": 5,
+        "club": "Putter",
+        "distance_yd": 1.0,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.511914248564,
+            30.055430762071
+          ],
+          [
+            -95.511907947607,
+            30.05543020345
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 1,
+        "shot": 6,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5141495,
+            30.0547446
+          ],
+          [
+            -95.5142113,
+            30.0554473
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 2,
+        "shot": 1,
+        "club": "8 Iron",
+        "distance_yd": 85.7,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5142113,
+            30.0554473
+          ],
+          [
+            -95.514304881067,
+            30.055668004988
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 2,
+        "shot": 2,
+        "club": "Putter",
+        "distance_yd": 28.6,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.514304881067,
+            30.055668004988
+          ],
+          [
+            -95.5143126,
+            30.0556915
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 2,
+        "shot": 3,
+        "club": "Putter",
+        "distance_yd": 3.0,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5143126,
+            30.0556915
+          ],
+          [
+            -95.514312518855,
+            30.055686018177
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 2,
+        "shot": 4,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5148209,
+            30.0563561
+          ],
+          [
+            -95.516017824411,
+            30.054549443084
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 3,
+        "shot": 1,
+        "club": "Driver",
+        "distance_yd": 253.3,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.516017824411,
+            30.054549443084
+          ],
+          [
+            -95.5169297,
+            30.0543919
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 3,
+        "shot": 2,
+        "club": "Wedge",
+        "distance_yd": 97.9,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5169297,
+            30.0543919
+          ],
+          [
+            -95.5166495,
+            30.0543469
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 3,
+        "shot": 3,
+        "club": "Wedge",
+        "distance_yd": 30.0,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5166495,
+            30.0543469
+          ],
+          [
+            -95.5166747,
+            30.0543284
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 3,
+        "shot": 4,
+        "club": "Putter",
+        "distance_yd": 3.5,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5166747,
+            30.0543284
+          ],
+          [
+            -95.516679530392,
+            30.054324853879
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 3,
+        "shot": 5,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5168191,
+            30.0551638
+          ],
+          [
+            -95.515391863883,
+            30.056880575445
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 4,
+        "shot": 1,
+        "club": "Driver",
+        "distance_yd": 257.2,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.515391863883,
+            30.056880575445
+          ],
+          [
+            -95.5152205,
+            30.0575686
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 4,
+        "shot": 2,
+        "club": "4 Iron",
+        "distance_yd": 85.6,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5152205,
+            30.0575686
+          ],
+          [
+            -95.5150114,
+            30.0588219
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 4,
+        "shot": 3,
+        "club": "4 Iron",
+        "distance_yd": 154.0,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5150114,
+            30.0588219
+          ],
+          [
+            -95.515034078214,
+            30.059008995299
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 4,
+        "shot": 4,
+        "club": "Putter",
+        "distance_yd": 22.9,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.515034078214,
+            30.059008995299
+          ],
+          [
+            -95.515036060891,
+            30.059025352351
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 4,
+        "shot": 5,
+        "club": "Putter",
+        "distance_yd": 2.0,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5153981,
+            30.0603722
+          ],
+          [
+            -95.5167184,
+            30.0608966
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 5,
+        "shot": 1,
+        "club": "Driver",
+        "distance_yd": 152.9,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5167184,
+            30.0608966
+          ],
+          [
+            -95.517025905882,
+            30.061074185294
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 5,
+        "shot": 2,
+        "club": "4 Iron",
+        "distance_yd": 38.9,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.517025905882,
+            30.061074185294
+          ],
+          [
+            -95.5184067,
+            30.0616279
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 5,
+        "shot": 3,
+        "club": "5 Iron",
+        "distance_yd": 160.2,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5184067,
+            30.0616279
+          ],
+          [
+            -95.5183257,
+            30.0617098
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 5,
+        "shot": 4,
+        "club": "Wedge",
+        "distance_yd": 13.1,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5183257,
+            30.0617098
+          ],
+          [
+            -95.518298876389,
+            30.061719250386
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 5,
+        "shot": 5,
+        "club": "Putter",
+        "distance_yd": 3.0,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.518298876389,
+            30.061719250386
+          ],
+          [
+            -95.518293009531,
+            30.061721317373
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 5,
+        "shot": 6,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5181101,
+            30.0607101
+          ],
+          [
+            -95.5182464,
+            30.0601402
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 6,
+        "shot": 1,
+        "club": "5 Iron",
+        "distance_yd": 70.8,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5182464,
+            30.0601402
+          ],
+          [
+            -95.518252538889,
+            30.059931577778
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 6,
+        "shot": 2,
+        "club": "Wedge",
+        "distance_yd": 25.4,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.518252538889,
+            30.059931577778
+          ],
+          [
+            -95.5186757,
+            30.059279
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 6,
+        "shot": 3,
+        "club": "Wedge",
+        "distance_yd": 91.0,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5186757,
+            30.059279
+          ],
+          [
+            -95.5186747,
+            30.0594157
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 6,
+        "shot": 4,
+        "club": "Wedge",
+        "distance_yd": 16.6,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5186747,
+            30.0594157
+          ],
+          [
+            -95.51867372,
+            30.05941229
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 6,
+        "shot": 5,
+        "club": "Wedge",
+        "distance_yd": 0.4,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.51867372,
+            30.05941229
+          ],
+          [
+            -95.518653507599,
+            30.059517278747
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 6,
+        "shot": 6,
+        "club": "Putter",
+        "distance_yd": 12.9,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.518653507599,
+            30.059517278747
+          ],
+          [
+            -95.518652466506,
+            30.059522686463
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 6,
+        "shot": 7,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5196666,
+            30.0607294
+          ],
+          [
+            -95.520282201469,
+            30.062609361936
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 7,
+        "shot": 1,
+        "club": "3 Wood",
+        "distance_yd": 237.6,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.520282201469,
+            30.062609361936
+          ],
+          [
+            -95.520479,
+            30.0628921
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 7,
+        "shot": 2,
+        "club": "9 Iron",
+        "distance_yd": 40.1,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.520479,
+            30.0628921
+          ],
+          [
+            -95.5205643,
+            30.0628601
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 7,
+        "shot": 3,
+        "club": "9 Iron",
+        "distance_yd": 9.8,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5205643,
+            30.0628601
+          ],
+          [
+            -95.5206398,
+            30.0628743
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 7,
+        "shot": 4,
+        "club": "Putter",
+        "distance_yd": 8.1,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5206398,
+            30.0628743
+          ],
+          [
+            -95.520645989927,
+            30.0628754642
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 7,
+        "shot": 5,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5198642,
+            30.0641497
+          ],
+          [
+            -95.517306625843,
+            30.063984198151
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 8,
+        "shot": 1,
+        "club": "Driver",
+        "distance_yd": 269.9,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.517306625843,
+            30.063984198151
+          ],
+          [
+            -95.5162286,
+            30.0643281
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 8,
+        "shot": 2,
+        "club": "7 Iron",
+        "distance_yd": 120.9,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5162286,
+            30.0643281
+          ],
+          [
+            -95.516314695745,
+            30.064418761496
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 8,
+        "shot": 3,
+        "club": "Putter",
+        "distance_yd": 14.3,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.516314695745,
+            30.064418761496
+          ],
+          [
+            -95.516318717817,
+            30.064422996858
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 8,
+        "shot": 4,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5151143,
+            30.0645873
+          ],
+          [
+            -95.514417551458,
+            30.062686258092
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 9,
+        "shot": 1,
+        "club": "Driver",
+        "distance_yd": 242.5,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.514417551458,
+            30.062686258092
+          ],
+          [
+            -95.5138019,
+            30.0622658
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 9,
+        "shot": 2,
+        "club": "Hybrid",
+        "distance_yd": 82.5,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5138019,
+            30.0622658
+          ],
+          [
+            -95.5140202,
+            30.0614594
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 9,
+        "shot": 3,
+        "club": "4 Iron",
+        "distance_yd": 100.7,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5140202,
+            30.0614594
+          ],
+          [
+            -95.513674477778,
+            30.061220761111
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 9,
+        "shot": 4,
+        "club": "Wedge",
+        "distance_yd": 46.5,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.513674477778,
+            30.061220761111
+          ],
+          [
+            -95.513685505143,
+            30.061256983762
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 9,
+        "shot": 5,
+        "club": "Putter",
+        "distance_yd": 4.6,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.513685505143,
+            30.061256983762
+          ],
+          [
+            -95.513687119046,
+            30.061262285103
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 9,
+        "shot": 6,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5119587,
+            30.0591246
+          ],
+          [
+            -95.5095563,
+            30.0584496
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 10,
+        "shot": 1,
+        "club": "Driver",
+        "distance_yd": 265.8,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5095563,
+            30.0584496
+          ],
+          [
+            -95.5093094,
+            30.0580498
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 10,
+        "shot": 2,
+        "club": "Wedge",
+        "distance_yd": 55.1,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5093094,
+            30.0580498
+          ],
+          [
+            -95.5087817,
+            30.0579055
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 10,
+        "shot": 3,
+        "club": "Wedge",
+        "distance_yd": 58.2,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5087817,
+            30.0579055
+          ],
+          [
+            -95.508889276307,
+            30.057749141411
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 10,
+        "shot": 4,
+        "club": "Putter",
+        "distance_yd": 22.1,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.508889276307,
+            30.057749141411
+          ],
+          [
+            -95.508897378239,
+            30.057737365499
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 10,
+        "shot": 5,
+        "club": "Putter",
+        "distance_yd": 1.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5075647,
+            30.0578485
+          ],
+          [
+            -95.5071447,
+            30.0591333
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 11,
+        "shot": 1,
+        "club": "6 Iron",
+        "distance_yd": 162.4,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5071447,
+            30.0591333
+          ],
+          [
+            -95.5069223,
+            30.0591097
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 11,
+        "shot": 2,
+        "club": "Wedge",
+        "distance_yd": 23.6,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5069223,
+            30.0591097
+          ],
+          [
+            -95.506894749739,
+            30.059088712165
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 11,
+        "shot": 3,
+        "club": "Putter",
+        "distance_yd": 3.9,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.506894749739,
+            30.059088712165
+          ],
+          [
+            -95.50688999502,
+            30.05908509001
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 11,
+        "shot": 4,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5049729,
+            30.058724
+          ],
+          [
+            -95.5041234,
+            30.0605306
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 12,
+        "shot": 1,
+        "club": "Driver",
+        "distance_yd": 237.2,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5041234,
+            30.0605306
+          ],
+          [
+            -95.5038969,
+            30.0614103
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 12,
+        "shot": 2,
+        "club": "4 Iron",
+        "distance_yd": 109.6,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5038969,
+            30.0614103
+          ],
+          [
+            -95.5032481,
+            30.0620619
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 12,
+        "shot": 3,
+        "club": "Wedge",
+        "distance_yd": 104.6,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5032481,
+            30.0620619
+          ],
+          [
+            -95.5035556,
+            30.0617459
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 12,
+        "shot": 4,
+        "club": "Wedge",
+        "distance_yd": 50.2,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5035556,
+            30.0617459
+          ],
+          [
+            -95.503502805882,
+            30.061831070588
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 12,
+        "shot": 5,
+        "club": "Wedge",
+        "distance_yd": 11.8,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.503502805882,
+            30.061831070588
+          ],
+          [
+            -95.50344218993,
+            30.061892780418
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 12,
+        "shot": 6,
+        "club": "Putter",
+        "distance_yd": 9.8,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.50344218993,
+            30.061892780418
+          ],
+          [
+            -95.503438087103,
+            30.061896957281
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 12,
+        "shot": 7,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5057339,
+            30.0619641
+          ],
+          [
+            -95.507825352252,
+            30.061143680771
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 13,
+        "shot": 1,
+        "club": "Driver",
+        "distance_yd": 241.7,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.507825352252,
+            30.061143680771
+          ],
+          [
+            -95.5090403,
+            30.061383
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 13,
+        "shot": 2,
+        "club": "4 Iron",
+        "distance_yd": 131.1,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5090403,
+            30.061383
+          ],
+          [
+            -95.5092171,
+            30.0612595
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 13,
+        "shot": 3,
+        "club": "Wedge",
+        "distance_yd": 23.9,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5092171,
+            30.0612595
+          ],
+          [
+            -95.509251375824,
+            30.061216423586
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 13,
+        "shot": 4,
+        "club": "Putter",
+        "distance_yd": 6.4,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.509251375824,
+            30.061216423586
+          ],
+          [
+            -95.509258680835,
+            30.061203662866
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 13,
+        "shot": 5,
+        "club": "Putter",
+        "distance_yd": 1.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.509258680835,
+            30.061203662866
+          ],
+          [
+            -95.509263950274,
+            30.061200620534
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 13,
+        "shot": 6,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5096626,
+            30.0625288
+          ],
+          [
+            -95.508471764624,
+            30.063966787934
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 14,
+        "shot": 1,
+        "club": "Driver",
+        "distance_yd": 215.1,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.508471764624,
+            30.063966787934
+          ],
+          [
+            -95.5081204,
+            30.0644037
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 14,
+        "shot": 2,
+        "club": "Hybrid",
+        "distance_yd": 64.7,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5081204,
+            30.0644037
+          ],
+          [
+            -95.5075255,
+            30.06453
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 14,
+        "shot": 3,
+        "club": "4 Iron",
+        "distance_yd": 64.5,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5075255,
+            30.06453
+          ],
+          [
+            -95.5073253,
+            30.0648562
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 14,
+        "shot": 4,
+        "club": "4 Iron",
+        "distance_yd": 44.9,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5073253,
+            30.0648562
+          ],
+          [
+            -95.506800748408,
+            30.06566107785
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 14,
+        "shot": 5,
+        "club": "9 Iron",
+        "distance_yd": 112.4,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.506800748408,
+            30.06566107785
+          ],
+          [
+            -95.506673678756,
+            30.065638154785
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 14,
+        "shot": 6,
+        "club": "Putter",
+        "distance_yd": 13.7,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.506673678756,
+            30.065638154785
+          ],
+          [
+            -95.506726864749,
+            30.065480564849
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 14,
+        "shot": 7,
+        "club": "Wedge",
+        "distance_yd": 20.0,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5072768,
+            30.0659154
+          ],
+          [
+            -95.508947186172,
+            30.064406394972
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 15,
+        "shot": 1,
+        "club": "Driver",
+        "distance_yd": 254.1,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.508947186172,
+            30.064406394972
+          ],
+          [
+            -95.5092968,
+            30.0639957
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 15,
+        "shot": 2,
+        "club": "6 Iron",
+        "distance_yd": 62.0,
+        "category": "short"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5092968,
+            30.0639957
+          ],
+          [
+            -95.5095985,
+            30.0636485
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 15,
+        "shot": 3,
+        "club": "Wedge",
+        "distance_yd": 52.8,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5095985,
+            30.0636485
+          ],
+          [
+            -95.5095513,
+            30.0637403
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 15,
+        "shot": 4,
+        "club": "Putter",
+        "distance_yd": 12.2,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5095513,
+            30.0637403
+          ],
+          [
+            -95.509548724695,
+            30.063745308749
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 15,
+        "shot": 5,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5099512,
+            30.0656724
+          ],
+          [
+            -95.5105431,
+            30.0667617
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 16,
+        "shot": 1,
+        "club": "8 Iron",
+        "distance_yd": 146.4,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5105431,
+            30.0667617
+          ],
+          [
+            -95.510448040541,
+            30.066710205405
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 16,
+        "shot": 2,
+        "club": "Wedge",
+        "distance_yd": 11.8,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.510448040541,
+            30.066710205405
+          ],
+          [
+            -95.510356864613,
+            30.066592821294
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 16,
+        "shot": 3,
+        "club": "Putter",
+        "distance_yd": 17.2,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.510356864613,
+            30.066592821294
+          ],
+          [
+            -95.510353330615,
+            30.066588271455
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 16,
+        "shot": 4,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.511866100132,
+            30.066162482285
+          ],
+          [
+            -95.511504001915,
+            30.064209660182
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 17,
+        "shot": 1,
+        "club": "3 Wood",
+        "distance_yd": 240.5,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.511504001915,
+            30.064209660182
+          ],
+          [
+            -95.5112743,
+            30.0641854
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 17,
+        "shot": 2,
+        "club": "Wedge",
+        "distance_yd": 24.4,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.5112743,
+            30.0641854
+          ],
+          [
+            -95.511279636698,
+            30.06416996755
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 17,
+        "shot": 3,
+        "club": "Putter",
+        "distance_yd": 2.0,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.511279636698,
+            30.06416996755
+          ],
+          [
+            -95.511284177268,
+            30.064156837311
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 17,
+        "shot": 4,
+        "club": "Putter",
+        "distance_yd": 1.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.511284177268,
+            30.064156837311
+          ],
+          [
+            -95.511285993495,
+            30.064151585215
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 17,
+        "shot": 5,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.510058291256,
+            30.063699250551
+          ],
+          [
+            -95.511086247861,
+            30.061683701639
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 18,
+        "shot": 1,
+        "club": "Driver",
+        "distance_yd": 267.9,
+        "category": "tee"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.511086247861,
+            30.061683701639
+          ],
+          [
+            -95.511765895002,
+            30.060582912364
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 18,
+        "shot": 2,
+        "club": "6 Iron",
+        "distance_yd": 151.8,
+        "category": "approach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.511765895002,
+            30.060582912364
+          ],
+          [
+            -95.51178458857,
+            30.060551162242
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 18,
+        "shot": 3,
+        "club": "Putter",
+        "distance_yd": 4.3,
+        "category": "putt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -95.51178458857,
+            30.060551162242
+          ],
+          [
+            -95.511787464502,
+            30.060546277607
+          ]
+        ]
+      },
+      "properties": {
+        "hole": 18,
+        "shot": 4,
+        "club": "Putter",
+        "distance_yd": 0.7,
+        "category": "putt"
+      }
+    }
+  ]
+}
