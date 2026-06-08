@@ -57,7 +57,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # Output dir: ./arccos_out when it exists (dev layout: script sits beside the repo
 # dir), otherwise this script's own dir (so the copy committed INSIDE the repo is
 # runnable after a plain `git clone` regardless of the clone dir name).
-OUT_DIR = os.path.join(HERE, "arccos_out") if os.path.isdir(os.path.join(HERE, "arccos_out")) else HERE
+OUT_DIR = os.environ.get("GOLF_STORE") or (
+    os.path.join(HERE, "arccos_out") if os.path.isdir(os.path.join(HERE, "arccos_out")) else HERE)
 CACHE = os.path.join(OUT_DIR, "_cache_raw")          # gitignored (GPS + PII)
 DISCOVERY_DIR = os.path.join(OUT_DIR, "_discovery")  # gitignored
 

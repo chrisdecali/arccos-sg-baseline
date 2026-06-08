@@ -45,7 +45,8 @@ from typing import Any, Optional
 GHIN_BASE = "https://api2.ghin.com/api/v1"
 CREDS_PATH = os.path.expanduser("~/.ghin_creds.json")
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT_DIR = os.path.join(HERE, "arccos_out") if os.path.isdir(os.path.join(HERE, "arccos_out")) else HERE
+OUT_DIR = os.environ.get("GOLF_STORE") or (
+    os.path.join(HERE, "arccos_out") if os.path.isdir(os.path.join(HERE, "arccos_out")) else HERE)
 CACHE = os.path.join(OUT_DIR, "_cache_ghin")     # gitignored (_cache*)
 DELAY_S = 0.6
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148 Safari/537.36"
