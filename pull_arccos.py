@@ -220,14 +220,61 @@ def _refresh_jwt(access_key: str, user_id: str) -> Optional[str]:
     return _strip_bearer(d.get("token") or d.get("accessToken") or d.get("jwt"))
 
 
+def arccos_login(email: str, password: str) -> tuple[Optional[str], Optional[str]]:
+    """Email + password -> (accessKey, userId) via POST /accessKeys. NO DevTools.
+    The accessKey is long-lived; store it once and refresh JWTs from it after."""
+    body = json.dumps({"email": email, "password": password,
+                       "signedInByFacebook": "F"}).encode()
+    req = urllib.request.Request(f"{AUTH_BASE}/accessKeys", data=body, method="POST")
+    req.add_header("Content-Type", "application/json;charset=utf-8")
+    req.add_header("Accept", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            d = json.loads(r.read().decode("utf-8"))
+    except Exception as e:  # noqa: BLE001
+        print(f"Error: Arccos login failed ({type(e).__name__}: {e})", file=sys.stderr)
+        return None, None
+    return d.get("accessKey"), (str(d.get("userId")) if d.get("userId") else None)
+
+
+def _save_creds(updates: dict) -> None:
+    cur = {}
+    if os.path.exists(CREDS_PATH):
+        try:
+            with open(CREDS_PATH, encoding="utf-8") as f:
+                cur = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            cur = {}
+    cur.update(updates)
+    with open(CREDS_PATH, "w", encoding="utf-8") as f:
+        json.dump(cur, f)
+    os.chmod(CREDS_PATH, 0o600)
+
+
+def interactive_login() -> None:
+    """`--login`: prompt for email+password (no DevTools), fetch + store the
+    accessKey (password is NOT stored). After this, runs are hands-off."""
+    import getpass
+    email = input("Arccos email: ").strip()
+    password = getpass.getpass("Arccos password (hidden, NOT stored): ")
+    ak, uid = arccos_login(email, password)
+    if not ak:
+        sys.exit("Login failed — check your email/password and try again.")
+    _save_creds({"access_key": ak, **({"user_id": uid} if uid else {})})
+    print(f"✓ Logged in. accessKey saved to {CREDS_PATH} (password not stored). "
+          "You're set — pulls are now hands-off.")
+
+
 def load_creds() -> tuple[str, str]:
-    """Return (jwt, user_id). Auto mode: an `access_key` in creds/env is refreshed
-    into a fresh JWT every call (no manual step → cron-friendly). Manual mode: a
-    pasted `bearer_token` is used as-is. accessKey is preferred when both exist."""
+    """Return (jwt, user_id). Priority: stored access_key (refresh) > email+password
+    (login -> accessKey, no DevTools) > pasted bearer_token. accessKey/JWT auto-refresh
+    keeps the cron hands-off."""
     token = _strip_bearer(os.environ.get("ARCCOS_BEARER_TOKEN"))
     access_key = os.environ.get("ARCCOS_ACCESS_KEY")
     user_id = os.environ.get("ARCCOS_USER_ID")
-    if (not user_id or not (token or access_key)) and os.path.exists(CREDS_PATH):
+    email = os.environ.get("ARCCOS_EMAIL")
+    password = os.environ.get("ARCCOS_PASSWORD")
+    if os.path.exists(CREDS_PATH):
         try:
             with open(CREDS_PATH, encoding="utf-8") as f:
                 c = json.load(f)
@@ -236,20 +283,22 @@ def load_creds() -> tuple[str, str]:
         access_key = access_key or c.get("access_key") or c.get("accessKey")
         token = token or _strip_bearer(c.get("bearer_token") or c.get("token") or c.get("access_token"))
         user_id = user_id or c.get("user_id") or c.get("userId") or c.get("id")
+        email = email or c.get("email")
+        password = password or c.get("password")
 
-    if not user_id:
-        sys.exit(f"Error: missing user_id. Put it in {CREDS_PATH}.")
-    # Prefer the long-lived accessKey (always mints a fresh JWT) over a stored token.
-    if access_key:
+    # No-DevTools path: email+password -> accessKey (only if we don't have one).
+    if not access_key and email and password:
+        access_key, uid = arccos_login(email, password)
+        user_id = user_id or uid
+    # Long-lived accessKey -> fresh short JWT each run.
+    if access_key and user_id:
         fresh = _refresh_jwt(access_key, str(user_id))
         if fresh:
             token = fresh
-        elif not token:
-            sys.exit("Error: accessKey refresh failed and no fallback bearer_token. "
-                     "Re-extract the accessKey from the dashboard.")
-    if not token:
-        sys.exit(f"Error: missing creds. Put EITHER an access_key (auto, recommended) "
-                 f'OR a bearer_token (manual) in {CREDS_PATH} with user_id.')
+    if not token or not user_id:
+        sys.exit("Error: missing Arccos creds. Easiest: run `python3 pull_arccos.py "
+                 "--login` (email+password, no DevTools). Or put access_key+user_id "
+                 f"(or bearer_token+user_id) in {CREDS_PATH}.")
     return token, str(user_id)
 
 
@@ -1051,7 +1100,13 @@ def main():
     p.add_argument("--build", action="store_true", help="Build outputs from cache.")
     p.add_argument("--n", type=int, default=50, help="Max recent rounds (default 50).")
     p.add_argument("--after", type=str, default=None, help="Only rounds on/after YYYY-MM-DD.")
+    p.add_argument("--login", action="store_true",
+                   help="One-time email/password login -> stores accessKey (no DevTools).")
     args = p.parse_args()
+
+    if args.login:
+        interactive_login()
+        return
 
     pulled_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     do_fetch = args.fetch or not args.build
