@@ -19,14 +19,14 @@ ARCCOS_USER_ID also work.
 ARCHITECTURE
   --fetch : pull every endpoint into a local cache (_cache_raw/, gitignored —
             contains GPS coords + PII). Round details cached by id => idempotent.
-  --build : (re)build all public outputs from the cache. No GPS/PII leaves here.
+  --build : (re)build all public outputs from the cache (GPS only with --include-gps).
   --discover : dump raw endpoint structure.
   default : --fetch then --build.
 
-OUTPUTS (./arccos_out/, no GPS/PII, safe for a public repo):
+OUTPUTS (./arccos_out/, GPS excluded by default — enable with --include-gps):
   rounds_summary.csv      one row per round (scoring, GIR/FW/scramble, SG categories)
   holes.csv               one row per hole (par calibrated, proximity, SG)
-  shots.csv               one row per shot (club, distances-to-pin, lie, SG) — NO coords
+  shots.csv               one row per shot (club, distances-to-pin, lie, SG; lat/lng only with --include-gps)
   clubs.csv               per-club smart distance, terrain splits, GIR%, dispersion
   handicap_history.csv    per-round Arccos category handicaps
   player_profile.json     redacted profile + bag + subscription + home course
@@ -64,6 +64,16 @@ DISCOVERY_DIR = os.path.join(OUT_DIR, "_discovery")  # gitignored
 
 _HEADER_FORMS = ["Bearer: {tok}", "Bearer {tok}"]    # nonstandard colon form first
 REQUEST_DELAY_S = 0.5
+# GPS columns are PRIVACY-SENSITIVE (home course location). Excluded from the
+# public CSVs unless explicitly enabled (env GOLF_INCLUDE_GPS=1 or --include-gps).
+INCLUDE_GPS = os.environ.get("GOLF_INCLUDE_GPS", "").lower() in ("1", "true", "yes")
+GPS_COLS = {"start_lat", "start_lng", "end_lat", "end_lng", "pin_lat", "pin_lng"}
+
+
+def public_cols(cols: list[str]) -> list[str]:
+    return list(cols) if INCLUDE_GPS else [c for c in cols if c not in GPS_COLS]
+
+
 YD_PER_M = 1.0936132983
 
 # Confirmed-working endpoints (recon 2026-06-06). {u}=user id, {r}=round, {c}=course.
@@ -319,6 +329,25 @@ def _request(url: str, token: str, form: str) -> Any:
         return json.loads(resp.read().decode("utf-8"))
 
 
+_RETRY_CODES = (500, 502, 503, 504)
+
+
+def _with_retry(fn, attempts: int = 3, base_delay: float = 2.0):
+    """Retry transient failures (5xx, timeouts, connection drops) with backoff.
+    4xx and other HTTPErrors raise immediately. Duplicated in both pullers on
+    purpose — no shared module, the ~ copies are symlinks (see plan Task 8)."""
+    for i in range(attempts):
+        try:
+            return fn()
+        except urllib.error.HTTPError as e:
+            if e.code not in _RETRY_CODES or i == attempts - 1:
+                raise
+        except (urllib.error.URLError, TimeoutError, OSError):
+            if i == attempts - 1:
+                raise
+        time.sleep(base_delay * (2 ** i))
+
+
 def api_get(path: str, token: str, soft: bool = False) -> Any:
     """GET -> JSON. soft=True returns None on any error instead of exiting."""
     global _working_header_form
@@ -328,7 +357,7 @@ def api_get(path: str, token: str, soft: bool = False) -> Any:
     for form in forms:
         try:
             time.sleep(REQUEST_DELAY_S)
-            data = _request(url, token, form)
+            data = _with_retry(lambda: _request(url, token, form))
             _working_header_form = form
             return data
         except urllib.error.HTTPError as e:
@@ -370,9 +399,11 @@ def haversine_yd(lat1, lon1, lat2, lon2) -> Optional[float]:
 # ---------------------------------------------------------------------------
 
 def _save(path: str, obj: Any) -> None:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(obj, f, indent=2)
+    os.replace(tmp, path)
 
 
 def _load(path: str) -> Any:
@@ -759,11 +790,13 @@ def build_round(summary, detail, tee, hcp, clubid_map, rdash, pulled_at):
 
 
 def write_csv(path, cols, rows):
-    with open(path, "w", newline="", encoding="utf-8") as f:
+    tmp = path + ".tmp"
+    with open(tmp, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
         for r in rows:
             w.writerow({k: ("" if r.get(k) is None else r.get(k)) for k in cols})
+    os.replace(tmp, path)
 
 
 def build_clubs_csv(clubs_raw, clubid_map, meta):
@@ -903,8 +936,8 @@ def build(pulled_at: str) -> dict:
     shot_rows.sort(key=lambda r: (r.get("date") or "", r.get("round_id"), r.get("hole_id"), r.get("shot_num")))
 
     write_csv(os.path.join(OUT_DIR, "rounds_summary.csv"), ROUND_COLS, round_rows)
-    write_csv(os.path.join(OUT_DIR, "holes.csv"), HOLE_COLS, hole_rows)
-    write_csv(os.path.join(OUT_DIR, "shots.csv"), SHOT_COLS, shot_rows)
+    write_csv(os.path.join(OUT_DIR, "holes.csv"), public_cols(HOLE_COLS), hole_rows)
+    write_csv(os.path.join(OUT_DIR, "shots.csv"), public_cols(SHOT_COLS), shot_rows)
     club_rows = build_clubs_csv(clubs_raw, clubid_map, meta)
     write_csv(os.path.join(OUT_DIR, "clubs.csv"), CLUB_COLS, club_rows)
     write_csv(os.path.join(OUT_DIR, "handicap_history.csv"), HCP_COLS, hcp_rows)
@@ -957,8 +990,8 @@ def build_xlsx(rounds, holes, shots, clubs, hcps, career, pulled_at, counts):
             ws.column_dimensions[get_column_letter(i)].width = max(10, min(30, len(col) + 2))
 
     tab(wb.active, ROUND_COLS, rounds, "Rounds")
-    tab(wb.create_sheet(), HOLE_COLS, holes, "Holes")
-    tab(wb.create_sheet(), SHOT_COLS, shots, "Shots")
+    tab(wb.create_sheet(), public_cols(HOLE_COLS), holes, "Holes")
+    tab(wb.create_sheet(), public_cols(SHOT_COLS), shots, "Shots")
     tab(wb.create_sheet(), CLUB_COLS, clubs, "Clubs")
     tab(wb.create_sheet(), HCP_COLS, hcps, "Handicap History")
 
@@ -1103,7 +1136,13 @@ def main():
     p.add_argument("--after", type=str, default=None, help="Only rounds on/after YYYY-MM-DD.")
     p.add_argument("--login", action="store_true",
                    help="One-time email/password login -> stores accessKey (no DevTools).")
+    p.add_argument("--include-gps", action="store_true",
+                   help="include lat/lng columns in shots.csv/holes.csv (privacy-sensitive)")
     args = p.parse_args()
+
+    global INCLUDE_GPS
+    if args.include_gps:
+        INCLUDE_GPS = True
 
     if args.login:
         interactive_login()

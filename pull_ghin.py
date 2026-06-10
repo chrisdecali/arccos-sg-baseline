@@ -120,6 +120,12 @@ def load_creds() -> tuple[str, str]:
         ghin = ghin or c.get("ghin_id") or c.get("ghin") or c.get("golfer_id")
         email = email or c.get("email") or c.get("email_or_ghin") or c.get("username")
         password = password or c.get("password")
+        if email and not password:
+            try:
+                import keyring  # optional; OS keychain
+                password = keyring.get_password("golf-reports-ghin", email)
+            except Exception:
+                password = None
     if token:
         token = token.strip()
         for pre in ("Bearer:", "Bearer"):
@@ -144,6 +150,25 @@ def load_creds() -> tuple[str, str]:
 # HTTP (read-only GET)
 # ---------------------------------------------------------------------------
 
+_RETRY_CODES = (500, 502, 503, 504)
+
+
+def _with_retry(fn, attempts: int = 3, base_delay: float = 2.0):
+    """Retry transient failures (5xx, timeouts, connection drops) with backoff.
+    4xx and other HTTPErrors raise immediately. Duplicated in both pullers on
+    purpose — no shared module, the ~ copies are symlinks (see plan Task 8)."""
+    for i in range(attempts):
+        try:
+            return fn()
+        except urllib.error.HTTPError as e:
+            if e.code not in _RETRY_CODES or i == attempts - 1:
+                raise
+        except (urllib.error.URLError, TimeoutError, OSError):
+            if i == attempts - 1:
+                raise
+        time.sleep(base_delay * (2 ** i))
+
+
 def ghin_get(path: str, token: str, params: Optional[dict] = None, soft: bool = False) -> Any:
     q = dict(params or {})
     q.setdefault("source", "GHINcom")
@@ -152,14 +177,17 @@ def ghin_get(path: str, token: str, params: Optional[dict] = None, soft: bool = 
     req.add_header("Authorization", f"Bearer {token}")
     req.add_header("Content-Type", "application/json")
     req.add_header("User-Agent", UA)
-    try:
-        time.sleep(DELAY_S)
+    def _go():
         with urllib.request.urlopen(req, timeout=25) as r:
             return json.loads(r.read().decode("utf-8"))
+    try:
+        time.sleep(DELAY_S)
+        return _with_retry(_go)
     except urllib.error.HTTPError as e:
         if e.code == 401:
-            sys.exit("Error: 401 Unauthorized — GHIN token expired (they last ~12h). "
-                     "Re-copy the Bearer from GHIN.com DevTools.")
+            sys.exit("Error: 401 Unauthorized — GHIN session rejected. "
+                     "If you set up with email/password: re-run setup.py (password may have changed). "
+                     "If you pasted a manual bearer_token: it expires ~12h — paste a fresh one.")
         if soft:
             print(f"  {path} -> HTTP {e.code}", file=sys.stderr)
             return None
@@ -173,8 +201,11 @@ def ghin_get(path: str, token: str, params: Optional[dict] = None, soft: bool = 
 
 def _save(name: str, obj: Any) -> None:
     os.makedirs(CACHE, exist_ok=True)
-    with open(os.path.join(CACHE, name), "w", encoding="utf-8") as f:
+    target = os.path.join(CACHE, name)
+    tmp = target + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(obj, f, indent=2)
+    os.replace(tmp, target)
 
 
 def _keys(o: Any) -> Any:
@@ -312,11 +343,13 @@ def build_profile(prof: Any) -> dict:
 
 
 def write_csv(path: str, cols: list[str], rows: list[dict]) -> None:
-    with open(path, "w", newline="", encoding="utf-8") as f:
+    tmp = path + ".tmp"
+    with open(tmp, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
         for r in rows:
             w.writerow({k: ("" if r.get(k) is None else r.get(k)) for k in cols})
+    os.replace(tmp, path)
 
 
 def build(data: dict) -> dict:
@@ -326,8 +359,11 @@ def build(data: dict) -> dict:
     prof = build_profile(data.get("profile"))
     write_csv(os.path.join(OUT_DIR, "ghin_scores.csv"), SCORE_COLS, scores)
     write_csv(os.path.join(OUT_DIR, "ghin_handicap_history.csv"), HIST_COLS, hist)
-    with open(os.path.join(OUT_DIR, "ghin_profile.json"), "w", encoding="utf-8") as f:
+    profile_path = os.path.join(OUT_DIR, "ghin_profile.json")
+    tmp = profile_path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(prof, f, indent=2)
+    os.replace(tmp, profile_path)
     return {"scores": len(scores), "revisions": len(hist), "index": prof.get("handicap_index")}
 
 
