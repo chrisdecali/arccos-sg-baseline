@@ -3,7 +3,7 @@
 pull_ghin.py — pull your official USGA/GHIN handicap + full score history into
 the repo, alongside the Arccos data.
 
-READ-ONLY. Never posts a score, never handles your password. Auth is a short-lived
+READ-ONLY: never posts a score. Password lives in the OS keychain when available (plaintext file only with explicit consent). Auth is a short-lived
 Bearer JWT (~12h) you paste from GHIN.com's DevTools — exactly like the Arccos flow.
 
 AUTH — put in ~/.ghin_creds.json (chmod 600; gitignored):
@@ -125,6 +125,7 @@ def load_creds() -> tuple[str, str]:
                 import keyring  # optional; OS keychain
                 password = keyring.get_password("golf-reports-ghin", email)
             except Exception:
+                print("  note: OS keychain unavailable — set GHIN_PASSWORD env or re-run setup.py", file=sys.stderr)
                 password = None
     if token:
         token = token.strip()

@@ -137,10 +137,16 @@ def main():
         if kml.count("LineString") == 0:
             continue
         n_rounds += 1
-        with open(os.path.join(MAPS_DIR, f"round_{rid}.kml"), "w", encoding="utf-8") as o:
+        kml_path = os.path.join(MAPS_DIR, f"round_{rid}.kml")
+        tmp = kml_path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as o:
             o.write(kml)
-        with open(os.path.join(MAPS_DIR, f"round_{rid}.geojson"), "w", encoding="utf-8") as o:
+        os.replace(tmp, kml_path)
+        geo_path = os.path.join(MAPS_DIR, f"round_{rid}.geojson")
+        tmp = geo_path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as o:
             json.dump(build_geojson(detail, rid), o, indent=2)
+        os.replace(tmp, geo_path)
         for hid, sn, club, dist, cat, start, end, pin in round_features(detail):
             csv_rows.append({"round_id": rid, "date": date, "course": course, "hole": hid,
                              "shot": sn, "club": club, "distance_yd": dist, "category": cat,
@@ -149,11 +155,14 @@ def main():
                              "pin_lat": pin[0], "pin_lng": pin[1]})
     cols = ["round_id", "date", "course", "hole", "shot", "club", "distance_yd", "category",
             "start_lat", "start_lng", "end_lat", "end_lng", "pin_lat", "pin_lng"]
-    with open(os.path.join(MAPS_DIR, "shots_geo.csv"), "w", newline="", encoding="utf-8") as o:
+    csv_path = os.path.join(MAPS_DIR, "shots_geo.csv")
+    tmp = csv_path + ".tmp"
+    with open(tmp, "w", newline="", encoding="utf-8") as o:
         w = csv.DictWriter(o, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
         for r in csv_rows:
             w.writerow({k: ("" if r.get(k) is None else r.get(k)) for k in cols})
+    os.replace(tmp, csv_path)
     print(f"Wrote {n_rounds} round map(s) + shots_geo.csv ({len(csv_rows)} shots) -> {MAPS_DIR}")
     print("Open a round_<id>.kml in Google Earth -> satellite -> export/print PDF.")
 
