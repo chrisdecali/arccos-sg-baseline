@@ -1,0 +1,197 @@
+{
+ "schema_version": "1.0",
+ "generated_at": "2026-06-11T12:00:17Z",
+ "player": {
+  "hcp_index": 12.1,
+  "rounds_with_gps": 1
+ },
+ "clubs": [
+  {
+   "club": "3 Wood",
+   "category": "Wood",
+   "total_yd": {
+    "mean": 207.9,
+    "sd": 9.7,
+    "n": 2,
+    "source_weight": 0.12
+   },
+   "lateral_yd": {
+    "sd": 11.3,
+    "n": 2,
+    "source_weight": 0.07
+   },
+   "usage_count": 2,
+   "confidence": "low"
+  },
+  {
+   "club": "4 Iron",
+   "category": "Iron",
+   "total_yd": {
+    "mean": 110.6,
+    "sd": 19.0,
+    "n": 9,
+    "source_weight": 0.38
+   },
+   "lateral_yd": {
+    "sd": 8.9,
+    "n": 9,
+    "source_weight": 0.26
+   },
+   "usage_count": 9,
+   "confidence": "medium"
+  },
+  {
+   "club": "5 Iron",
+   "category": "Iron",
+   "total_yd": {
+    "mean": 140.4,
+    "sd": 10.7,
+    "n": 2,
+    "source_weight": 0.12
+   },
+   "lateral_yd": {
+    "sd": 7.5,
+    "n": 2,
+    "source_weight": 0.07
+   },
+   "usage_count": 2,
+   "confidence": "low"
+  },
+  {
+   "club": "5 Wood",
+   "category": "Wood",
+   "total_yd": {
+    "mean": 184.0,
+    "sd": 9.2,
+    "n": 0,
+    "source_weight": 0.0
+   },
+   "lateral_yd": {
+    "sd": 9.2,
+    "n": 0,
+    "source_weight": 0.0
+   },
+   "usage_count": 0,
+   "confidence": "low"
+  },
+  {
+   "club": "6 Iron",
+   "category": "Iron",
+   "total_yd": {
+    "mean": 149.5,
+    "sd": 14.0,
+    "n": 4,
+    "source_weight": 0.21
+   },
+   "lateral_yd": {
+    "sd": 8.8,
+    "n": 4,
+    "source_weight": 0.14
+   },
+   "usage_count": 4,
+   "confidence": "low"
+  },
+  {
+   "club": "7 Iron",
+   "category": "Iron",
+   "total_yd": {
+    "mean": 132.8,
+    "sd": 6.7,
+    "n": 1,
+    "source_weight": 0.06
+   },
+   "lateral_yd": {
+    "sd": 6.6,
+    "n": 1,
+    "source_weight": 0.0
+   },
+   "usage_count": 1,
+   "confidence": "low"
+  },
+  {
+   "club": "8 Iron",
+   "category": "Iron",
+   "total_yd": {
+    "mean": 121.3,
+    "sd": 8.4,
+    "n": 2,
+    "source_weight": 0.12
+   },
+   "lateral_yd": {
+    "sd": 6.3,
+    "n": 2,
+    "source_weight": 0.07
+   },
+   "usage_count": 2,
+   "confidence": "low"
+  },
+  {
+   "club": "9 Iron",
+   "category": "Iron",
+   "total_yd": {
+    "mean": 104.4,
+    "sd": 8.3,
+    "n": 2,
+    "source_weight": 0.12
+   },
+   "lateral_yd": {
+    "sd": 6.1,
+    "n": 2,
+    "source_weight": 0.07
+   },
+   "usage_count": 3,
+   "confidence": "low"
+  },
+  {
+   "club": "Driver",
+   "category": "Driver",
+   "total_yd": {
+    "mean": 251.3,
+    "sd": 22.7,
+    "n": 12,
+    "source_weight": 0.44
+   },
+   "lateral_yd": {
+    "sd": 19.0,
+    "n": 12,
+    "source_weight": 0.32
+   },
+   "usage_count": 12,
+   "confidence": "medium"
+  },
+  {
+   "club": "Hybrid",
+   "category": "Hybrid",
+   "total_yd": {
+    "mean": 161.2,
+    "sd": 8.9,
+    "n": 2,
+    "source_weight": 0.12
+   },
+   "lateral_yd": {
+    "sd": 9.6,
+    "n": 2,
+    "source_weight": 0.07
+   },
+   "usage_count": 2,
+   "confidence": "low"
+  },
+  {
+   "club": "Wedge",
+   "category": "Wedge",
+   "total_yd": {
+    "mean": 59.7,
+    "sd": 17.8,
+    "n": 18,
+    "source_weight": 0.55
+   },
+   "lateral_yd": {
+    "sd": 5.5,
+    "n": 9,
+    "source_weight": 0.26
+   },
+   "usage_count": 6,
+   "confidence": "medium"
+  }
+ ]
+}
