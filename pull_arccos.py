@@ -102,15 +102,21 @@ ENDPOINTS = {
 # goalHcp=0 gives the most interpretable "vs scratch" strokes-gained.)
 GOAL_HCP = 0
 
-# clubType id -> name. CORRECTED against this account's live bag (clubs_v6):
-# type 12 is PUTTER here (the arccos-export enum's "PW=12" is wrong/outdated).
-# Wedge loft codes (42/44/45/46/49/53/56) are labeled generically "Wedge" — the
-# exact loft isn't asserted; clubs.csv carries make/model/distance to disambiguate.
+# clubType id -> name. CONFIRMED 2026-06-11 against the owner's real bag as the
+# Arccos app displays it (irons 5-PW, wedges 50/54/58, Cleveland HB Soft putter):
+# the iron block runs 6=5i .. 11=PW — the community arccos-export enum (5=3i,
+# 12=PW) is off by one for the current API; type 12 is the PUTTER (clubs_v6
+# model "HB Soft 2" confirms). Wedge ids 44/42/45 = 50/54/58 per this bag's
+# distance ladder + clubId registration order; other wedge ids unverified and
+# left generic. Types absent from the confirmed bag (5, 46, 49, 53, 56) are
+# inferred/generic — clubs.csv make/model/distance disambiguates if it matters.
 CLUBTYPE = {
     1: "Driver", 2: "3 Wood", 3: "5 Wood", 4: "Hybrid", 36: "Hybrid", 37: "Hybrid",
-    5: "3 Iron", 6: "4 Iron", 7: "5 Iron", 8: "6 Iron", 9: "7 Iron",
-    10: "8 Iron", 11: "9 Iron",
-    42: "Wedge", 44: "Wedge", 45: "Wedge", 46: "Wedge", 49: "Wedge", 53: "Wedge", 56: "Wedge",
+    5: "4 Iron",  # inferred (one below confirmed 6=5 Iron)
+    6: "5 Iron", 7: "6 Iron", 8: "7 Iron", 9: "8 Iron",
+    10: "9 Iron", 11: "Pitching Wedge",
+    44: "50 Wedge", 42: "54 Wedge", 45: "58 Wedge",
+    46: "Wedge", 49: "Wedge", 53: "Wedge", 56: "Wedge",
     12: "Putter", 14: "Putter",
 }
 
@@ -122,7 +128,9 @@ def club_category(name: Optional[str]) -> str:
         return "Iron"
     if "Wood" in name:
         return "Wood"
-    return {"Driver": "Driver", "Hybrid": "Hybrid", "Wedge": "Wedge",
+    if "Wedge" in name:  # "Pitching Wedge", "50 Wedge", generic "Wedge"
+        return "Wedge"
+    return {"Driver": "Driver", "Hybrid": "Hybrid",
             "Putter": "Putter"}.get(name, "?")
 
 # Par inference boundaries (yards, straight-line tee->pin); calibrated to course par.
