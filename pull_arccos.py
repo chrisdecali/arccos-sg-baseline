@@ -47,6 +47,8 @@ import urllib.request
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from weather import fetch_round_weather
+
 # ---------------------------------------------------------------------------
 # Paths / config
 # ---------------------------------------------------------------------------
@@ -596,6 +598,9 @@ ROUND_COLS = [
     "sg_total_broadie", "sg_off_tee_broadie", "sg_approach_broadie",
     "sg_short_broadie", "sg_putting_broadie",
     "user_hcp", "drive_hcp", "approach_hcp", "chip_hcp", "sand_hcp", "putt_hcp",
+    # Weather columns (external: Open-Meteo historical reanalysis by course lat/lng
+    # + round mid-time UTC; non-GPS — always published regardless of GOLF_INCLUDE_GPS).
+    "temp_f", "wind_mph", "wind_dir_deg", "wind_dir", "weather",
 ]
 HOLE_COLS = [
     "round_id", "date", "course", "hole_id", "par", "par_source", "shots", "net_score",
@@ -608,6 +613,12 @@ SHOT_COLS = [
     "round_id", "date", "hole_id", "shot_num", "club", "club_category",
     "shot_distance_yd", "start_dist_to_pin_yd", "end_dist_to_pin_yd",
     "start_lat", "start_lng", "end_lat", "end_lng",
+    # Elevation in metres (terrain altitude, NOT a locating coordinate — always published
+    # regardless of GOLF_INCLUDE_GPS). Useful for adjusting expected carry on hilly courses.
+    "start_alt", "end_alt",
+    # isHalfSwing flag from Arccos (bool -> 1/0). Helps isolate full-swing club distances
+    # from partial swings; useful since there is no launch monitor data in this dataset.
+    "is_half_swing",
     "lie_approx", "is_tee", "is_putt", "penalties", "category_approx", "sg_shot_approx",
 ]
 CLUB_COLS = [
@@ -619,7 +630,8 @@ HCP_COLS = ["round_id", "user_hcp", "drive_hcp", "approach_hcp", "chip_hcp",
             "sand_hcp", "putt_hcp"]
 
 
-def build_round(summary, detail, tee, hcp, clubid_map, rdash, pulled_at):
+def build_round(summary, detail, tee, hcp, clubid_map, rdash, pulled_at,
+                course_lat=None, course_lng=None):
     holes = [h for h in (detail.get("holes") or []) if h.get("shouldIgnore") != "T"]
     date = (summary.get("startTime") or "")[:10]
     course = summary.get("courseName") or detail.get("courseName") or "?"
@@ -730,6 +742,8 @@ def build_round(summary, detail, tee, hcp, clubid_map, rdash, pulled_at):
                 "start_dist_to_pin_yd": sd, "end_dist_to_pin_yd": ed,
                 "start_lat": s.get("startLat"), "start_lng": s.get("startLong"),
                 "end_lat": s.get("endLat"), "end_lng": s.get("endLong"),
+                "start_alt": s.get("startAltitude"), "end_alt": s.get("endAltitude"),
+                "is_half_swing": 1 if s.get("isHalfSwing") else 0,
                 "lie_approx": lie, "is_tee": 1 if si == 0 else 0,
                 "is_putt": 1 if lie == "green" else 0, "penalties": pen,
                 "category_approx": cat, "sg_shot_approx": sg_shot,
@@ -762,6 +776,38 @@ def build_round(summary, detail, tee, hcp, clubid_map, rdash, pulled_at):
     nh = len(holes)
     score = summary.get("scoreOverride") or summary.get("noOfShots")
     sec = overall.get("overallSection") or {}
+
+    # Weather enrichment (external: Open-Meteo historical reanalysis — not Arccos).
+    # Uses course lat/lng (fetched during build) + round mid-time UTC hour.
+    # Always graceful: returns {} on any failure so the pull is never broken.
+    wx: dict = {}
+    if course_lat is not None and course_lng is not None and date:
+        try:
+            start_str = summary.get("startTime") or ""
+            end_str = summary.get("endTime") or ""
+            _fmt = "%Y-%m-%dT%H:%M:%S.%fZ"
+            def _parse_utc(s: str) -> Optional[datetime]:
+                for fmt in ("%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ"):
+                    try:
+                        return datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
+                    except ValueError:
+                        continue
+                return None
+            t_start = _parse_utc(start_str)
+            t_end = _parse_utc(end_str)
+            if t_start and t_end:
+                mid_ts = t_start.timestamp() + (t_end.timestamp() - t_start.timestamp()) / 2
+                mid_hour = int(datetime.fromtimestamp(mid_ts, tz=timezone.utc).hour)
+            elif t_start:
+                mid_hour = int(t_start.hour)
+            else:
+                mid_hour = 12  # noon UTC fallback
+            wx = fetch_round_weather(
+                course_lat, course_lng, date, mid_hour, cache_dir=OUT_DIR
+            )
+        except Exception:  # noqa: BLE001
+            wx = {}
+
     rr = {
         "round_id": rid, "date": date, "course": course,
         "tee_name": tee.get("name"), "tee_yards": tee.get("distance"),
@@ -792,6 +838,10 @@ def build_round(summary, detail, tee, hcp, clubid_map, rdash, pulled_at):
         "user_hcp": hcp.get("userHcp"), "drive_hcp": hcp.get("driveHcp"),
         "approach_hcp": hcp.get("approachHcp"), "chip_hcp": hcp.get("chipHcp"),
         "sand_hcp": hcp.get("sandHcp"), "putt_hcp": hcp.get("puttHcp"),
+        # Weather (Open-Meteo historical reanalysis; {} when unavailable).
+        "temp_f": wx.get("temp_f"), "wind_mph": wx.get("wind_mph"),
+        "wind_dir_deg": wx.get("wind_dir_deg"), "wind_dir": wx.get("wind_dir"),
+        "weather": wx.get("weather"),
         "pulled_at": pulled_at,
     }
     return rr, hole_rows, shot_rows
@@ -897,6 +947,155 @@ def build_career_stats(tour, player, dashboard, pulled_at, counts) -> dict:
     }
 
 
+SGA_BANDS_COLS = [
+    "section", "metric", "slab", "slab_unit", "terrain", "sga",
+    "shots_count", "avg_dist_to_pin", "dist_to_pin_unit", "goal", "extra",
+]
+
+
+def extract_sga_bands(dashboard: Optional[dict]) -> list[dict]:
+    """Extract Arccos-computed SG band breakdowns from the account-level dashboard
+    response into a tidy long-format list. Sections/fields are Arccos-proprietary
+    (pre-computed strokes-gained vs goalHcp=0 scratch benchmark). Missing sections
+    are skipped gracefully — callers with few rounds may have empty subsections.
+
+    The resulting rows feed sga_bands.csv (non-GPS, always published).
+    """
+    if not isinstance(dashboard, dict):
+        return []
+    rows: list[dict] = []
+
+    def row(**kwargs) -> dict:
+        base: dict = {c: None for c in SGA_BANDS_COLS}
+        base.update(kwargs)
+        return base
+
+    def slab_val(obj: Any) -> tuple[Optional[str], Optional[str]]:
+        """Extract (value, unit) from a slab/distance object like {"value": "50-100", "unit": "Yards"}."""
+        if not isinstance(obj, dict):
+            return None, None
+        return obj.get("value"), obj.get("unit")
+
+    driving = dashboard.get("driving") or {}
+    # driving.distanceVsAccuracy — aggregate SG for distance/accuracy/penalties
+    dva = driving.get("distanceVsAccuracy") or {}
+    if dva:
+        rows.append(row(section="driving", metric="sg_distance", sga=dva.get("sgDistance")))
+        rows.append(row(section="driving", metric="sg_accuracy", sga=dva.get("sgAccuracy")))
+        rows.append(row(section="driving", metric="sg_penalties", sga=dva.get("sgPenalties")))
+
+    # driving.drivingDistance — avg distance + goal + longest
+    dd = driving.get("drivingDistance") or {}
+    if dd:
+        avg_obj = dd.get("averageDistance") or {}
+        goal_obj = dd.get("goal") or {}
+        rows.append(row(
+            section="driving", metric="driving_distance",
+            sga=avg_obj.get("value"),
+            goal=goal_obj.get("value"),
+            extra=f"longestDrive={dd.get('longestDrive')},drivingCount={dd.get('drivingCount')}",
+        ))
+
+    # driving.drivingByHoleLength[] — SG by tee-shot hole length band
+    for entry in (driving.get("drivingByHoleLength") or []):
+        sv, su = slab_val(entry.get("slab"))
+        rows.append(row(
+            section="driving", metric="driving_by_hole_length",
+            slab=sv, slab_unit=su,
+            sga=entry.get("sga"), shots_count=entry.get("shotsCount"),
+        ))
+
+    approach = dashboard.get("approach") or {}
+    # approach.approachByPinDistance[] — SG from various distances
+    for entry in (approach.get("approachByPinDistance") or []):
+        sv, su = slab_val(entry.get("slab"))
+        rows.append(row(
+            section="approach", metric="approach_by_pin_distance",
+            slab=sv, slab_unit=su,
+            sga=entry.get("sga"), shots_count=entry.get("shotsCount"),
+        ))
+
+    # approach.approachByTerrain[] — SG by lie (fairway/rough/sand/tee)
+    for entry in (approach.get("approachByTerrain") or []):
+        rows.append(row(
+            section="approach", metric="approach_by_terrain",
+            terrain=entry.get("terrain"),
+            sga=entry.get("sga"), shots_count=entry.get("shotsCount"),
+        ))
+
+    short = dashboard.get("short") or {}
+    # short.chipByPinDistance[] — chip SG by distance to pin (key chip-leave data)
+    for entry in (short.get("chipByPinDistance") or []):
+        sv, su = slab_val(entry.get("slab"))
+        rows.append(row(
+            section="short", metric="chip_by_pin_distance",
+            slab=sv, slab_unit=su,
+            sga=entry.get("sga"), shots_count=entry.get("shotsCount"),
+        ))
+
+    # short.chippingAccuracy[] — avg distance to pin by slab with goal
+    for entry in (short.get("chippingAccuracy") or []):
+        sv, su = slab_val(entry.get("slab"))
+        adp = entry.get("avgDistanceToPin") or {}
+        adp_goal = entry.get("avgDistanceToPinGoal") or {}
+        rows.append(row(
+            section="short", metric="chipping_accuracy",
+            slab=sv, slab_unit=su,
+            avg_dist_to_pin=adp.get("value"), dist_to_pin_unit=adp.get("unit"),
+            goal=adp_goal.get("value"),
+        ))
+
+    # short.sandByPinDistance[] — bunker SG by distance
+    for entry in (short.get("sandByPinDistance") or []):
+        sv, su = slab_val(entry.get("slab"))
+        rows.append(row(
+            section="short", metric="sand_by_pin_distance",
+            slab=sv, slab_unit=su,
+            sga=entry.get("sga"), shots_count=entry.get("shotsCount"),
+        ))
+
+    # short.sandAccuracy[] — avg distance to pin from sand by slab
+    for entry in (short.get("sandAccuracy") or []):
+        sv, su = slab_val(entry.get("slab"))
+        adp = entry.get("avgDistanceToPin") or {}
+        adp_goal = entry.get("avgDistanceToPinGoal") or {}
+        rows.append(row(
+            section="short", metric="sand_accuracy",
+            slab=sv, slab_unit=su,
+            avg_dist_to_pin=adp.get("value"), dist_to_pin_unit=adp.get("unit"),
+            goal=adp_goal.get("value"),
+        ))
+
+    putting = dashboard.get("putting") or {}
+    # putting.puttingByLength[] — SG by putt length band
+    for entry in (putting.get("puttingByLength") or []):
+        sv, su = slab_val(entry.get("slab"))
+        rows.append(row(
+            section="putting", metric="putting_by_length",
+            slab=sv, slab_unit=su,
+            sga=entry.get("sga"), shots_count=entry.get("shotsCount"),
+        ))
+
+    # overall.overallSection.caddieInsights — helping/hurting factors
+    # May be empty with few rounds; tolerate gracefully.
+    overall = dashboard.get("overall") or {}
+    ov_sec = overall.get("overallSection") or {}
+    caddie = ov_sec.get("caddieInsights") or {}
+    for metric, key in (("caddie_helping", "helping"), ("caddie_hurting", "hurting")):
+        for entry in (caddie.get(key) or []):
+            dist_obj = entry.get("fromDistance") or {}
+            sv, _ = slab_val(dist_obj) if isinstance(dist_obj, dict) else (None, None)
+            rows.append(row(
+                section="overall", metric=metric,
+                slab=sv,
+                terrain=entry.get("from"),
+                sga=entry.get("sga"),
+                extra=entry.get("label"),
+            ))
+
+    return rows
+
+
 def build(pulled_at: str) -> dict:
     os.makedirs(OUT_DIR, exist_ok=True)
     summaries = _load(os.path.join(CACHE, "rounds_list.json")) or []
@@ -907,6 +1106,7 @@ def build(pulled_at: str) -> dict:
 
     # Load round details + course tees + per-round dashboards.
     details, courses, rdashes = {}, {}, {}
+    course_latlng: dict = {}  # courseId -> (lat, lng) for weather enrichment
     for r in summaries:
         rid = r.get("roundId")
         d = _load(os.path.join(CACHE, "rounds", f"{rid}.json"))
@@ -918,6 +1118,9 @@ def build(pulled_at: str) -> dict:
             c = _load(os.path.join(CACHE, "courses", f"{cid}.json"))
             if c:
                 courses[cid] = {str(t.get("teeId")): t for t in (c.get("courseTees") or [])}
+                lat, lng = c.get("latitude"), c.get("longitude")
+                if lat is not None and lng is not None:
+                    course_latlng[cid] = (float(lat), float(lng))
 
     clubid_map = build_clubid_map(meta, list(details.values()))
 
@@ -927,9 +1130,12 @@ def build(pulled_at: str) -> dict:
         detail = details.get(rid)
         if not detail:
             continue
-        tee = courses.get(r.get("courseId"), {}).get(str(r.get("teeId")), {})
+        cid = r.get("courseId")
+        tee = courses.get(cid, {}).get(str(r.get("teeId")), {})
         hcp = hcp_by_round.get(rid, {})
-        rr, hr, sr = build_round(r, detail, tee, hcp, clubid_map, rdashes.get(rid), pulled_at)
+        c_lat, c_lng = (course_latlng.get(cid) or (None, None))
+        rr, hr, sr = build_round(r, detail, tee, hcp, clubid_map, rdashes.get(rid), pulled_at,
+                                 course_lat=c_lat, course_lng=c_lng)
         round_rows.append(rr)
         hole_rows.extend(hr)
         shot_rows.extend(sr)
@@ -954,11 +1160,17 @@ def build(pulled_at: str) -> dict:
                           _load(os.path.join(CACHE, "subscription.json")))
     _save(os.path.join(OUT_DIR, "player_profile.json"), prof)
 
+    # sga_bands.csv — Arccos-computed SG band breakdowns (non-GPS, always published).
+    # Source: account-level dashboard.json. Bands are Arccos' own SG calculation vs goalHcp=0.
+    dashboard_raw = _load(os.path.join(CACHE, "dashboard.json"))
+    band_rows = extract_sga_bands(dashboard_raw)
+    write_csv(os.path.join(OUT_DIR, "sga_bands.csv"), SGA_BANDS_COLS, band_rows)
+
     counts = dict(rounds=len(round_rows), holes=len(hole_rows), shots=len(shot_rows),
-                  clubs=len(club_rows), hcp=len(hcp_rows))
+                  clubs=len(club_rows), hcp=len(hcp_rows), sga_bands=len(band_rows))
     career = build_career_stats(_load(os.path.join(CACHE, "tour_summary.json")),
                                 _load(os.path.join(CACHE, "player_summary.json")),
-                                _load(os.path.join(CACHE, "dashboard.json")), pulled_at, counts)
+                                dashboard_raw, pulled_at, counts)
     _save(os.path.join(OUT_DIR, "career_stats.json"), career)
 
     build_xlsx(round_rows, hole_rows, shot_rows, club_rows, hcp_rows, career, pulled_at, counts)

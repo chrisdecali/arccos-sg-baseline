@@ -248,6 +248,67 @@ SCORE_COLS = ["played_at", "course_name", "holes", "adjusted_gross_score", "cour
               "slope_rating", "differential", "score_type", "status", "used", "exceptional",
               "posted_at", "score_id"]
 HIST_COLS = ["date", "handicap_index", "low_hi", "is_low_hi"]
+HOLE_SCORE_COLS = [
+    "score_id", "played_at", "course_name", "hole_number", "par", "raw_score",
+    "adjusted_gross_score", "stroke_allocation", "putts", "fairway_hit", "gir_flag",
+    "drive_accuracy", "approach_shot_accuracy", "x_hole", "most_likely_score",
+]
+
+
+def build_hole_scores(scores: Any) -> list[dict]:
+    """Extract per-hole detail rows from GHIN score buckets.
+
+    Iterates recent_scores and revision_scores (deduped by score id) and emits
+    one row per hole_detail entry. Many fields (putts, fairway_hit, gir_flag, etc.)
+    are null for manually posted scores — that is expected; write null/empty.
+    Returns rows sorted by played_at desc, then hole_number asc.
+    """
+    if not isinstance(scores, dict):
+        return []
+    rows: list[dict] = []
+    seen: set = set()
+    for k in ("recent_scores", "revision_scores", "9_hole_score", "scores", "results"):
+        v = scores.get(k)
+        if isinstance(v, dict):
+            v = v.get("scores")
+        if not isinstance(v, list):
+            continue
+        for s in v:
+            if not isinstance(s, dict):
+                continue
+            sid = s.get("id")
+            if sid is not None and sid in seen:
+                continue
+            if sid is not None:
+                seen.add(sid)
+            played_at = (_g(s, "played_at", "date_played", default="") or "")[:10]
+            course_name = _g(s, "course_name", "course_display_value", default="")
+            for hd in (s.get("hole_details") or []):
+                if not isinstance(hd, dict):
+                    continue
+                rows.append({
+                    "score_id": sid,
+                    "played_at": played_at,
+                    "course_name": course_name,
+                    "hole_number": _g(hd, "hole_number", "hole"),
+                    "par": _g(hd, "par"),
+                    "raw_score": _g(hd, "raw_score", "gross_score", "score"),
+                    "adjusted_gross_score": _g(hd, "adjusted_gross_score", "adjusted_score"),
+                    "stroke_allocation": _g(hd, "stroke_allocation", "handicap_stroke"),
+                    "putts": _g(hd, "putts", "number_of_putts"),
+                    "fairway_hit": _g(hd, "fairway_hit"),
+                    "gir_flag": _g(hd, "gir_flag", "green_in_regulation"),
+                    "drive_accuracy": _g(hd, "drive_accuracy"),
+                    "approach_shot_accuracy": _g(hd, "approach_shot_accuracy"),
+                    "x_hole": _g(hd, "x_hole"),
+                    "most_likely_score": _g(hd, "most_likely_score"),
+                })
+    rows.sort(key=lambda r: (
+        r.get("played_at") or "", r.get("hole_number") or 0
+    ), reverse=False)
+    # Re-sort: newest first by played_at, then hole ascending within a round.
+    rows.sort(key=lambda r: r.get("played_at") or "", reverse=True)
+    return rows
 
 
 def _scores_list(scores: Any) -> list[dict]:
@@ -360,12 +421,18 @@ def build(data: dict) -> dict:
     prof = build_profile(data.get("profile"))
     write_csv(os.path.join(OUT_DIR, "ghin_scores.csv"), SCORE_COLS, scores)
     write_csv(os.path.join(OUT_DIR, "ghin_handicap_history.csv"), HIST_COLS, hist)
+    # ghin_hole_scores.csv — per-hole detail rows (non-GPS, always published).
+    # Many stat fields (putts, gir_flag, etc.) are null for manually-posted scores;
+    # that is normal GHIN behaviour — the row is written with empty values regardless.
+    hole_scores = build_hole_scores(data.get("scores"))
+    write_csv(os.path.join(OUT_DIR, "ghin_hole_scores.csv"), HOLE_SCORE_COLS, hole_scores)
     profile_path = os.path.join(OUT_DIR, "ghin_profile.json")
     tmp = profile_path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(prof, f, indent=2)
     os.replace(tmp, profile_path)
-    return {"scores": len(scores), "revisions": len(hist), "index": prof.get("handicap_index")}
+    return {"scores": len(scores), "revisions": len(hist), "index": prof.get("handicap_index"),
+            "hole_scores": len(hole_scores)}
 
 
 # ---------------------------------------------------------------------------
