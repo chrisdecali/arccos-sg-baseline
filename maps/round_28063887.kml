@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+<name>Arccos WindRose GC 2026-06-14 (round 28063887)</name>
+<Style id="tee"><LineStyle><color>ff0000ff</color><width>3</width></LineStyle><IconStyle><color>ff0000ff</color></IconStyle></Style>
+<Style id="approach"><LineStyle><color>ff00a5ff</color><width>3</width></LineStyle><IconStyle><color>ff00a5ff</color></IconStyle></Style>
+<Style id="short"><LineStyle><color>ff00ff00</color><width>3</width></LineStyle><IconStyle><color>ff00ff00</color></IconStyle></Style>
+<Style id="putt"><LineStyle><color>ffff0000</color><width>3</width></LineStyle><IconStyle><color>ffff0000</color></IconStyle></Style>
+<Folder><name>Hole 1</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.511873113416,30.055389806647</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 99y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5136962,30.0578917 -95.513280166667,30.057158366667</coordinates></LineString></Placemark>
+<Placemark><name>S2 3 Wood 29y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.513280166667,30.057158366667 -95.5131428,30.0569558</coordinates></LineString></Placemark>
+<Placemark><name>S3 5 Iron 170y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5131428,30.0569558 -95.512126417143,30.055870917143</coordinates></LineString></Placemark>
+<Placemark><name>S4 54 Wedge 59y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.512126417143,30.055870917143 -95.5117566,30.055503</coordinates></LineString></Placemark>
+<Placemark><name>S5 Putter 16y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5117566,30.055503 -95.511858366474,30.055404133393</coordinates></LineString></Placemark>
+<Placemark><name>S6 Putter 2y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.511858366474,30.055404133393 -95.511873113416,30.055389806647</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 2</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.514442539511,30.055765568762</coordinates></Point></Placemark>
+<Placemark><name>S1 Pitching Wedge 132y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5141338,30.0547575 -95.5144692,30.0557996</coordinates></LineString></Placemark>
+<Placemark><name>S2 Putter 4y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5144692,30.0557996 -95.514446094242,30.055770106261</coordinates></LineString></Placemark>
+<Placemark><name>S3 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.514446094242,30.055770106261 -95.514442539511,30.055765568762</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 3</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.516658354329,30.054353477852</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 165y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5146709,30.0567604 -95.5149014,30.0554215</coordinates></LineString></Placemark>
+<Placemark><name>S2 5 Iron 149y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5149014,30.0554215 -95.5161392,30.054829</coordinates></LineString></Placemark>
+<Placemark><name>S3 58 Wedge 85y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5161392,30.054829 -95.5166555,30.054292</coordinates></LineString></Placemark>
+<Placemark><name>S4 Putter 5y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5166555,30.054292 -95.516657464178,30.05433430537</coordinates></LineString></Placemark>
+<Placemark><name>S5 Putter 2y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.516657464178,30.05433430537 -95.5166581,30.054348</coordinates></LineString></Placemark>
+<Placemark><name>S6 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5166581,30.054348 -95.516658354329,30.054353477852</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 4</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.515006099645,30.05908200417</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 286y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5167583,30.0548809 -95.5152176,30.0568145</coordinates></LineString></Placemark>
+<Placemark><name>S2 5 Iron 132y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5152176,30.0568145 -95.5152813,30.0578998</coordinates></LineString></Placemark>
+<Placemark><name>S3 9 Iron 152y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5152813,30.0578998 -95.5154017,30.0591489</coordinates></LineString></Placemark>
+<Placemark><name>S4 58 Wedge 22y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5154017,30.0591489 -95.5151939,30.0591668</coordinates></LineString></Placemark>
+<Placemark><name>S5 58 Wedge 22y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5151939,30.0591668 -95.5150067,30.0590957</coordinates></LineString></Placemark>
+<Placemark><name>S6 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5150067,30.0590957 -95.515006339787,30.059087482502</coordinates></LineString></Placemark>
+<Placemark><name>S7 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.515006339787,30.059087482502 -95.515006099645,30.05908200417</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 5</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.518226953049,30.06179343257</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 277y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5152781,30.0603288 -95.5177023,30.061214</coordinates></LineString></Placemark>
+<Placemark><name>S2 54 Wedge 69y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5177023,30.061214 -95.5180221,30.061707</coordinates></LineString></Placemark>
+<Placemark><name>S3 Putter 22y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5180221,30.061707 -95.51820702481,30.061785024374</coordinates></LineString></Placemark>
+<Placemark><name>S4 Putter 3y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.51820702481,30.061785024374 -95.518233,30.0617918</coordinates></LineString></Placemark>
+<Placemark><name>S5 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.518233,30.0617918 -95.518226953049,30.06179343257</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 6</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.518603114487,30.059612021262</coordinates></Point></Placemark>
+<Placemark><name>S1 5 Wood 142y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.518352921818,30.060949250909 -95.5182273,30.0597872</coordinates></LineString></Placemark>
+<Placemark><name>S2 58 Wedge 71y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5182273,30.0597872 -95.5188095,30.0594939</coordinates></LineString></Placemark>
+<Placemark><name>S3 58 Wedge 6y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5188095,30.0594939 -95.5187648,30.0595196</coordinates></LineString></Placemark>
+<Placemark><name>S4 Putter 20y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5187648,30.0595196 -95.5186084,30.059609</coordinates></LineString></Placemark>
+<Placemark><name>S5 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5186084,30.059609 -95.518603114487,30.059612021262</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 7</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.52077577513,30.062893350155</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 76y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5195017,30.0602103 -95.5195617,30.0608329</coordinates></LineString></Placemark>
+<Placemark><name>S2 Hybrid 221y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5195617,30.0608329 -95.5205663,30.0624278</coordinates></LineString></Placemark>
+<Placemark><name>S3 54 Wedge 103y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5205663,30.0624278 -95.5209617,30.063199</coordinates></LineString></Placemark>
+<Placemark><name>S4 54 Wedge 29y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5209617,30.063199 -95.5208117,30.0629967</coordinates></LineString></Placemark>
+<Placemark><name>S5 Putter 12y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5208117,30.0629967 -95.5207776,30.0628986</coordinates></LineString></Placemark>
+<Placemark><name>S6 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5207776,30.0628986 -95.52077577513,30.062893350155</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 8</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.516341370244,30.064421115021</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 211y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5203031,30.0642385 -95.5183045,30.0641607</coordinates></LineString></Placemark>
+<Placemark><name>S2 7 Iron 112y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5183045,30.0641607 -95.5173234,30.0638076</coordinates></LineString></Placemark>
+<Placemark><name>S3 7 Iron 137y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5173234,30.0638076 -95.516398396,30.06460386</coordinates></LineString></Placemark>
+<Placemark><name>S4 54 Wedge 22y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.516398396,30.06460386 -95.5163339,30.0644332</coordinates></LineString></Placemark>
+<Placemark><name>S5 Putter 2y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5163339,30.0644332 -95.516341370244,30.064421115021</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 9</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.513655552658,30.0613222672</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 261y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5150588,30.0647206 -95.514882691892,30.062578232432</coordinates></LineString></Placemark>
+<Placemark><name>S2 5 Iron 184y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.514882691892,30.062578232432 -95.5141737,30.0611914</coordinates></LineString></Placemark>
+<Placemark><name>S3 58 Wedge 37y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5141737,30.0611914 -95.5138272,30.0611579</coordinates></LineString></Placemark>
+<Placemark><name>S4 Putter 26y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5138272,30.0611579 -95.5136598,30.0613182</coordinates></LineString></Placemark>
+<Placemark><name>S5 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5136598,30.0613182 -95.513655552658,30.0613222672</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 10</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.508913475274,30.0578214022</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 269y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5122191,30.0592576 -95.5100248,30.0581218</coordinates></LineString></Placemark>
+<Placemark><name>S2 Pitching Wedge 84y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5100248,30.0581218 -95.5092606,30.057934</coordinates></LineString></Placemark>
+<Placemark><name>S3 58 Wedge 34y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5092606,30.057934 -95.5089644,30.0578238</coordinates></LineString></Placemark>
+<Placemark><name>S4 Putter 5y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5089644,30.0578238 -95.5089198,30.0578217</coordinates></LineString></Placemark>
+<Placemark><name>S5 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5089198,30.0578217 -95.508913475274,30.0578214022</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 11</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.50677836127,30.059005195483</coordinates></Point></Placemark>
+<Placemark><name>S1 6 Iron 112y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5080288,30.0582509 -95.5073623,30.058967</coordinates></LineString></Placemark>
+<Placemark><name>S2 58 Wedge 57y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5073623,30.058967 -95.506825732343,30.059002097034</coordinates></LineString></Placemark>
+<Placemark><name>S3 Putter 3y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.506825732343,30.059002097034 -95.506800467771,30.059003749542</coordinates></LineString></Placemark>
+<Placemark><name>S4 Putter 2y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.506800467771,30.059003749542 -95.506784677413,30.059004782357</coordinates></LineString></Placemark>
+<Placemark><name>S5 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.506784677413,30.059004782357 -95.50677836127,30.059005195483</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 12</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.503449911604,30.061806918002</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 265y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5051462,30.0586049 -95.5033386,30.0601241</coordinates></LineString></Placemark>
+<Placemark><name>S2 Hybrid 48y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5033386,30.0601241 -95.503373188889,30.060517214815</coordinates></LineString></Placemark>
+<Placemark><name>S3 5 Wood 78y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.503373188889,30.060517214815 -95.5034579,30.0611584</coordinates></LineString></Placemark>
+<Placemark><name>S4 58 Wedge 94y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5034579,30.0611584 -95.5030021,30.0618265</coordinates></LineString></Placemark>
+<Placemark><name>S5 50 Wedge 48y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5030021,30.0618265 -95.5034517,30.0617933</coordinates></LineString></Placemark>
+<Placemark><name>S6 Putter 2y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5034517,30.0617933 -95.503449911604,30.061806918002</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 13</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.509252118997,30.061140995627</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 147y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5054321,30.0620974 -95.5064602,30.0612803</coordinates></LineString></Placemark>
+<Placemark><name>S2 5 Iron 152y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5064602,30.0612803 -95.5079019,30.0611792</coordinates></LineString></Placemark>
+<Placemark><name>S3 7 Iron 150y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5079019,30.0611792 -95.509301576667,30.060955886667</coordinates></LineString></Placemark>
+<Placemark><name>S4 54 Wedge 25y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.509301576667,30.060955886667 -95.5092519,30.0611547</coordinates></LineString></Placemark>
+<Placemark><name>S5 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5092519,30.0611547 -95.509252031399,30.061146477376</coordinates></LineString></Placemark>
+<Placemark><name>S6 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.509252031399,30.061146477376 -95.509252118997,30.061140995627</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 14</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.506726864749,30.065480564849</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 179y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5098136,30.0623639 -95.5090495,30.0636755</coordinates></LineString></Placemark>
+<Placemark><name>S2 Hybrid 31y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5090495,30.0636755 -95.508784133333,30.0637801625</coordinates></LineString></Placemark>
+<Placemark><name>S3 3 Wood 122y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.508784133333,30.0637801625 -95.5082294,30.0646632</coordinates></LineString></Placemark>
+<Placemark><name>S4 5 Iron 171y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5082294,30.0646632 -95.5070678,30.0656437</coordinates></LineString></Placemark>
+<Placemark><name>S5 54 Wedge 39y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5070678,30.0656437 -95.506740723962,30.065487196414</coordinates></LineString></Placemark>
+<Placemark><name>S6 Putter 2y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.506740723962,30.065487196414 -95.506726864749,30.065480564849</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 15</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.509564284218,30.063751735931</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 100y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5074382,30.0661751 -95.5081389,30.0656156</coordinates></LineString></Placemark>
+<Placemark><name>S2 5 Iron 184y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5081389,30.0656156 -95.5092935,30.0644833</coordinates></LineString></Placemark>
+<Placemark><name>S3 Pitching Wedge 85y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5092935,30.0644833 -95.5095712,30.063825</coordinates></LineString></Placemark>
+<Placemark><name>S4 Putter 8y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5095712,30.063825 -95.5095648,30.0637572</coordinates></LineString></Placemark>
+<Placemark><name>S5 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5095648,30.0637572 -95.509564284218,30.063751735931</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 16</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.510343110681,30.066613157199</coordinates></Point></Placemark>
+<Placemark><name>S1 8 Iron 171y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5099881,30.0652784 -95.5103272,30.0666519</coordinates></LineString></Placemark>
+<Placemark><name>S2 Putter 4y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5103272,30.0666519 -95.510340989257,30.066618322906</coordinates></LineString></Placemark>
+<Placemark><name>S3 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.510340989257,30.066618322906 -95.510343110681,30.066613157199</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 17</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.511237708325,30.064025150648</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 236y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.5118746,30.0661919 -95.5124199,30.0643092</coordinates></LineString></Placemark>
+<Placemark><name>S2 9 Iron 126y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5124199,30.0643092 -95.5112342,30.0641973</coordinates></LineString></Placemark>
+<Placemark><name>S3 Putter 20y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5112342,30.0641973 -95.511237596616,30.064030632069</coordinates></LineString></Placemark>
+<Placemark><name>S4 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.511237596616,30.064030632069 -95.511237708325,30.064025150648</coordinates></LineString></Placemark>
+</Folder>
+<Folder><name>Hole 18</name>
+<Placemark><name>Pin</name><Point><coordinates>-95.511796813631,30.060634822692</coordinates></Point></Placemark>
+<Placemark><name>S1 Driver 231y</name><styleUrl>#tee</styleUrl><LineString><coordinates>-95.510024776289,30.063719190722 -95.511192,30.0621145</coordinates></LineString></Placemark>
+<Placemark><name>S2 5 Iron 125y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.511192,30.0621145 -95.5114501,30.0611149</coordinates></LineString></Placemark>
+<Placemark><name>S3 58 Wedge 37y</name><styleUrl>#short</styleUrl><LineString><coordinates>-95.5114501,30.0611149 -95.5117186,30.0609215</coordinates></LineString></Placemark>
+<Placemark><name>S4 58 Wedge 22y</name><styleUrl>#approach</styleUrl><LineString><coordinates>-95.5117186,30.0609215 -95.5117064,30.0607386</coordinates></LineString></Placemark>
+<Placemark><name>S5 Putter 15y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.5117064,30.0607386 -95.511793,30.0606392</coordinates></LineString></Placemark>
+<Placemark><name>S6 Putter 1y</name><styleUrl>#putt</styleUrl><LineString><coordinates>-95.511793,30.0606392 -95.511796813631,30.060634822692</coordinates></LineString></Placemark>
+</Folder>
+</Document></kml>

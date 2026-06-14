@@ -1,4 +1,5 @@
 played_at,course_name,holes,adjusted_gross_score,course_rating,slope_rating,differential,score_type,status,used,exceptional,posted_at,score_id
+2026-06-14,WindRose Golf Club,18,92,72.1,127,17.7,H,Validated,0,0,2026-06-14,1170854129
 2026-06-06,WindRose Golf Club,18,96,72.1,127,21.3,H,Validated,0,0,2026-06-06,1167864949
 2026-05-16,WindRose Golf Club,18,88,72.1,127,14.1,H,Validated,1,0,2026-06-07,1168056070
 2026-05-03,Forest,18,101,73.6,137,22.6,H,Validated,0,0,2026-06-07,1168056454

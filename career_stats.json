@@ -1,24 +1,24 @@
 {
-  "pulled_at": "2026-06-14 12:00 UTC",
-  "rounds": 1,
-  "holes": 18,
-  "shots": 95,
+  "pulled_at": "2026-06-14 18:21 UTC",
+  "rounds": 2,
+  "holes": 36,
+  "shots": 189,
   "player_summary": {
-    "handicap": -25.7,
-    "totalRounds": 1,
-    "holesPlayed": 18,
-    "shotsPlayed": 96,
+    "handicap": -23.9,
+    "totalRounds": 2,
+    "holesPlayed": 36,
+    "shotsPlayed": 190,
     "settings": {
       "noOfRounds": 1,
-      "goalHcp": -12
+      "goalHcp": -15
     }
   },
   "strokes_gained_arccos": {
-    "sga": -23.7,
-    "drivingSga": -1.2,
-    "approachSga": -14.6,
-    "shortSga": -6.1,
-    "puttingSga": -1.8,
+    "sga": -21.9,
+    "drivingSga": -4.3,
+    "approachSga": -12.1,
+    "shortSga": -3.4,
+    "puttingSga": -2.2,
     "historicSga": null
   },
   "caddie_insights": {
@@ -26,7 +26,7 @@
       {
         "shotType": "putting",
         "label": "puttingByLength",
-        "sga": 1.5,
+        "sga": 0.9,
         "fromDistance": {
           "unit": "ft",
           "value": "50+"
@@ -35,43 +35,43 @@
         "insightId": 18
       },
       {
+        "shotType": "driving",
+        "label": "distanceVsAccuracy",
+        "sga": 0,
+        "from": "penalties",
+        "insightId": 19
+      },
+      {
         "shotType": "short",
         "label": "sandByPinDistance",
-        "sga": 0.1,
+        "sga": 0,
         "fromDistance": {
           "unit": "Yards",
           "value": "25-50"
         },
         "slabId": 10,
         "insightId": 14
-      },
-      {
-        "shotType": "driving",
-        "label": "distanceVsAccuracy",
-        "sga": 0,
-        "from": "penalties",
-        "insightId": 19
       }
     ],
     "hurting": [
       {
         "shotType": "approach",
         "label": "approachByTerrain",
-        "sga": -6.2,
-        "from": "rough",
-        "insightId": 9
-      },
-      {
-        "shotType": "approach",
-        "label": "approachByTerrain",
-        "sga": -5.8,
+        "sga": -5.6,
         "from": "fairway",
         "insightId": 8
       },
       {
         "shotType": "approach",
+        "label": "approachByTerrain",
+        "sga": -4.7,
+        "from": "rough",
+        "insightId": 9
+      },
+      {
+        "shotType": "approach",
         "label": "approachByPinDistance",
-        "sga": -4.9,
+        "sga": -4.1,
         "fromDistance": {
           "unit": "Yards",
           "value": "50-100"
@@ -84,16 +84,16 @@
   "score_analysis": {
     "parsData": {
       "par3": {
-        "score": 4.8,
-        "sga": -1.7
+        "score": 4.4,
+        "sga": -1.3
       },
       "par4": {
-        "score": 5.1,
-        "sga": -1
+        "score": 5.3,
+        "sga": -1.1
       },
       "par5": {
-        "score": 6.5,
-        "sga": -1.9
+        "score": 6.3,
+        "sga": -1.6
       }
     },
     "birdies": {
@@ -109,7 +109,7 @@
     "bogies": {
       "actual": {
         "unit": "percent",
-        "value": 50
+        "value": 42
       },
       "goal": {
         "unit": "percent",
@@ -119,7 +119,7 @@
     "doubleplus": {
       "actual": {
         "unit": "percent",
-        "value": 33
+        "value": 39
       },
       "goal": {
         "unit": "percent",
@@ -129,7 +129,7 @@
     "pars": {
       "actual": {
         "unit": "percent",
-        "value": 17
+        "value": 19
       },
       "goal": {
         "unit": "percent",
@@ -141,53 +141,53 @@
       "goal": 2.2
     },
     "bogiesRaw": {
-      "actual": 9,
+      "actual": 7.5,
       "goal": 4.6
     },
     "doubleplusRaw": {
-      "actual": 6,
+      "actual": 7,
       "goal": 0.7
     },
     "parsRaw": {
-      "actual": 3,
+      "actual": 3.5,
       "goal": 10.5
     }
   },
   "key_rates": {
-    "fairway_pct": 64.3,
+    "fairway_pct": 42.9,
     "gir_pct": 27.8,
     "scramble_chip_save_pct": 0.0,
-    "chip_down_pct": 11.1,
+    "chip_down_pct": 22.2,
     "chip_error_rate": 18.2,
     "sand_save_pct": 0.0,
     "three_putt_pct": 16.7,
-    "one_putt_pct": 5.6,
-    "putts_per_round": 38.0
+    "one_putt_pct": 11.1,
+    "putts_per_round": 37.0
   },
   "career_by_category": {
     "drive": {
-      "noOfFairWaysHit": 9,
-      "noOfFairWaysRight": 0,
+      "noOfFairWaysHit": 12,
+      "noOfFairWaysRight": 5,
       "noOfHoles": null,
-      "noOfFairWaysLeft": 5,
-      "noOfFairwayAttempts": 14,
+      "noOfFairWaysLeft": 11,
+      "noOfFairwayAttempts": 28,
       "noOfPlusOnePenalties": 0,
-      "noOfRecoveryShotsHit": 2,
+      "noOfRecoveryShotsHit": 9,
       "noOfPlusTwoPenalties": 0,
-      "noOfTimesRecoveryRequired": 2,
-      "totalDistance": 3035.272659301758,
-      "maxDistance": 247.294,
-      "noOfDriveShotsNotIgnored": 14,
-      "noOfDriveShots": 14,
-      "deltaDistance": 28.861928156835837,
+      "noOfTimesRecoveryRequired": 9,
+      "totalDistance": 5593.903076171875,
+      "maxDistance": 260.803,
+      "noOfDriveShotsNotIgnored": 28,
+      "noOfDriveShots": 28,
+      "deltaDistance": 52.40875398876519,
       "noOfGreensHitInRegulation": 0,
-      "noOfShort": 2,
-      "noOfRecoveryShots": 2,
-      "noOfRecoveryShotsNotIgnored": 2,
-      "totalDistanceRecoveryShots": 64.45765495300293,
-      "maxDistanceRecoveryShots": 35.5918,
-      "deltaDistanceRecoveryShots": 3.362942695617676,
-      "driveHcp": -7.49223,
+      "noOfShort": 7,
+      "noOfRecoveryShots": 9,
+      "noOfRecoveryShotsNotIgnored": 9,
+      "totalDistanceRecoveryShots": 795.698278427124,
+      "maxDistanceRecoveryShots": 167.778,
+      "deltaDistanceRecoveryShots": 51.63343779143239,
+      "driveHcp": -18.7461,
       "expectedDistance": 0,
       "expectedDistanceRangeLow": 0,
       "expectedDistanceRangeHigh": 0
@@ -196,40 +196,40 @@
       "noOfPlusOnePenalties": 0,
       "noOfShotsInSand": 3,
       "noOfPlusTwoPenalties": 0,
-      "noOfGreensHitInRegulation": 5,
-      "noOfGreens": 16,
-      "noOfHoles": 18,
-      "noOfGreensHit": 7,
+      "noOfGreensHitInRegulation": 10,
+      "noOfGreens": 29,
+      "noOfHoles": 36,
+      "noOfGreensHit": 16,
       "noOfRight": 3,
       "noOfLong": 3,
-      "noOfLeft": 1,
-      "noOfShort": 4,
-      "noOfApproachShots": 23,
-      "noOfStrokesToGetDown": 96,
-      "totalDistanceToPin": 816.3141489028931,
-      "totalDistanceToPinOnGreensHit": 115.9676160812378,
-      "totalDistanceToPinOnGreensHitInRegulation": 73.00543689727783,
-      "noOfLayUpShots": 4,
-      "approachHcp": -30
+      "noOfLeft": 3,
+      "noOfShort": 10,
+      "noOfApproachShots": 47,
+      "noOfStrokesToGetDown": 188,
+      "totalDistanceToPin": 1862.75057554245,
+      "totalDistanceToPinOnGreensHit": 227.14345121383667,
+      "totalDistanceToPinOnGreensHitInRegulation": 147.78784132003784,
+      "noOfLayUpShots": 6,
+      "approachHcp": -27.3459
     },
     "chip": {
       "noOfPlusOnePenalties": 1,
-      "noOfErrors": 2,
+      "noOfErrors": 4,
       "noOfPlusTwoPenalties": 0,
       "noOfZeroPutts": 1,
-      "noOfOnePutts": 0,
-      "noOfTwoPutts": 9,
+      "noOfOnePutts": 3,
+      "noOfTwoPutts": 17,
       "noOfThreePlusPutts": 1,
-      "noOfChipDownChances": 9,
-      "noOfChipDownSuccesses": 1,
-      "noOfChipSaveChances": 7,
+      "noOfChipDownChances": 18,
+      "noOfChipDownSuccesses": 4,
+      "noOfChipSaveChances": 16,
       "noOfChipSaveSuccesses": 0,
-      "noOfChipShots": 11,
-      "noOfStrokesToGetDown": 34,
-      "totalDistanceToPin": 101.18990409374236,
-      "totalDistanceToPinOnChipDownChances": 79.1748799085617,
-      "totalDistanceToPinOnChipSaveChances": 65.29403507709503,
-      "totalDistanceToPinOnChipDownSuccess": 1.8287999629974363,
+      "noOfChipShots": 22,
+      "noOfStrokesToGetDown": 66,
+      "totalDistanceToPin": 202.99794614315036,
+      "totalDistanceToPinOnChipDownChances": 160.80756771564484,
+      "totalDistanceToPinOnChipSaveChances": 146.92672288417816,
+      "totalDistanceToPinOnChipDownSuccess": 6.394452810287476,
       "totalDistanceToPinOnChipSaveSuccesses": 0,
       "totalDistanceToPinOnGreensHitInRegulation": 0,
       "noOfGreensHitInRegulation": 0,
@@ -237,7 +237,7 @@
       "noOfLong": 0,
       "noOfLeft": 0,
       "noOfShort": 0,
-      "chipHcp": -30
+      "chipHcp": -18.5154
     },
     "sand": {
       "noOfPlusOnePenalties": 0,
@@ -264,36 +264,36 @@
       "noOfLong": 0,
       "noOfLeft": 0,
       "noOfShort": 0,
-      "sandHcp": -4.95085
+      "sandHcp": -2.47542
     },
     "putt": {
       "zeroPutts": 0,
-      "onePutts": 1,
-      "twoPutts": 14,
-      "threePlusPutts": 3,
-      "totalPutts": 38,
-      "noOfHoles": 18,
-      "noOfPuttsAfterGir": 12,
-      "noOfGirsHit": 5,
+      "onePutts": 4,
+      "twoPutts": 26,
+      "threePlusPutts": 6,
+      "totalPutts": 74,
+      "noOfHoles": 36,
+      "noOfPuttsAfterGir": 23,
+      "noOfGirsHit": 10,
       "noOfPlusOnePenalites": 0,
       "noOfPlusTwoPenalites": 0,
-      "strokesGained": -3.097316284198314,
-      "puttHcp": -10.2852
+      "strokesGained": -5.6692964227404445,
+      "puttHcp": -8.83972
     },
     "overall": {
       "noOfEagles": 0,
       "noOfBirdies": 0,
-      "noOfPars": 3,
-      "noOfBogeys": 9,
-      "noOfDoubleBogeys": 6,
-      "noOfParThree": 4,
-      "parThreeTotalStrokes": 19,
-      "noOfParFour": 10,
-      "parFourTotalStrokes": 51,
-      "noOfParFive": 4,
-      "parFiveTotalStrokes": 26,
-      "noOfHoles": 18,
-      "userHcp": -20.4148
+      "noOfPars": 7,
+      "noOfBogeys": 15,
+      "noOfDoubleBogeys": 14,
+      "noOfParThree": 8,
+      "parThreeTotalStrokes": 35,
+      "noOfParFour": 20,
+      "parFourTotalStrokes": 105,
+      "noOfParFive": 8,
+      "parFiveTotalStrokes": 50,
+      "noOfHoles": 36,
+      "userHcp": -18.0783
     }
   },
   "_note": "Aggregate career stats from Arccos tourAnalyticsSummary + getDashboardAnalysis (SG vs scratch) + playerProfile. *_hcp are Arccos' proprietary negative skill scale, not USGA."
