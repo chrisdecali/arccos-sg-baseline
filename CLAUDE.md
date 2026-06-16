@@ -59,11 +59,28 @@ holed iff it's the max `shot_num` among that hole's putts.
 ```powershell
 # Only hard dep is matplotlib; the HTML uses CDNs (Leaflet + Esri) client-side.
 # A local venv at .venv already has it (see MIGRATION below).
-python dashboard/gen_tracker.py .  docs/index.html   # the dashboard (primary artifact)
+
+# 1) Refresh data — MUST set GPS or every shot map goes blank (see warning below):
+$env:GOLF_INCLUDE_GPS = "1"; python pull_arccos.py   # fetch+build; needs weather.py + openpyxl
+python pull_ghin.py                                   # official GHIN scores/index
+
+# 2) Build the dashboard + per-round review pages (-> docs/index.html + docs/rounds/):
+python dashboard/gen_tracker.py .  docs/index.html
+
+# 3) (optional) Shareable shot-map PDF per round — uses the golf-reports render layer:
+#    python <golf-reports>/render/build_round_pages.py . docs/rounds --all
+#    gen_tracker auto-links any *_shotmaps.pdf it finds in docs/rounds/.
 ```
 
-Output to `docs/` so GitHub Pages serves it (Settings → Pages → main /docs). The
-per-round map/stats/PDF render layer is in the **golf-reports** repo, not here.
+> ⚠️ **GPS flag is load-bearing.** `pull_arccos.py` strips shot lat/lng from
+> `shots.csv`/`holes.csv` UNLESS `GOLF_INCLUDE_GPS=1` (or `--include-gps`). Without
+> it the dashboard map and every per-round review render "No GPS." Always set it for
+> this repo (the README intends GPS to be public here; only identity is redacted).
+
+Output to `docs/` so GitHub Pages serves the whole experience (dashboard +
+`docs/rounds/<course>_<date>_review.html` per round). `gen_tracker.py` now emits the
+per-round reviews itself (satellite shot map + hole-by-hole + SG), schema-matched to
+this repo. Only the optional PDF uses the golf-reports render layer.
 
 ## Generator files (in dashboard/)
 
