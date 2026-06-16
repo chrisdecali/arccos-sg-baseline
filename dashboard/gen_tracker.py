@@ -660,10 +660,15 @@ def render_html(d: dict) -> str:
     # ---- dispersion table ----
     disp_rows = ""
     for c in d["dispersion"]:
+        drop = c.get("dropped") or 0
+        total = (c["n"] or 0) + drop
+        used = (f'{c["n"]} of {total}'
+                + (f' <span class="lc" title="{drop} clear mishits (topped/hooked) '
+                   f'removed before averaging">−{drop}</span>' if drop else ''))
         disp_rows += (
             f'<tr data-group="{_esc(c["group"])}"><td>{_esc(c["club"])}</td>'
             f'<td>{_num(c["carry"],0)}</td><td>±{_num(c["carry_sd"],0)}</td>'
-            f'<td>±{_num(c["lateral_sd"],1)}</td><td>{c["n"] or "—"}</td>'
+            f'<td>±{_num(c["lateral_sd"],0)}</td><td>{used}</td>'
             f'<td><span class="conf conf-{_esc(c["confidence"])}">{_esc(c["confidence"])}</span></td></tr>')
 
     # ---- aim table ----
@@ -892,13 +897,14 @@ finishes. Fix the chunk first.</p></section>
 <div class="tabs" id="disp-tabs" style="margin:12px 0 8px">
  <button class="on" data-g="all">All</button><button data-g="Woods">Woods</button>
  <button data-g="Irons">Irons</button><button data-g="Wedges">Wedges</button></div>
-<table><thead><tr><th>Club</th><th>Carry</th><th>Carry ±SD</th>
-<th>Lateral ±SD</th><th>n</th><th>Confidence</th></tr></thead>
+<table><thead><tr><th>Club</th><th>Carry (best ⅓)</th><th>Carry ±SD</th>
+<th>Lateral ±SD</th><th>Shots used</th><th>Confidence</th></tr></thead>
 <tbody id="disp-body">{disp_rows}</tbody></table>
-<p class="note">Measured from your shots with clear mishits removed — topped/chunked
-shots (carry &lt; 0.8× your median) and hooks/pushes (lateral outliers) are dropped
-before averaging. Carry and spread are rounded to the nearest 5 yards. Trust
-high/medium confidence; low-n rows are still thin.</p></section>
+<p class="note"><b>Outlier filter is on.</b> The "Shots used" column shows how many of
+your shots survived after dropping clear mishits — topped/chunked (carry &lt; 0.8× your
+median) and hooks/pushes (lateral IQR outliers). Carry is the <b>best-third</b> strike;
+carry/spread rounded to the nearest 5 yds. These exact numbers are also written to
+<code>club_distances.csv</code> in the repo.</p></section>
 
 <section><h2>Measured vs target bag</h2>
 <table><thead><tr><th>Club</th><th>Target carry</th><th>Measured (best-⅓)</th>
@@ -1172,6 +1178,16 @@ def main():
     os.makedirs(outdir, exist_ok=True)
     rounds_dir = os.path.join(outdir, "rounds")
     os.makedirs(rounds_dir, exist_ok=True)
+    # Persist the cleaned per-club distances as a data artifact so the outlier
+    # filter / best-third numbers live IN THE DATA (not just rendered live).
+    with open(os.path.join(store, "club_distances.csv"), "w", newline="",
+              encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["club", "category", "carry_yd", "carry_sd_yd", "lateral_sd_yd",
+                    "shots_used", "shots_dropped_outliers", "confidence"])
+        for c in data["dispersion"]:
+            w.writerow([c["club"], c["category"], c["carry"], c["carry_sd"],
+                        c["lateral_sd"], c["n"], c.get("dropped", 0), c["confidence"]])
     # detect an existing shot-map PDF per round (generated separately) so we only
     # ever link a PDF that's really there — no dead links.
     for r in data["rounds"]:

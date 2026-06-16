@@ -1,0 +1,14 @@
+club,category,carry_yd,carry_sd_yd,lateral_sd_yd,shots_used,shots_dropped_outliers,confidence
+Driver,Driver,240,20,40,18,8,high
+3 Wood,Wood,225,0,25,2,2,low
+5 Wood,Wood,130,0,15,1,1,low
+Hybrid,Hybrid,145,65,15,3,2,low
+5 Iron,Iron,165,25,20,11,6,medium
+6 Iron,Iron,155,25,10,2,1,low
+7 Iron,Iron,150,15,30,6,1,medium
+8 Iron,Iron,165,25,5,2,0,low
+9 Iron,Iron,150,10,20,3,1,low
+Pitching Wedge,Wedge,120,20,10,4,2,low
+50 Wedge,Wedge,85,25,10,5,4,low
+54 Wedge,Wedge,70,25,0,11,2,medium
+58 Wedge,Wedge,80,20,5,11,5,medium
