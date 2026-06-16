@@ -25,3 +25,7 @@ __pycache__/
 *.pyc
 *.log
 _cron.log
+
+# --- local python venv (machine-specific, never commit) ---
+.venv/
+venv/
