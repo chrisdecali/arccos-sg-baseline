@@ -416,6 +416,8 @@ def compute(store: str) -> dict:
         "holes_by_round": holes_by_round,
         # map payload: per round -> per hole -> shot polyline
         "map": _map_payload(shots, holes),
+        # per-shot detail (club/dist/lie/GPS) for the hole-by-hole shot explorer
+        "shotmap": _shotmap_payload(shots, holes),
     }
 
 
@@ -466,6 +468,48 @@ def _map_payload(shots, holes):
             out.append({"round_id": rid, "date": rd.get("date"),
                         "course": rd.get("course"), "holes": holelist})
     out.sort(key=lambda r: r.get("date") or "")
+    return out
+
+
+def _shotmap_payload(shots, holes):
+    """Per round -> per hole -> per shot, with club + distance + lie + GPS, for the
+    hole-by-hole shot explorer. Keeps each shot so the map can label the club."""
+    hole_meta = {}
+    for h in holes:
+        hole_meta[(h.get("round_id"), h.get("hole_id"))] = {
+            "par": _i(h.get("par")), "len": _f(h.get("hole_len_yd")),
+            "pin": [_f(h.get("pin_lat")), _f(h.get("pin_lng"))],
+        }
+    rounds: dict[str, dict] = {}
+    for s in shots:
+        sl, sg = _f(s.get("start_lat")), _f(s.get("start_lng"))
+        if sl is None or sg is None:
+            continue
+        el, eg = _f(s.get("end_lat")), _f(s.get("end_lng"))
+        rid, hid = s.get("round_id"), s.get("hole_id")
+        rd = rounds.setdefault(rid, {})
+        rd.setdefault(hid, []).append({
+            "n": _i(s.get("shot_num")), "club": s.get("club") or "",
+            "cat": s.get("club_category") or _club_cat(s.get("club") or ""),
+            "dist": round(_f(s.get("shot_distance_yd")) or 0),
+            "lie": s.get("lie_approx") or "", "putt": _truthy(s.get("is_putt")),
+            "tee": _truthy(s.get("is_tee")),
+            "dtp_s": round(_f(s.get("start_dist_to_pin_yd")) or 0),
+            "dtp_e": round(_f(s.get("end_dist_to_pin_yd")) or 0),
+            "s": [round(sl, 6), round(sg, 6)],
+            "e": [round(el, 6), round(eg, 6)] if el is not None and eg is not None else None,
+        })
+    out = {}
+    for rid, hl in rounds.items():
+        holelist = []
+        for hid, sh in sorted(hl.items(),
+                              key=lambda kv: int(kv[0]) if str(kv[0]).isdigit() else 0):
+            sh.sort(key=lambda x: x["n"] or 0)
+            meta = hole_meta.get((rid, hid), {})
+            holelist.append({"hole": _i(hid), "par": meta.get("par"),
+                             "len": meta.get("len"), "pin": meta.get("pin"),
+                             "shots": sh})
+        out[rid] = holelist
     return out
 
 
@@ -934,8 +978,7 @@ if(ROUNDS.length){{
 def render_round_page(d: dict, r: dict) -> str:
     """Full review for one round: satellite shot map + hole-by-hole + SG."""
     holes = d["holes_by_round"].get(r["round_id"], [])
-    rmap = next((x for x in d["map"] if x["round_id"] == r["round_id"]), None)
-    map_json = json.dumps(rmap or {})
+    shotmap_json = json.dumps(d["shotmap"].get(r["round_id"], []))
     tp = r["to_par"]
     tps = f"{tp:+d}" if tp is not None else "—"
 
@@ -994,6 +1037,20 @@ th,td{{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}}
 th{{color:var(--mut);font-size:11px;text-transform:uppercase}}
 #map{{height:480px;border-radius:10px}}
 .note{{color:var(--mut);font-size:12px}}
+.holenav{{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}}
+.holenav button{{background:#0f131a;color:var(--ink);border:1px solid var(--line);
+border-radius:7px;min-width:30px;padding:4px 8px;cursor:pointer;font-size:12.5px}}
+.holenav button.on{{background:var(--accent);color:#06121f;border-color:var(--accent)}}
+.legend{{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;font-size:11.5px;color:var(--mut)}}
+.lchip{{display:inline-flex;align-items:center;gap:4px}}
+.lchip i{{width:11px;height:11px;border-radius:2px;display:inline-block}}
+.explorer{{display:grid;grid-template-columns:2fr 1fr;gap:12px}}
+@media(max-width:720px){{.explorer{{grid-template-columns:1fr}}}}
+.shotlist{{background:#0f131a;border:1px solid var(--line);border-radius:10px;
+padding:10px;font-size:12.5px;max-height:480px;overflow:auto}}
+.sl-h{{font-weight:600;margin-bottom:6px}}
+.shotlbl{{color:#fff;font-size:10px;font-weight:600;
+text-shadow:0 0 3px #000,0 0 3px #000;white-space:nowrap;pointer-events:none}}
 </style></head><body>
 <header>
 <a class="back" href="../index.html">← back to dashboard</a>
@@ -1004,9 +1061,16 @@ th{{color:var(--mut);font-size:11px;text-transform:uppercase}}
 <main>
 <section><h2>Round</h2><div class="kpis">{kpi_html}</div></section>
 <section><h2>Strokes gained (vs scratch)</h2><div class="kpis">{sg_html}</div></section>
-<section><h2>Shot map</h2><div id="map"></div>
-<p class="note">Satellite tiles (Esri) load in the browser. Yellow lines are each
-hole's shot path from GPS; blue dots mark tees.</p></section>
+<section><h2>Shot map — explore hole by hole</h2>
+<div class="holenav" id="holenav"></div>
+<div class="legend" id="legend"></div>
+<div class="explorer">
+  <div id="map"></div>
+  <div class="shotlist" id="shotlist"></div>
+</div>
+<p class="note">Pick a hole to zoom in — each line is one shot, colored by club, with
+the club + carry labeled. Hover a shot for the detail; the panel lists every shot,
+club, lie, and distance-to-pin. "All" shows the whole round.</p></section>
 <section><h2>Hole by hole</h2>
 <table><thead><tr><th>Hole</th><th>Par</th><th>Yd</th><th>Shots</th><th>±Par</th>
 <th>Putts</th><th>FW</th><th>GIR</th><th>Drive</th><th>Prox</th><th>SG</th></tr></thead>
@@ -1014,20 +1078,66 @@ hole's shot path from GPS; blue dots mark tees.</p></section>
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-var R={map_json};
+var SM={shotmap_json};
+var COL={{Driver:'#e53935',Wood:'#fb8c00',Hybrid:'#fdd835',Iron:'#43a047',
+Wedge:'#29b6f6',Putter:'#ab47bc'}};
+function colOf(c){{return COL[c]||'#bbbbbb';}}
+function abbr(c){{return (c||'').replace('Pitching Wedge','PW').replace(' Wedge','°W')
+ .replace(' Iron','i').replace(' Wood','W').replace('Driver','Dr').replace('Hybrid','Hy')
+ .replace('Putter','Putt');}}
+if(!SM.length){{
+ document.getElementById('map').innerHTML='<p class="note" style="padding:20px">No GPS for this round.</p>';
+}}else{{
 var map=L.map('map',{{scrollWheelZoom:false}});
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{{z}}/{{y}}/{{x}}',
  {{maxZoom:19,attribution:'Esri'}}).addTo(map);
-var all=[];
-(R.holes||[]).forEach(function(h){{
- if(h.pts.length<2) return;
- L.polyline(h.pts,{{color:'#ffd54f',weight:2,opacity:.9}}).addTo(map);
- h.pts.forEach(p=>all.push(p));
- L.circleMarker(h.pts[0],{{radius:3,color:'#4f9cf9',fillOpacity:1}})
-   .bindTooltip('Hole '+h.hole).addTo(map);
-}});
-if(all.length) map.fitBounds(all,{{padding:[20,20]}});
-else document.getElementById('map').innerHTML='<p class="note" style="padding:20px">No GPS for this round.</p>';
+var layer=L.layerGroup().addTo(map);
+function drawShot(sh,label){{
+ if(!sh.s) return []; var c=colOf(sh.cat); var pts=[sh.s]; if(sh.e) pts.push(sh.e);
+ var tip='#'+sh.n+' '+sh.club+' · '+sh.dist+'y'+(sh.lie?' · from '+sh.lie:'');
+ if(pts.length===2){{
+  L.polyline(pts,{{color:c,weight:3,opacity:.95}}).addTo(layer).bindTooltip(tip);
+  L.circleMarker(sh.e,{{radius:3,color:c,fillColor:c,fillOpacity:1,weight:1}}).addTo(layer);
+ }}
+ L.circleMarker(sh.s,{{radius:sh.tee?5:3,color:c,
+  fillColor:sh.tee?'#ffffff':c,fillOpacity:1,weight:1}}).addTo(layer).bindTooltip(tip);
+ if(label && pts.length===2){{
+  var mid=[(sh.s[0]+sh.e[0])/2,(sh.s[1]+sh.e[1])/2];
+  L.marker(mid,{{icon:L.divIcon({{className:'shotlbl',
+   html:abbr(sh.club)+' '+sh.dist,iconSize:[64,14]}})}}).addTo(layer);
+ }}
+ return pts;
+}}
+function show(idx){{
+ layer.clearLayers(); var all=[],rows='';
+ var hs = idx<0 ? SM : [SM[idx]];
+ hs.forEach(function(h){{(h.shots||[]).forEach(function(sh){{
+  drawShot(sh, idx>=0).forEach(function(p){{all.push(p);}});
+  if(idx>=0) rows+='<tr><td style="border-left:3px solid '+colOf(sh.cat)+
+   ';padding-left:6px">'+sh.n+'</td><td>'+sh.club+'</td><td>'+sh.dist+'y</td><td>'+
+   (sh.lie||'')+'</td><td>'+(sh.putt?'—':sh.dtp_e+'y')+'</td></tr>';
+ }});}});
+ if(all.length) map.fitBounds(all,{{padding:[25,25]}});
+ var sl=document.getElementById('shotlist');
+ if(idx>=0){{var h=SM[idx];
+  sl.innerHTML='<div class="sl-h">Hole '+h.hole+' · par '+(h.par||'?')+
+   (h.len?' · '+Math.round(h.len)+'y':'')+'</div>'+
+   '<table><thead><tr><th>#</th><th>Club</th><th>Carry</th><th>Lie</th><th>To pin</th>'+
+   '</tr></thead><tbody>'+rows+'</tbody></table>';
+ }}else sl.innerHTML='<div class="sl-h">All '+SM.length+' holes</div>'+
+   '<p class="note">Pick a hole number above to see each shot and the club used.</p>';
+}}
+var nav=document.getElementById('holenav');
+function setActive(b){{nav.querySelectorAll('button').forEach(function(x){{x.classList.remove('on');}});b.classList.add('on');}}
+var ab=document.createElement('button');ab.textContent='All';ab.className='on';
+ab.onclick=function(){{setActive(ab);show(-1);}};nav.appendChild(ab);
+SM.forEach(function(h,i){{var b=document.createElement('button');b.textContent=h.hole;
+ b.onclick=function(){{setActive(b);show(i);}};nav.appendChild(b);}});
+var lg=document.getElementById('legend');
+Object.keys(COL).forEach(function(k){{lg.innerHTML+='<span class="lchip"><i style="background:'+
+ COL[k]+'"></i>'+k+'</span>';}});
+show(-1);
+}}
 </script>
 </body></html>"""
 
