@@ -93,6 +93,11 @@ def _slug(course: str, date: str) -> str:
     return f"{base.strip('_')}_{date or 'x'}"
 
 
+def _round5(x):
+    """Round to the nearest 5 yards (None-safe)."""
+    return None if x is None else int(round(x / 5.0) * 5)
+
+
 # ----------------------------------------------------------------------- WHS
 # Number of posted scores -> (how many lowest differentials count, adjustment).
 # This is the USGA WHS allotment for fewer than 20 scores. The index is the mean
@@ -243,18 +248,18 @@ def compute(store: str) -> dict:
         clean_total = _clean_third(shots_by_club.get(name, []))
         if clean_total is None:
             clean_total = _f(cm.get("smart_distance_yd"))
-        measured = round(clean_total * CARRY_FACTOR.get(cat, 0.97)
-                         ) if clean_total else None
+        measured = _round5(clean_total * CARRY_FACTOR.get(cat, 0.97)
+                           ) if clean_total else None
         # Only let MEASURED override the known-good target when it's high
         # confidence: enough samples AND within ~15% of target (a wild measured
         # value is noise/mis-tag, not a real gap). Otherwise trust the target.
         confident = (measured is not None and n and n >= 8
                      and abs(measured - target) <= 0.15 * target)
-        candidate = measured if confident else target
-        # Enforce strictly descending: never emit a club carrying >= the one above
-        # it. If the candidate would break order, hold/clamp just under the prev.
+        candidate = _round5(measured if confident else target)
+        # Enforce strictly descending in 5-yard steps: never emit a club carrying
+        # >= the one above it. If the candidate would break order, step down by 5.
         if prev_carry is not None and candidate >= prev_carry:
-            suggested = prev_carry - 1
+            suggested = prev_carry - 5
             held = True
         else:
             suggested = candidate
@@ -267,25 +272,12 @@ def compute(store: str) -> dict:
             "low_conf": (n or 0) < 5,
         })
 
-    # ---- dispersion explorer (from dispersion.json model) ----
-    disp_clubs = []
-    for c in (disp.get("clubs") or []):
-        tot, lat = c.get("total_yd", {}), c.get("lateral_yd", {})
-        disp_clubs.append({
-            "club": c.get("club"), "category": c.get("category"),
-            "group": GROUP_OF.get(c.get("category"), "Other"),
-            "carry": tot.get("mean"), "carry_sd": tot.get("sd"),
-            "lateral_sd": lat.get("sd"), "n": c.get("usage_count"),
-            "confidence": c.get("confidence"),
-        })
-    disp_clubs.sort(key=lambda d: -(d["carry"] or 0))
-
-    # ---- aim-by-club (signed lateral bias to the pin line) ----
+    # ---- lateral offsets per club (one pass; shared by dispersion + aim) ----
     pin_of = {}
     for h in holes:
-        key = (h.get("round_id"), h.get("hole_id"))
-        pin_of[key] = (_f(h.get("pin_lat")), _f(h.get("pin_lng")))
-    aim_acc: dict[str, list[float]] = {}
+        pin_of[(h.get("round_id"), h.get("hole_id"))] = (
+            _f(h.get("pin_lat")), _f(h.get("pin_lng")))
+    lat_by_club: dict[str, list[float]] = {}
     for s in shots:
         if _truthy(s.get("is_putt")):
             continue
@@ -297,11 +289,39 @@ def compute(store: str) -> dict:
             (_f(s.get("start_lat")), _f(s.get("start_lng"))),
             (_f(s.get("end_lat")), _f(s.get("end_lng"))),
             pin if pin and all(pin) else (None, None))
-        if off is not None and abs(off) < 80:  # drop wild geo outliers
-            aim_acc.setdefault(club, []).append(off)
+        if off is not None and abs(off) < 80:  # drop wild geo glitches
+            lat_by_club.setdefault(club, []).append(off)
+
+    # ---- dispersion explorer (measured from shots, clear mishits removed) ----
+    # Drop topped/chunked shots via a carry floor (0.8 x median carry) and
+    # hooked/pushed shots via lateral IQR (1.5x); round carry + spread to 5 yds.
+    bag_order = {name: i for i, (name, _t) in enumerate(TARGET_BAG)}
+    disp_clubs = []
+    for name, dists in shots_by_club.items():
+        ds = sorted(v for v in dists if v)
+        if not ds:
+            continue
+        cat = (club_meta.get(name, {}) or {}).get("club_category") or _club_cat(name)
+        med = statistics.median(ds)
+        kept = [v for v in ds if v >= 0.8 * med] or ds        # drop tops/chunks
+        factor = CARRY_FACTOR.get(cat, 0.97)
+        lat = _iqr_filter(lat_by_club.get(name, []))          # drop hooks/pushes
+        disp_clubs.append({
+            "club": name, "category": cat, "group": GROUP_OF.get(cat, "Other"),
+            # carry center = best-third strike (robust to partials/tops), like the bag
+            "carry": _round5((_clean_third(ds) or 0) * factor),
+            # spread = SD over the cleaned set (tops/hooks already dropped)
+            "carry_sd": _round5(statistics.pstdev(kept) * factor) if len(kept) > 1 else 0,
+            "lateral_sd": _round5(statistics.pstdev(lat)) if len(lat) > 1 else None,
+            "n": len(kept), "dropped": len(ds) - len(kept),
+            "confidence": "high" if len(kept) >= 12 else "medium" if len(kept) >= 6 else "low",
+        })
+    disp_clubs.sort(key=lambda d: bag_order.get(d["club"], 99))   # natural club order
+
+    # ---- aim-by-club (signed lateral bias to the pin line) ----
     aim = []
     for name, _t in TARGET_BAG:
-        offs = _iqr_filter(aim_acc.get(name, []))
+        offs = _iqr_filter(lat_by_club.get(name, []))
         if len(offs) < 3:
             continue
         bias = statistics.fmean(offs)
@@ -755,7 +775,8 @@ h1{{margin:0;font-size:24px}} h2{{font-size:18px;margin:0 0 12px}}
 main{{max-width:1000px;margin:0 auto;padding:8px 20px 60px}}
 section{{background:var(--card);border:1px solid var(--line);border-radius:12px;
 padding:18px 18px 20px;margin:16px 0}}
-.kpis{{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}}
+.kpis{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}}
+@media(max-width:640px){{.kpis{{grid-template-columns:repeat(2,1fr)}}}}
 .kpi{{background:#0f131a;border:1px solid var(--line);border-radius:10px;padding:12px}}
 .kpi-v{{font-size:22px;font-weight:700}} .kpi-l{{font-size:13px;margin-top:2px}}
 .kpi-s{{font-size:11px;color:var(--mut)}}
@@ -874,9 +895,10 @@ finishes. Fix the chunk first.</p></section>
 <table><thead><tr><th>Club</th><th>Carry</th><th>Carry ±SD</th>
 <th>Lateral ±SD</th><th>n</th><th>Confidence</th></tr></thead>
 <tbody id="disp-body">{disp_rows}</tbody></table>
-<p class="note">Carry and spread are <span class="modeled" title="empirical-Bayes model blending your shots with a prior; shrinks toward the prior when n is low">modeled</span>
-(empirical-Bayes, from dispersion.json). Trust high/medium confidence; low-n rows
-are prior-dominated.</p></section>
+<p class="note">Measured from your shots with clear mishits removed — topped/chunked
+shots (carry &lt; 0.8× your median) and hooks/pushes (lateral outliers) are dropped
+before averaging. Carry and spread are rounded to the nearest 5 yards. Trust
+high/medium confidence; low-n rows are still thin.</p></section>
 
 <section><h2>Measured vs target bag</h2>
 <table><thead><tr><th>Club</th><th>Target carry</th><th>Measured (best-⅓)</th>
