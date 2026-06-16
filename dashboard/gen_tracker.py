@@ -85,6 +85,14 @@ def _truthy(x) -> bool:
     return str(x).strip() in ("1", "1.0", "true", "True", "yes")
 
 
+def _slug(course: str, date: str) -> str:
+    """Stable filename slug for a round, e.g. 'WindRose_GC_2026-06-06'."""
+    base = "".join(c if c.isalnum() else "_" for c in (course or "round"))
+    while "__" in base:
+        base = base.replace("__", "_")
+    return f"{base.strip('_')}_{date or 'x'}"
+
+
 # ----------------------------------------------------------------------- WHS
 # Number of posted scores -> (how many lowest differentials count, adjustment).
 # This is the USGA WHS allotment for fewer than 20 scores. The index is the mean
@@ -200,6 +208,8 @@ def compute(store: str) -> dict:
         round_rows.append({
             "round_id": r.get("round_id"), "date": r.get("date"),
             "course": r.get("course"), "tee": r.get("tee_name"),
+            "slug": _slug(r.get("course"), r.get("date")),
+            "yards": _i(r.get("tee_yards")), "par": _i(r.get("par")),
             "score": _i(r.get("score")), "to_par": _i(r.get("score_to_par")),
             "putts": _i(r.get("putts")), "gir": _f(r.get("gir_pct")),
             "fairway": _f(r.get("fairway_pct")), "scramble": _f(r.get("scramble_pct")),
@@ -351,6 +361,22 @@ def compute(store: str) -> dict:
     raw_recoverable = -sum(min(0, x["sg"]) for x in levers)
     eff_recoverable = round(raw_recoverable * 0.62, 1)
 
+    # ---- per-round hole detail (for the full round-review pages) ----
+    holes_by_round: dict[str, list[dict]] = {}
+    for h in holes:
+        holes_by_round.setdefault(h.get("round_id"), []).append({
+            "hole": _i(h.get("hole_id")), "par": _i(h.get("par")),
+            "len": _f(h.get("hole_len_yd")), "shots": _i(h.get("shots")),
+            "to_par": _i(h.get("score_to_par")), "putts": _i(h.get("putts")),
+            "fairway": _truthy(h.get("fairway_hit")), "gir": _truthy(h.get("gir")),
+            "drive": _f(h.get("drive_yd")),
+            "proximity": _f(h.get("approach_proximity_yd")),
+            "penalties": _i(h.get("penalties")),
+            "sg": _f(h.get("sg_hole_broadie")),
+        })
+    for hid in holes_by_round:
+        holes_by_round[hid].sort(key=lambda x: x["hole"] or 0)
+
     return {
         "meta": {
             "generated_at": (disp.get("generated_at")
@@ -387,6 +413,7 @@ def compute(store: str) -> dict:
             "diff": _f(g.get("differential")), "used": _truthy(g.get("used")),
         } for g in sorted(ghin, key=lambda g: g.get("played_at", ""), reverse=True)],
         "career": career,
+        "holes_by_round": holes_by_round,
         # map payload: per round -> per hole -> shot polyline
         "map": _map_payload(shots, holes),
     }
@@ -629,6 +656,32 @@ def render_html(d: dict) -> str:
         f'<td>{g["score"]}</td><td>{_num(g["diff"],1)}</td>'
         f'<td>{"✓" if g["used"] else ""}</td></tr>' for g in d["posted"])
 
+    # ---- rounds navigator (grouped by course -> round, newest first) ----
+    by_course: dict[str, list] = {}
+    for r in d["rounds"]:
+        by_course.setdefault(r["course"] or "Unknown", []).append(r)
+    nav_html = ""
+    for course in sorted(by_course):
+        rs = sorted(by_course[course], key=lambda r: r["date"] or "", reverse=True)
+        cards = ""
+        for r in rs:
+            sg = _num(r["sg_total"], 1, True)
+            sgcls = "pos" if (r["sg_total"] or 0) >= 0 else "neg"
+            tp = r["to_par"]
+            tps = f"{tp:+d}" if tp is not None else "—"
+            cards += (
+                f'<a class="rcard" href="rounds/{r["slug"]}_review.html">'
+                f'<div class="rc-date">{_esc(r["date"])}</div>'
+                f'<div class="rc-score">{r["score"]} <span class="rc-par">({tps})</span></div>'
+                f'<div class="rc-meta">{_esc(r["tee"])} · {_num(r["yards"],0)} yd · '
+                f'putts {r["putts"]}</div>'
+                f'<div class="rc-sg {sgcls}">SG {sg}</div>'
+                f'<div class="rc-open">Open full review →</div></a>')
+        nav_html += (f'<div class="course-grp"><h3 class="course-h">⛳ {_esc(course)} '
+                     f'<span class="course-n">{len(rs)} round'
+                     f'{"s" if len(rs)!=1 else ""}</span></h3>'
+                     f'<div class="rcards">{cards}</div></div>')
+
     # ---- SG-by-round chart + map payload ----
     sg_png = chart_sg_by_round(d["rounds"]) if d["rounds"] else ""
     disp_png = chart_dispersion(d["dispersion"]) if d["dispersion"] else ""
@@ -679,6 +732,18 @@ input[type=range]{{flex:1;min-width:180px}}
 .proj{{font-size:22px;font-weight:700;color:var(--accent)}}
 .pos{{color:var(--good)}} .neg{{color:var(--bad)}}
 .modeled{{border-bottom:1px dotted var(--mut);cursor:help}}
+.course-grp{{margin:14px 0}}
+.course-h{{font-size:15px;margin:0 0 8px}} .course-n{{color:var(--mut);font-size:12px;font-weight:400}}
+.rcards{{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}}
+.rcard{{display:block;text-decoration:none;color:var(--ink);background:#0f131a;
+border:1px solid var(--line);border-radius:10px;padding:12px 14px;transition:.12s}}
+.rcard:hover{{border-color:var(--accent);transform:translateY(-2px)}}
+.rc-date{{font-size:12px;color:var(--mut)}}
+.rc-score{{font-size:26px;font-weight:700;margin:2px 0}}
+.rc-par{{font-size:14px;color:var(--mut);font-weight:400}}
+.rc-meta{{font-size:11.5px;color:var(--mut)}}
+.rc-sg{{font-size:13px;font-weight:600;margin-top:6px}}
+.rc-open{{font-size:12px;color:var(--accent);margin-top:6px}}
 footer{{max-width:1000px;margin:0 auto;padding:0 20px 50px;color:var(--mut);font-size:12px}}
 </style></head>
 <body>
@@ -695,6 +760,11 @@ generated {_esc(m['generated_at'])}</div>
 Arccos, measured vs scratch — large negatives are normal for a mid-handicap.</p></section>
 
 <section><h2>Key numbers</h2><div class="kpis">{kpi_html}</div></section>
+
+<section><h2>Rounds — full reviews</h2>
+<p class="note">Click any round to open its full review: satellite shot map,
+hole-by-hole, and strokes-gained for that round.</p>
+{nav_html or '<p class="note">No rounds yet.</p>'}</section>
 
 <section><h2>Index projection</h2>
 <p class="note">WHS uses your best differentials; with &lt;20 scores only the best
@@ -854,16 +924,125 @@ if(ROUNDS.length){{
 </body></html>"""
 
 
+def render_round_page(d: dict, r: dict) -> str:
+    """Full review for one round: satellite shot map + hole-by-hole + SG."""
+    holes = d["holes_by_round"].get(r["round_id"], [])
+    rmap = next((x for x in d["map"] if x["round_id"] == r["round_id"]), None)
+    map_json = json.dumps(rmap or {})
+    tp = r["to_par"]
+    tps = f"{tp:+d}" if tp is not None else "—"
+
+    kpi = [
+        ("Score", f'{r["score"]} <span class="rc-par">({tps})</span>'),
+        ("Putts", _num(r["putts"], 0)),
+        ("GIR", _pct(r["gir"], 0)), ("Fairways", _pct(r["fairway"], 0)),
+        ("Scramble", _pct(r["scramble"], 0)),
+        ("SG total", _num(r["sg_total"], 1, True)),
+    ]
+    kpi_html = "".join(
+        f'<div class="kpi"><div class="kpi-v">{v}</div><div class="kpi-l">{lab}</div></div>'
+        for lab, v in kpi)
+    sg_html = "".join(
+        f'<div class="kpi"><div class="kpi-v">{_num(r[k],1,True)}</div>'
+        f'<div class="kpi-l">{lab}</div></div>'
+        for lab, k in [("Off the tee", "sg_off_tee"), ("Approach", "sg_approach"),
+                       ("Short game", "sg_short"), ("Putting", "sg_putting")])
+
+    hrows = "".join(
+        f'<tr><td>#{h["hole"]}</td><td>{h["par"]}</td><td>{_num(h["len"],0)}</td>'
+        f'<td>{h["shots"]}</td><td>{("+%d"%h["to_par"]) if (h["to_par"] or 0)>0 else h["to_par"]}</td>'
+        f'<td>{h["putts"]}</td><td>{"✓" if h["fairway"] else ""}</td>'
+        f'<td>{"✓" if h["gir"] else ""}</td><td>{_num(h["drive"],0)}</td>'
+        f'<td>{_num(h["proximity"],0)}</td><td>{_num(h["sg"],2,True)}</td></tr>'
+        for h in holes)
+
+    weather = ""
+    if r.get("temp_f") or r.get("weather"):
+        weather = (f' · {_num(r["temp_f"],0)}°F'
+                   f'{" · wind "+_num(r["wind_mph"],0)+" mph" if r.get("wind_mph") else ""}'
+                   f'{" · "+_esc(r["weather"]) if r.get("weather") else ""}')
+
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{_esc(r['course'])} · {_esc(r['date'])} — round review</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{{--bg:#0f1115;--card:#1a1d24;--ink:#e8eaed;--mut:#9aa0aa;--line:#2a2e37;
+--good:#43a047;--bad:#e53935;--accent:#4f9cf9}}
+*{{box-sizing:border-box}}
+body{{margin:0;background:var(--bg);color:var(--ink);
+font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}}
+header,main{{max-width:1000px;margin:0 auto;padding:0 20px}}
+header{{padding-top:22px}} h1{{margin:6px 0 2px;font-size:22px}}
+.sub{{color:var(--mut);font-size:13px}} a{{color:var(--accent)}}
+.back{{font-size:13px;text-decoration:none}}
+section{{background:var(--card);border:1px solid var(--line);border-radius:12px;
+padding:16px 18px;margin:16px 0}} h2{{font-size:17px;margin:0 0 12px}}
+.kpis{{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}}
+.kpi{{background:#0f131a;border:1px solid var(--line);border-radius:10px;padding:11px}}
+.kpi-v{{font-size:20px;font-weight:700}} .kpi-l{{font-size:12px;color:var(--mut)}}
+.rc-par{{font-size:13px;color:var(--mut);font-weight:400}}
+table{{width:100%;border-collapse:collapse;font-size:13.5px}}
+th,td{{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}}
+th{{color:var(--mut);font-size:11px;text-transform:uppercase}}
+#map{{height:480px;border-radius:10px}}
+.note{{color:var(--mut);font-size:12px}}
+</style></head><body>
+<header>
+<a class="back" href="../index.html">← back to dashboard</a>
+<h1>{_esc(r['course'])} — {_esc(r['date'])}</h1>
+<div class="sub">{_esc(r['tee'])} tee · {_num(r['yards'],0)} yd · par {r['par']}{weather}</div>
+</header>
+<main>
+<section><h2>Round</h2><div class="kpis">{kpi_html}</div></section>
+<section><h2>Strokes gained (vs scratch)</h2><div class="kpis">{sg_html}</div></section>
+<section><h2>Shot map</h2><div id="map"></div>
+<p class="note">Satellite tiles (Esri) load in the browser. Yellow lines are each
+hole's shot path from GPS; blue dots mark tees.</p></section>
+<section><h2>Hole by hole</h2>
+<table><thead><tr><th>Hole</th><th>Par</th><th>Yd</th><th>Shots</th><th>±Par</th>
+<th>Putts</th><th>FW</th><th>GIR</th><th>Drive</th><th>Prox</th><th>SG</th></tr></thead>
+<tbody>{hrows}</tbody></table></section>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var R={map_json};
+var map=L.map('map',{{scrollWheelZoom:false}});
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{{z}}/{{y}}/{{x}}',
+ {{maxZoom:19,attribution:'Esri'}}).addTo(map);
+var all=[];
+(R.holes||[]).forEach(function(h){{
+ if(h.pts.length<2) return;
+ L.polyline(h.pts,{{color:'#ffd54f',weight:2,opacity:.9}}).addTo(map);
+ h.pts.forEach(p=>all.push(p));
+ L.circleMarker(h.pts[0],{{radius:3,color:'#4f9cf9',fillOpacity:1}})
+   .bindTooltip('Hole '+h.hole).addTo(map);
+}});
+if(all.length) map.fitBounds(all,{{padding:[20,20]}});
+else document.getElementById('map').innerHTML='<p class="note" style="padding:20px">No GPS for this round.</p>';
+</script>
+</body></html>"""
+
+
 def main():
     store = sys.argv[1] if len(sys.argv) > 1 else "."
     out = sys.argv[2] if len(sys.argv) > 2 else os.path.join("docs", "index.html")
     data = compute(store)
-    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    outdir = os.path.dirname(os.path.abspath(out))
+    os.makedirs(outdir, exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
         f.write(render_html(data))
+    # per-round full-review pages -> <outdir>/rounds/<slug>_review.html
+    rounds_dir = os.path.join(outdir, "rounds")
+    os.makedirs(rounds_dir, exist_ok=True)
+    for r in data["rounds"]:
+        with open(os.path.join(rounds_dir, f'{r["slug"]}_review.html'), "w",
+                  encoding="utf-8") as f:
+            f.write(render_round_page(data, r))
     m = data["meta"]
-    print(f"wrote {out}  ({m['n_rounds']} rounds, {m['n_holes']} holes, "
-          f"{m['n_shots']} shots, index {data['player']['index']})")
+    print(f"wrote {out} + {len(data['rounds'])} round reviews  "
+          f"({m['n_rounds']} rounds, {m['n_holes']} holes, {m['n_shots']} shots, "
+          f"index {data['player']['index']})")
 
 
 if __name__ == "__main__":

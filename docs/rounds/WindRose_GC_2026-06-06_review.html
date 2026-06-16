@@ -1,0 +1,60 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WindRose GC · 2026-06-06 — round review</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{--bg:#0f1115;--card:#1a1d24;--ink:#e8eaed;--mut:#9aa0aa;--line:#2a2e37;
+--good:#43a047;--bad:#e53935;--accent:#4f9cf9}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+header,main{max-width:1000px;margin:0 auto;padding:0 20px}
+header{padding-top:22px} h1{margin:6px 0 2px;font-size:22px}
+.sub{color:var(--mut);font-size:13px} a{color:var(--accent)}
+.back{font-size:13px;text-decoration:none}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;
+padding:16px 18px;margin:16px 0} h2{font-size:17px;margin:0 0 12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.kpi{background:#0f131a;border:1px solid var(--line);border-radius:10px;padding:11px}
+.kpi-v{font-size:20px;font-weight:700} .kpi-l{font-size:12px;color:var(--mut)}
+.rc-par{font-size:13px;color:var(--mut);font-weight:400}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-size:11px;text-transform:uppercase}
+#map{height:480px;border-radius:10px}
+.note{color:var(--mut);font-size:12px}
+</style></head><body>
+<header>
+<a class="back" href="../index.html">← back to dashboard</a>
+<h1>WindRose GC — 2026-06-06</h1>
+<div class="sub">Middle tee · 6042 yd · par 72 · 79°F · wind 2 mph · Drizzle</div>
+</header>
+<main>
+<section><h2>Round</h2><div class="kpis"><div class="kpi"><div class="kpi-v">96 <span class="rc-par">(+24)</span></div><div class="kpi-l">Score</div></div><div class="kpi"><div class="kpi-v">38</div><div class="kpi-l">Putts</div></div><div class="kpi"><div class="kpi-v">28%</div><div class="kpi-l">GIR</div></div><div class="kpi"><div class="kpi-v">64%</div><div class="kpi-l">Fairways</div></div><div class="kpi"><div class="kpi-v">0%</div><div class="kpi-l">Scramble</div></div><div class="kpi"><div class="kpi-v">-23.7</div><div class="kpi-l">SG total</div></div></div></section>
+<section><h2>Strokes gained (vs scratch)</h2><div class="kpis"><div class="kpi"><div class="kpi-v">-1.2</div><div class="kpi-l">Off the tee</div></div><div class="kpi"><div class="kpi-v">-14.6</div><div class="kpi-l">Approach</div></div><div class="kpi"><div class="kpi-v">-6.1</div><div class="kpi-l">Short game</div></div><div class="kpi"><div class="kpi-v">-1.8</div><div class="kpi-l">Putting</div></div></div></section>
+<section><h2>Shot map</h2><div id="map"></div>
+<p class="note">Satellite tiles (Esri) load in the browser. Yellow lines are each
+hole's shot path from GPS; blue dots mark tees.</p></section>
+<section><h2>Hole by hole</h2>
+<table><thead><tr><th>Hole</th><th>Par</th><th>Yd</th><th>Shots</th><th>±Par</th>
+<th>Putts</th><th>FW</th><th>GIR</th><th>Drive</th><th>Prox</th><th>SG</th></tr></thead>
+<tbody><tr><td>#1</td><td>4</td><td>349</td><td>6</td><td>+2</td><td>2</td><td></td><td></td><td>187</td><td>2</td><td>-1.45</td></tr><tr><td>#2</td><td>3</td><td>116</td><td>4</td><td>+1</td><td>3</td><td></td><td>✓</td><td>—</td><td>31</td><td>-1.03</td></tr><tr><td>#3</td><td>4</td><td>315</td><td>5</td><td>+1</td><td>2</td><td>✓</td><td></td><td>253</td><td>4</td><td>-1.05</td></tr><tr><td>#4</td><td>5</td><td>506</td><td>5</td><td>0</td><td>2</td><td>✓</td><td>✓</td><td>257</td><td>25</td><td>-0.32</td></tr><tr><td>#5</td><td>4</td><td>346</td><td>6</td><td>+2</td><td>2</td><td></td><td></td><td>153</td><td>4</td><td>-1.47</td></tr><tr><td>#6</td><td>3</td><td>155</td><td>7</td><td>+4</td><td>2</td><td></td><td></td><td>—</td><td>14</td><td>-3.24</td></tr><tr><td>#7</td><td>4</td><td>281</td><td>5</td><td>+1</td><td>2</td><td>✓</td><td></td><td>238</td><td>9</td><td>-1.17</td></tr><tr><td>#8</td><td>4</td><td>375</td><td>4</td><td>0</td><td>2</td><td>✓</td><td>✓</td><td>270</td><td>15</td><td>-0.05</td></tr><tr><td>#9</td><td>5</td><td>431</td><td>6</td><td>+1</td><td>2</td><td>✓</td><td></td><td>242</td><td>5</td><td>-1.53</td></tr><tr><td>#10</td><td>4</td><td>364</td><td>5</td><td>+1</td><td>2</td><td></td><td></td><td>266</td><td>24</td><td>-0.64</td></tr><tr><td>#11</td><td>3</td><td>166</td><td>4</td><td>+1</td><td>2</td><td></td><td></td><td>—</td><td>4</td><td>-0.81</td></tr><tr><td>#12</td><td>5</td><td>418</td><td>7</td><td>+2</td><td>2</td><td></td><td></td><td>237</td><td>10</td><td>-2.17</td></tr><tr><td>#13</td><td>4</td><td>383</td><td>6</td><td>+2</td><td>3</td><td>✓</td><td></td><td>242</td><td>9</td><td>-1.86</td></tr><tr><td>#14</td><td>5</td><td>474</td><td>7</td><td>+2</td><td>1</td><td>✓</td><td></td><td>215</td><td>20</td><td>-2.88</td></tr><tr><td>#15</td><td>4</td><td>356</td><td>5</td><td>+1</td><td>2</td><td></td><td></td><td>254</td><td>13</td><td>-0.69</td></tr><tr><td>#16</td><td>3</td><td>119</td><td>4</td><td>+1</td><td>2</td><td></td><td></td><td>—</td><td>18</td><td>-0.83</td></tr><tr><td>#17</td><td>4</td><td>252</td><td>5</td><td>+1</td><td>3</td><td>✓</td><td>✓</td><td>240</td><td>4</td><td>-1.63</td></tr><tr><td>#18</td><td>4</td><td>424</td><td>4</td><td>0</td><td>2</td><td>✓</td><td>✓</td><td>268</td><td>5</td><td>+0.03</td></tr></tbody></table></section>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var R={};
+var map=L.map('map',{scrollWheelZoom:false});
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+ {maxZoom:19,attribution:'Esri'}).addTo(map);
+var all=[];
+(R.holes||[]).forEach(function(h){
+ if(h.pts.length<2) return;
+ L.polyline(h.pts,{color:'#ffd54f',weight:2,opacity:.9}).addTo(map);
+ h.pts.forEach(p=>all.push(p));
+ L.circleMarker(h.pts[0],{radius:3,color:'#4f9cf9',fillOpacity:1})
+   .bindTooltip('Hole '+h.hole).addTo(map);
+});
+if(all.length) map.fitBounds(all,{padding:[20,20]});
+else document.getElementById('map').innerHTML='<p class="note" style="padding:20px">No GPS for this round.</p>';
+</script>
+</body></html>
