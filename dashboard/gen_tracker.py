@@ -669,14 +669,18 @@ def render_html(d: dict) -> str:
             sgcls = "pos" if (r["sg_total"] or 0) >= 0 else "neg"
             tp = r["to_par"]
             tps = f"{tp:+d}" if tp is not None else "—"
+            pdf_link = (f'<a class="rc-pdf" href="rounds/{r["pdf"]}">⬇ shot-map PDF</a>'
+                        if r.get("pdf") else "")
             cards += (
+                f'<div class="rcard-wrap">'
                 f'<a class="rcard" href="rounds/{r["slug"]}_review.html">'
                 f'<div class="rc-date">{_esc(r["date"])}</div>'
                 f'<div class="rc-score">{r["score"]} <span class="rc-par">({tps})</span></div>'
                 f'<div class="rc-meta">{_esc(r["tee"])} · {_num(r["yards"],0)} yd · '
                 f'putts {r["putts"]}</div>'
                 f'<div class="rc-sg {sgcls}">SG {sg}</div>'
-                f'<div class="rc-open">Open full review →</div></a>')
+                f'<div class="rc-open">Open full review →</div></a>'
+                f'{pdf_link}</div>')
         nav_html += (f'<div class="course-grp"><h3 class="course-h">⛳ {_esc(course)} '
                      f'<span class="course-n">{len(rs)} round'
                      f'{"s" if len(rs)!=1 else ""}</span></h3>'
@@ -735,9 +739,12 @@ input[type=range]{{flex:1;min-width:180px}}
 .course-grp{{margin:14px 0}}
 .course-h{{font-size:15px;margin:0 0 8px}} .course-n{{color:var(--mut);font-size:12px;font-weight:400}}
 .rcards{{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}}
+.rcard-wrap{{display:flex;flex-direction:column;gap:4px}}
 .rcard{{display:block;text-decoration:none;color:var(--ink);background:#0f131a;
 border:1px solid var(--line);border-radius:10px;padding:12px 14px;transition:.12s}}
 .rcard:hover{{border-color:var(--accent);transform:translateY(-2px)}}
+.rc-pdf{{font-size:11.5px;color:var(--mut);text-decoration:none;padding-left:4px}}
+.rc-pdf:hover{{color:var(--accent)}}
 .rc-date{{font-size:12px;color:var(--mut)}}
 .rc-score{{font-size:26px;font-weight:700;margin:2px 0}}
 .rc-par{{font-size:14px;color:var(--mut);font-weight:400}}
@@ -990,6 +997,7 @@ th{{color:var(--mut);font-size:11px;text-transform:uppercase}}
 </style></head><body>
 <header>
 <a class="back" href="../index.html">← back to dashboard</a>
+{f'<a class="back" href="{r["pdf"]}" style="margin-left:16px">⬇ shot-map PDF</a>' if r.get("pdf") else ""}
 <h1>{_esc(r['course'])} — {_esc(r['date'])}</h1>
 <div class="sub">{_esc(r['tee'])} tee · {_num(r['yards'],0)} yd · par {r['par']}{weather}</div>
 </header>
@@ -1030,11 +1038,16 @@ def main():
     data = compute(store)
     outdir = os.path.dirname(os.path.abspath(out))
     os.makedirs(outdir, exist_ok=True)
+    rounds_dir = os.path.join(outdir, "rounds")
+    os.makedirs(rounds_dir, exist_ok=True)
+    # detect an existing shot-map PDF per round (generated separately) so we only
+    # ever link a PDF that's really there — no dead links.
+    for r in data["rounds"]:
+        pdf = f'{r["slug"]}_shotmaps.pdf'
+        r["pdf"] = pdf if os.path.exists(os.path.join(rounds_dir, pdf)) else None
     with open(out, "w", encoding="utf-8") as f:
         f.write(render_html(data))
     # per-round full-review pages -> <outdir>/rounds/<slug>_review.html
-    rounds_dir = os.path.join(outdir, "rounds")
-    os.makedirs(rounds_dir, exist_ok=True)
     for r in data["rounds"]:
         with open(os.path.join(rounds_dir, f'{r["slug"]}_review.html'), "w",
                   encoding="utf-8") as f:
