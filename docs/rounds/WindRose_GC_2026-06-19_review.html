@@ -1,0 +1,128 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WindRose GC · 2026-06-19 — round review</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{--bg:#0f1115;--card:#1a1d24;--ink:#e8eaed;--mut:#9aa0aa;--line:#2a2e37;
+--good:#43a047;--bad:#e53935;--accent:#4f9cf9}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+header,main{max-width:1000px;margin:0 auto;padding:0 20px}
+header{padding-top:22px} h1{margin:6px 0 2px;font-size:22px}
+.sub{color:var(--mut);font-size:13px} a{color:var(--accent)}
+.back{font-size:13px;text-decoration:none}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;
+padding:16px 18px;margin:16px 0} h2{font-size:17px;margin:0 0 12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.kpi{background:#0f131a;border:1px solid var(--line);border-radius:10px;padding:11px}
+.kpi-v{font-size:20px;font-weight:700} .kpi-l{font-size:12px;color:var(--mut)}
+.rc-par{font-size:13px;color:var(--mut);font-weight:400}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-size:11px;text-transform:uppercase}
+#map{height:480px;border-radius:10px}
+.note{color:var(--mut);font-size:12px}
+.holenav{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.holenav button{background:#0f131a;color:var(--ink);border:1px solid var(--line);
+border-radius:7px;min-width:30px;padding:4px 8px;cursor:pointer;font-size:12.5px}
+.holenav button.on{background:var(--accent);color:#06121f;border-color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;font-size:11.5px;color:var(--mut)}
+.lchip{display:inline-flex;align-items:center;gap:4px}
+.lchip i{width:11px;height:11px;border-radius:2px;display:inline-block}
+.explorer{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+@media(max-width:720px){.explorer{grid-template-columns:1fr}}
+.shotlist{background:#0f131a;border:1px solid var(--line);border-radius:10px;
+padding:10px;font-size:12.5px;max-height:480px;overflow:auto}
+.sl-h{font-weight:600;margin-bottom:6px}
+.shotlbl{color:#fff;font-size:10px;font-weight:600;
+text-shadow:0 0 3px #000,0 0 3px #000;white-space:nowrap;pointer-events:none}
+</style></head><body>
+<header>
+<a class="back" href="../index.html">← back to dashboard</a>
+
+<h1>WindRose GC — 2026-06-19</h1>
+<div class="sub">Middle tee · 6042 yd · par 36 · 77°F · wind 8 mph · Rain</div>
+</header>
+<main>
+<section><h2>Round</h2><div class="kpis"><div class="kpi"><div class="kpi-v">47 <span class="rc-par">(+11)</span></div><div class="kpi-l">Score</div></div><div class="kpi"><div class="kpi-v">20</div><div class="kpi-l">Putts</div></div><div class="kpi"><div class="kpi-v">22%</div><div class="kpi-l">GIR</div></div><div class="kpi"><div class="kpi-v">57%</div><div class="kpi-l">Fairways</div></div><div class="kpi"><div class="kpi-v">0%</div><div class="kpi-l">Scramble</div></div><div class="kpi"><div class="kpi-v">-10.5</div><div class="kpi-l">SG total</div></div></div></section>
+<section><h2>Strokes gained (vs scratch)</h2><div class="kpis"><div class="kpi"><div class="kpi-v">-0.5</div><div class="kpi-l">Off the tee</div></div><div class="kpi"><div class="kpi-v">-6.8</div><div class="kpi-l">Approach</div></div><div class="kpi"><div class="kpi-v">+0.9</div><div class="kpi-l">Short game</div></div><div class="kpi"><div class="kpi-v">-4.1</div><div class="kpi-l">Putting</div></div></div></section>
+<section><h2>Shot map — explore hole by hole</h2>
+<div class="holenav" id="holenav"></div>
+<div class="legend" id="legend"></div>
+<div class="explorer">
+  <div id="map"></div>
+  <div class="shotlist" id="shotlist"></div>
+</div>
+<p class="note">Pick a hole to zoom in — each line is one shot, colored by club, with
+the club + carry labeled. Hover a shot for the detail; the panel lists every shot,
+club, lie, and distance-to-pin. "All" shows the whole round.</p></section>
+<section><h2>Hole by hole</h2>
+<table><thead><tr><th>Hole</th><th>Par</th><th>Yd</th><th>Shots</th><th>±Par</th>
+<th>Putts</th><th>FW</th><th>GIR</th><th>Drive</th><th>Prox</th><th>SG</th></tr></thead>
+<tbody><tr><td>#1</td><td>4</td><td>356</td><td>5</td><td>+1</td><td>2</td><td>✓</td><td></td><td>286</td><td>2</td><td>-0.91</td></tr><tr><td>#2</td><td>3</td><td>102</td><td>5</td><td>+2</td><td>4</td><td></td><td>✓</td><td>—</td><td>24</td><td>-2.07</td></tr><tr><td>#3</td><td>4</td><td>378</td><td>5</td><td>+1</td><td>2</td><td>✓</td><td></td><td>225</td><td>11</td><td>-0.84</td></tr><tr><td>#4</td><td>5</td><td>546</td><td>8</td><td>+3</td><td>2</td><td></td><td></td><td>146</td><td>12</td><td>-2.30</td></tr><tr><td>#5</td><td>4</td><td>350</td><td>5</td><td>+1</td><td>2</td><td></td><td></td><td>220</td><td>2</td><td>-0.69</td></tr><tr><td>#6</td><td>3</td><td>166</td><td>4</td><td>+1</td><td>2</td><td></td><td></td><td>—</td><td>16</td><td>-0.81</td></tr><tr><td>#7</td><td>4</td><td>351</td><td>5</td><td>+1</td><td>2</td><td></td><td></td><td>198</td><td>16</td><td>-0.67</td></tr><tr><td>#8</td><td>4</td><td>381</td><td>5</td><td>+1</td><td>2</td><td>✓</td><td></td><td>270</td><td>2</td><td>-0.85</td></tr><tr><td>#9</td><td>5</td><td>430</td><td>5</td><td>0</td><td>2</td><td>✓</td><td>✓</td><td>272</td><td>2</td><td>-0.77</td></tr></tbody></table></section>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var SM=[{"hole": 1, "par": 4, "len": 356.5, "pin": [30.055421954976, -95.511814909307], "shots": [{"n": 1, "club": "Driver", "cat": "Driver", "dist": 286, "lie": "tee", "putt": false, "tee": true, "dtp_s": 356, "dtp_e": 78, "s": [30.057856, -95.513704], "e": [30.055779, -95.512434]}, {"n": 2, "club": "Pitching Wedge", "cat": "Wedge", "dist": 110, "lie": "fairway", "putt": false, "tee": false, "dtp_s": 78, "dtp_e": 41, "s": [30.055779, -95.512434], "e": [30.055504, -95.511439]}, {"n": 3, "club": "50 Wedge", "cat": "Wedge", "dist": 39, "lie": "rough", "putt": false, "tee": false, "dtp_s": 41, "dtp_e": 2, "s": [30.055504, -95.511439], "e": [30.055425, -95.5118]}, {"n": 4, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 2, "dtp_e": 1, "s": [30.055425, -95.5118], "e": [30.055423, -95.511809]}, {"n": 5, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 1, "dtp_e": 0, "s": [30.055423, -95.511809], "e": [30.055422, -95.511815]}]}, {"hole": 2, "par": 3, "len": 102.3, "pin": [30.055567246083, -95.51429596951], "shots": [{"n": 1, "club": "Pitching Wedge", "cat": "Wedge", "dist": 124, "lie": "tee", "putt": false, "tee": true, "dtp_s": 102, "dtp_e": 24, "s": [30.054749, -95.51407], "e": [30.055758, -95.514252]}, {"n": 2, "club": "Putter", "cat": "Putter", "dist": 21, "lie": "green", "putt": true, "tee": false, "dtp_s": 24, "dtp_e": 2, "s": [30.055758, -95.514252], "e": [30.055586, -95.514292]}, {"n": 3, "club": "Putter", "cat": "Putter", "dist": 3, "lie": "green", "putt": true, "tee": false, "dtp_s": 2, "dtp_e": 1, "s": [30.055586, -95.514292], "e": [30.055564, -95.514301]}, {"n": 4, "club": "Putter", "cat": "Putter", "dist": 0, "lie": "green", "putt": true, "tee": false, "dtp_s": 1, "dtp_e": 1, "s": [30.055564, -95.514301], "e": [30.055564, -95.514301]}, {"n": 5, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 1, "dtp_e": 0, "s": [30.055564, -95.514301], "e": [30.055567, -95.514296]}]}, {"hole": 3, "par": 4, "len": 378.2, "pin": [30.054246458561, -95.516713141632], "shots": [{"n": 1, "club": "Driver", "cat": "Driver", "dist": 225, "lie": "tee", "putt": false, "tee": true, "dtp_s": 378, "dtp_e": 162, "s": [30.056779, -95.514628], "e": [30.055098, -95.515527]}, {"n": 2, "club": "7 Iron", "cat": "Iron", "dist": 160, "lie": "fairway", "putt": false, "tee": false, "dtp_s": 162, "dtp_e": 49, "s": [30.055098, -95.515527], "e": [30.053992, -95.516357]}, {"n": 3, "club": "58 Wedge", "cat": "Wedge", "dist": 39, "lie": "rough", "putt": false, "tee": false, "dtp_s": 49, "dtp_e": 11, "s": [30.053992, -95.516357], "e": [30.054161, -95.516672]}, {"n": 4, "club": "Putter", "cat": "Putter", "dist": 11, "lie": "green", "putt": true, "tee": false, "dtp_s": 11, "dtp_e": 1, "s": [30.054161, -95.516672], "e": [30.054241, -95.516711]}, {"n": 5, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 1, "dtp_e": 0, "s": [30.054241, -95.516711], "e": [30.054246, -95.516713]}]}, {"hole": 4, "par": 5, "len": 546.0, "pin": [30.059133812742, -95.515016766617], "shots": [{"n": 1, "club": "Driver", "cat": "Driver", "dist": 146, "lie": "tee", "putt": false, "tee": true, "dtp_s": 546, "dtp_e": 400, "s": [30.054884, -95.516693], "e": [30.056045, -95.516318]}, {"n": 2, "club": "Hybrid", "cat": "Hybrid", "dist": 184, "lie": "rough", "putt": false, "tee": false, "dtp_s": 400, "dtp_e": 242, "s": [30.056045, -95.516318], "e": [30.057148, -95.51512]}, {"n": 3, "club": "Hybrid", "cat": "Hybrid", "dist": 56, "lie": "rough", "putt": false, "tee": false, "dtp_s": 242, "dtp_e": 188, "s": [30.057148, -95.51512], "e": [30.057587, -95.514944]}, {"n": 4, "club": "6 Iron", "cat": "Iron", "dist": 109, "lie": "rough", "putt": false, "tee": false, "dtp_s": 188, "dtp_e": 96, "s": [30.057587, -95.514944], "e": [30.058435, -95.514599]}, {"n": 5, "club": "58 Wedge", "cat": "Wedge", "dist": 94, "lie": "rough", "putt": false, "tee": false, "dtp_s": 96, "dtp_e": 46, "s": [30.058435, -95.514599], "e": [30.058879, -95.515334]}, {"n": 6, "club": "58 Wedge", "cat": "Wedge", "dist": 34, "lie": "rough", "putt": false, "tee": false, "dtp_s": 46, "dtp_e": 12, "s": [30.058879, -95.515334], "e": [30.059044, -95.515073]}, {"n": 7, "club": "Putter", "cat": "Putter", "dist": 12, "lie": "green", "putt": true, "tee": false, "dtp_s": 12, "dtp_e": 1, "s": [30.059044, -95.515073], "e": [30.059129, -95.51502]}, {"n": 8, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 1, "dtp_e": 0, "s": [30.059129, -95.51502], "e": [30.059134, -95.515017]}]}, {"hole": 5, "par": 4, "len": 349.9, "pin": [30.061643297522, -95.518202253605], "shots": [{"n": 1, "club": "Driver", "cat": "Driver", "dist": 220, "lie": "tee", "putt": false, "tee": true, "dtp_s": 350, "dtp_e": 132, "s": [30.060328, -95.515245], "e": [30.06101, -95.517178]}, {"n": 2, "club": "Pitching Wedge", "cat": "Wedge", "dist": 114, "lie": "rough", "putt": false, "tee": false, "dtp_s": 132, "dtp_e": 33, "s": [30.06101, -95.517178], "e": [30.06171, -95.517895]}, {"n": 3, "club": "Pitching Wedge", "cat": "Wedge", "dist": 34, "lie": "rough", "putt": false, "tee": false, "dtp_s": 33, "dtp_e": 2, "s": [30.06171, -95.517895], "e": [30.06163, -95.518203]}, {"n": 4, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 2, "dtp_e": 1, "s": [30.06163, -95.518203], "e": [30.061638, -95.518202]}, {"n": 5, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 1, "dtp_e": 0, "s": [30.061638, -95.518202], "e": [30.061643, -95.518202]}]}, {"hole": 6, "par": 3, "len": 165.9, "pin": [30.059547429238, -95.518617174475], "shots": [{"n": 1, "club": "6 Iron", "cat": "Iron", "dist": 166, "lie": "tee", "putt": false, "tee": true, "dtp_s": 166, "dtp_e": 26, "s": [30.060897, -95.518386], "e": [30.059536, -95.518369]}, {"n": 2, "club": "54 Wedge", "cat": "Wedge", "dist": 41, "lie": "rough", "putt": false, "tee": false, "dtp_s": 26, "dtp_e": 16, "s": [30.059536, -95.518369], "e": [30.059478, -95.518751]}, {"n": 3, "club": "Putter", "cat": "Putter", "dist": 16, "lie": "green", "putt": true, "tee": false, "dtp_s": 16, "dtp_e": 1, "s": [30.059478, -95.518751], "e": [30.059545, -95.518623]}, {"n": 4, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 1, "dtp_e": 0, "s": [30.059545, -95.518623], "e": [30.059547, -95.518617]}]}, {"hole": 7, "par": 4, "len": 350.7, "pin": [30.062949778059, -95.520704012778], "shots": [{"n": 1, "club": "Driver", "cat": "Driver", "dist": 198, "lie": "tee", "putt": false, "tee": true, "dtp_s": 351, "dtp_e": 193, "s": [30.060244, -95.519552], "e": [30.061863, -95.51937]}, {"n": 2, "club": "5 Iron", "cat": "Iron", "dist": 135, "lie": "rough", "putt": false, "tee": false, "dtp_s": 193, "dtp_e": 59, "s": [30.061863, -95.51937], "e": [30.062563, -95.520363]}, {"n": 3, "club": "58 Wedge", "cat": "Wedge", "dist": 45, "lie": "rough", "putt": false, "tee": false, "dtp_s": 59, "dtp_e": 16, "s": [30.062563, -95.520363], "e": [30.062827, -95.520664]}, {"n": 4, "club": "Putter", "cat": "Putter", "dist": 15, "lie": "green", "putt": true, "tee": false, "dtp_s": 16, "dtp_e": 1, "s": [30.062827, -95.520664], "e": [30.062945, -95.520702]}, {"n": 5, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 1, "dtp_e": 0, "s": [30.062945, -95.520702], "e": [30.06295, -95.520704]}]}, {"hole": 8, "par": 4, "len": 381.3, "pin": [30.064332338697, -95.516396246634], "shots": [{"n": 1, "club": "Driver", "cat": "Driver", "dist": 270, "lie": "tee", "putt": false, "tee": true, "dtp_s": 381, "dtp_e": 114, "s": [30.064011, -95.520001], "e": [30.064077, -95.517434]}, {"n": 2, "club": "50 Wedge", "cat": "Wedge", "dist": 120, "lie": "fairway", "putt": false, "tee": false, "dtp_s": 114, "dtp_e": 19, "s": [30.064077, -95.517434], "e": [30.064489, -95.516398]}, {"n": 3, "club": "54 Wedge", "cat": "Wedge", "dist": 17, "lie": "rough", "putt": false, "tee": false, "dtp_s": 19, "dtp_e": 2, "s": [30.064489, -95.516398], "e": [30.064346, -95.516396]}, {"n": 4, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 2, "dtp_e": 1, "s": [30.064346, -95.516396], "e": [30.064338, -95.516396]}, {"n": 5, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 1, "dtp_e": 0, "s": [30.064338, -95.516396], "e": [30.064332, -95.516396]}]}, {"hole": 9, "par": 5, "len": 429.8, "pin": [30.061262285103, -95.513687119046], "shots": [{"n": 1, "club": "Driver", "cat": "Driver", "dist": 272, "lie": "tee", "putt": false, "tee": true, "dtp_s": 430, "dtp_e": 160, "s": [30.064578, -95.515101], "e": [30.062425, -95.514393]}, {"n": 2, "club": "5 Iron", "cat": "Iron", "dist": 144, "lie": "fairway", "putt": false, "tee": false, "dtp_s": 160, "dtp_e": 29, "s": [30.062425, -95.514393], "e": [30.061475, -95.513569]}, {"n": 3, "club": "54 Wedge", "cat": "Wedge", "dist": 27, "lie": "rough", "putt": false, "tee": false, "dtp_s": 29, "dtp_e": 2, "s": [30.061475, -95.513569], "e": [30.061275, -95.51368]}, {"n": 4, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 2, "dtp_e": 1, "s": [30.061275, -95.51368], "e": [30.061267, -95.513684]}, {"n": 5, "club": "Putter", "cat": "Putter", "dist": 1, "lie": "green", "putt": true, "tee": false, "dtp_s": 1, "dtp_e": 0, "s": [30.061267, -95.513684], "e": [30.061262, -95.513687]}]}];
+var COL={Driver:'#e53935',Wood:'#fb8c00',Hybrid:'#fdd835',Iron:'#43a047',
+Wedge:'#29b6f6',Putter:'#ab47bc'};
+function colOf(c){return COL[c]||'#bbbbbb';}
+function abbr(c){return (c||'').replace('Pitching Wedge','PW').replace(' Wedge','°W')
+ .replace(' Iron','i').replace(' Wood','W').replace('Driver','Dr').replace('Hybrid','Hy')
+ .replace('Putter','Putt');}
+if(!SM.length){
+ document.getElementById('map').innerHTML='<p class="note" style="padding:20px">No GPS for this round.</p>';
+}else{
+var map=L.map('map',{scrollWheelZoom:false});
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+ {maxZoom:19,attribution:'Esri'}).addTo(map);
+var layer=L.layerGroup().addTo(map);
+function drawShot(sh,label){
+ if(!sh.s) return []; var c=colOf(sh.cat); var pts=[sh.s]; if(sh.e) pts.push(sh.e);
+ var tip='#'+sh.n+' '+sh.club+' · '+sh.dist+'y'+(sh.lie?' · from '+sh.lie:'');
+ if(pts.length===2){
+  L.polyline(pts,{color:c,weight:3,opacity:.95}).addTo(layer).bindTooltip(tip);
+  L.circleMarker(sh.e,{radius:3,color:c,fillColor:c,fillOpacity:1,weight:1}).addTo(layer);
+ }
+ L.circleMarker(sh.s,{radius:sh.tee?5:3,color:c,
+  fillColor:sh.tee?'#ffffff':c,fillOpacity:1,weight:1}).addTo(layer).bindTooltip(tip);
+ if(label && pts.length===2){
+  var mid=[(sh.s[0]+sh.e[0])/2,(sh.s[1]+sh.e[1])/2];
+  L.marker(mid,{icon:L.divIcon({className:'shotlbl',
+   html:abbr(sh.club)+' '+sh.dist,iconSize:[64,14]})}).addTo(layer);
+ }
+ return pts;
+}
+function show(idx){
+ layer.clearLayers(); var all=[],rows='';
+ var hs = idx<0 ? SM : [SM[idx]];
+ hs.forEach(function(h){(h.shots||[]).forEach(function(sh){
+  drawShot(sh, idx>=0).forEach(function(p){all.push(p);});
+  if(idx>=0) rows+='<tr><td style="border-left:3px solid '+colOf(sh.cat)+
+   ';padding-left:6px">'+sh.n+'</td><td>'+sh.club+'</td><td>'+sh.dist+'y</td><td>'+
+   (sh.lie||'')+'</td><td>'+(sh.putt?'—':sh.dtp_e+'y')+'</td></tr>';
+ });});
+ if(all.length) map.fitBounds(all,{padding:[25,25]});
+ var sl=document.getElementById('shotlist');
+ if(idx>=0){var h=SM[idx];
+  sl.innerHTML='<div class="sl-h">Hole '+h.hole+' · par '+(h.par||'?')+
+   (h.len?' · '+Math.round(h.len)+'y':'')+'</div>'+
+   '<table><thead><tr><th>#</th><th>Club</th><th>Carry</th><th>Lie</th><th>To pin</th>'+
+   '</tr></thead><tbody>'+rows+'</tbody></table>';
+ }else sl.innerHTML='<div class="sl-h">All '+SM.length+' holes</div>'+
+   '<p class="note">Pick a hole number above to see each shot and the club used.</p>';
+}
+var nav=document.getElementById('holenav');
+function setActive(b){nav.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');}
+var ab=document.createElement('button');ab.textContent='All';ab.className='on';
+ab.onclick=function(){setActive(ab);show(-1);};nav.appendChild(ab);
+SM.forEach(function(h,i){var b=document.createElement('button');b.textContent=h.hole;
+ b.onclick=function(){setActive(b);show(i);};nav.appendChild(b);});
+var lg=document.getElementById('legend');
+Object.keys(COL).forEach(function(k){lg.innerHTML+='<span class="lchip"><i style="background:'+
+ COL[k]+'"></i>'+k+'</span>';});
+show(-1);
+}
+</script>
+</body></html>

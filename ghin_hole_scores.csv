@@ -1,4 +1,13 @@
 score_id,played_at,course_name,hole_number,par,raw_score,adjusted_gross_score,stroke_allocation,putts,fairway_hit,gir_flag,drive_accuracy,approach_shot_accuracy,x_hole,most_likely_score
+1172826456,2026-06-19,WindRose Golf Club,1,4,5,5,9,,,,,,False,
+1172826456,2026-06-19,WindRose Golf Club,2,3,5,5,8,,,,,,False,
+1172826456,2026-06-19,WindRose Golf Club,3,4,5,5,4,,,,,,False,
+1172826456,2026-06-19,WindRose Golf Club,4,5,8,8,2,,,,,,False,
+1172826456,2026-06-19,WindRose Golf Club,5,4,5,5,6,,,,,,False,
+1172826456,2026-06-19,WindRose Golf Club,6,3,4,4,3,,,,,,False,
+1172826456,2026-06-19,WindRose Golf Club,7,4,5,5,5,,,,,,False,
+1172826456,2026-06-19,WindRose Golf Club,8,4,5,5,1,,,,,,False,
+1172826456,2026-06-19,WindRose Golf Club,9,5,5,5,7,,,,,,False,
 1170854129,2026-06-14,WindRose Golf Club,1,4,6,6,17,,,,,,False,
 1170854129,2026-06-14,WindRose Golf Club,2,3,3,3,15,,,,,,False,
 1170854129,2026-06-14,WindRose Golf Club,3,4,4,4,7,,,,,,False,

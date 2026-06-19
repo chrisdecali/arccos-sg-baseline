@@ -1,14 +1,14 @@
 club,club_category,club_make,club_model,smart_distance_yd,normalized_yd,tee_yd,fairway_yd,rough_yd,sand_yd,longest_yd,range_low_yd,range_high_yd,dispersion_yd,gir_pct,usage_count
-Driver,Driver,Cobra,DS-ADAPT LS,263.8,263.8,268.1,,,,285.2,262.253,269.271,7.0,,26
+Driver,Driver,Cobra,DS-ADAPT LS,264.2,264.2,270.5,,,,285.2,265.412,271.155,5.7,,33
 3 Wood,Wood,Cobra,DS-ADAPT,229.0,229.0,239.0,,122.0,,239.8,225.476,238.387,12.9,0.0,4
-Hybrid,Hybrid,Cobra,DS-ADAPT,207.4,207.4,,,220.5,,220.5,220.471,220.471,0.0,0.0,5
-5 Wood,Wood,Cobra,DS-ADAPT,203.2,,,,,,141.5,,,,0.0,2
-6 Iron,Iron,Srixon,ZX7 Mk II,158.4,158.4,,160.3,,,160.3,160.338,160.338,0.0,,3
-5 Iron,Iron,Srixon,ZX7 Mk II,155.5,155.5,164.9,160.0,172.0,,184.0,152.576,170.43,17.9,16.7,17
-7 Iron,Iron,Srixon,ZX7 Mk II,149.0,149.0,161.9,151.1,134.1,,161.9,147.497,151.478,4.0,50.0,7
-8 Iron,Iron,Srixon,ZX7 Mk II,140.5,,,,,,170.3,,,,100.0,2
+5 Wood,Wood,Cobra,DS-ADAPT,200.1,,,,,,141.5,,,,0.0,2
+Hybrid,Hybrid,Cobra,DS-ADAPT,196.3,196.3,184.1,,220.5,,220.5,200.447,211.369,10.9,0.0,7
+6 Iron,Iron,Srixon,ZX7 Mk II,157.4,157.4,165.0,160.3,,,165.0,162.432,163.829,1.4,0.0,5
+7 Iron,Iron,Srixon,ZX7 Mk II,155.4,155.4,161.9,155.0,134.1,,161.9,150.417,157.992,7.6,33.3,8
+5 Iron,Iron,Srixon,ZX7 Mk II,147.8,147.8,164.9,155.1,163.5,,184.0,148.758,169.921,21.2,14.3,19
+8 Iron,Iron,Srixon,ZX7 Mk II,141.3,,,,,,170.3,,,,100.0,2
 9 Iron,Iron,Srixon,ZX7 Mk II,137.0,137.0,127.9,,144.1,,152.0,132.87,147.537,14.7,50.0,4
-Pitching Wedge,Wedge,Srixon,ZX7 Mk II,111.7,111.7,131.2,112.2,85.0,,131.2,109.448,121.677,12.2,100.0,6
-50 Wedge,Wedge,Cleveland,RTX 6 ZipCore,100.3,100.3,,98.0,104.5,,104.5,100.952,102.889,1.9,0.0,9
-58 Wedge,Wedge,Cleveland,RTX 6 ZipCore,88.8,88.8,,91.4,71.3,,94.2,79.5625,90.8301,11.3,,17
-54 Wedge,Wedge,Cleveland,RTX 6 ZipCore,72.2,72.2,,59.2,92.2,,102.4,67.6871,85.4968,17.8,100.0,13
+Pitching Wedge,Wedge,Srixon,ZX7 Mk II,112.7,112.7,129.0,111.5,105.0,,131.2,112.531,121.317,8.8,50.0,10
+50 Wedge,Wedge,Cleveland,RTX 6 ZipCore,107.6,107.6,,113.5,104.5,,120.2,103.858,112.338,8.5,0.0,11
+58 Wedge,Wedge,Cleveland,RTX 6 ZipCore,91.2,91.2,,91.4,91.2,,94.3,86.3596,93.3444,7.0,,21
+54 Wedge,Wedge,Cleveland,RTX 6 ZipCore,72.2,72.2,,59.2,92.2,,102.4,67.6871,85.4968,17.8,100.0,16
