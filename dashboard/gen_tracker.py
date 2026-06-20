@@ -197,12 +197,15 @@ def compute(store: str) -> dict:
     profile = _read_json(os.path.join(store, "player_profile.json"), {})
 
     # ---- player / index ----
-    # Only 18-hole Score Differentials feed the WHS index. A 9-hole round posts a
-    # 9-hole differential that WHS pairs with another nine (or an expected nine) into
-    # an 18-hole differential — using it raw would crash the index, so exclude lone
-    # 9-hole scores here.
+    # GHIN's official WHS Handicap Index is authoritative — use it verbatim. Our own
+    # whs_index() is only a fallback (for the projection what-if, or before GHIN has
+    # established an index): it can't perfectly mirror WHS edge cases like 9-hole
+    # pairing or the low-HI cap, so never let it override the official number.
+    ghin_profile = _read_json(os.path.join(store, "ghin_profile.json"), {})
     diffs = [_f(r.get("differential")) for r in ghin if _i(r.get("holes")) == 18]
-    idx = whs_index(diffs)
+    idx = _f(ghin_profile.get("handicap_index"))   # official GHIN value
+    if idx is None:
+        idx = whs_index(diffs)                      # fallback estimate
     if idx is None:
         idx = (disp.get("player") or {}).get("hcp_index")
 
