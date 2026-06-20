@@ -154,6 +154,11 @@ this repo. Only the optional PDF uses the golf-reports render layer.
   (SteelFiber i110 S); Cleveland RTX6 GW/SW/LW (SteelFiber FC115 S); Tour Edge ZT-4
   putter. 18B carries: Dr 250, 3W 225, 5W 200, 4H 185, 5i 175, 6i 165, 7i 155, 8i 145,
   9i 135, PW 120, GW 105, SW 90, LW 80. Only data-backed change so far: 5-iron → ~165–170.
+* **Launch-monitor carries (authoritative — override the modeled roll factor).** Lives
+  in `LM_CARRY` in `gen_tracker.py`; tagged `LM` on the dashboard. **Driver = 265
+  carry** (player launches it 260–270; little rollout — his Arccos *total* best-third
+  is ~270, so the old 0.90 roll haircut under-read carry at 245). Add clubs to
+  `LM_CARRY` as he measures them; those beat the modeled carry every time.
 * **Medical:** small-fiber neuropathy, fibromyalgia, ataxia → graphite is required (not
   a compromise) and fitting must be launch-monitor/dispersion-driven — he can't feel
   spec changes. Never recommend steel or feel-based fitting.

@@ -135,8 +135,15 @@ TARGET_BAG = [
     ("54 Wedge", 90), ("58 Wedge", 80),
 ]
 # Modeled total->carry haircut by category (woods roll out more than wedges).
+# Only used when there's no LAUNCH-MONITOR carry for a club (see LM_CARRY).
 CARRY_FACTOR = {"Driver": 0.90, "Wood": 0.93, "Hybrid": 0.95, "Iron": 0.97,
                 "Wedge": 0.98, "Putter": 1.0}
+# Launch-monitor (or player-known) CARRY by club — authoritative. These override the
+# modeled total->carry factor entirely, because Arccos has no launch data and the
+# roll haircut is a guess. Add a club here as you measure it on a launch monitor.
+LM_CARRY = {
+    "Driver": 265,   # player measured 260-270 carry; little rollout on his launch
+}
 GROUP_OF = {"Driver": "Woods", "Wood": "Woods", "Hybrid": "Woods",
             "Iron": "Irons", "Wedge": "Wedges"}
 
@@ -258,11 +265,15 @@ def compute(store: str) -> dict:
             clean_total = _f(cm.get("smart_distance_yd"))
         measured = _round5(clean_total * CARRY_FACTOR.get(cat, 0.97)
                            ) if clean_total else None
-        # Only let MEASURED override the known-good target when it's high
-        # confidence: enough samples AND within ~15% of target (a wild measured
-        # value is noise/mis-tag, not a real gap). Otherwise trust the target.
-        confident = (measured is not None and n and n >= 8
-                     and abs(measured - target) <= 0.15 * target)
+        # A launch-monitor carry, if we have one, is authoritative — it overrides the
+        # modeled (total x roll-factor) estimate entirely.
+        lm = name in LM_CARRY
+        if lm:
+            measured = _round5(LM_CARRY[name])
+        # Use MEASURED when it's trustworthy: a launch-monitor number always, else
+        # enough on-course samples AND within ~15% of target (else it's noise).
+        confident = lm or (measured is not None and n and n >= 8
+                           and abs(measured - target) <= 0.15 * target)
         candidate = _round5(measured if confident else target)
         # Enforce strictly descending in 5-yard steps: never emit a club carrying
         # >= the one above it. If the candidate would break order, step down by 5.
@@ -276,8 +287,8 @@ def compute(store: str) -> dict:
         bag.append({
             "club": name, "category": cat, "group": GROUP_OF.get(cat, "Other"),
             "target": target, "measured": measured, "suggested": suggested,
-            "n": n or 0, "held": held,
-            "low_conf": (n or 0) < 5,
+            "n": n or 0, "held": held, "lm": lm,
+            "low_conf": (n or 0) < 5 and not lm,
         })
 
     # ---- lateral offsets per club (one pass; shared by dispersion + aim) ----
@@ -320,12 +331,14 @@ def compute(store: str) -> dict:
         factor = CARRY_FACTOR.get(cat, 0.97)
         lat = _iqr_filter(lat_by_club.get(name, []))          # drop hooks/pushes
         best3 = _clean_third(ds) or 0   # best-third strike (total = carry + roll)
+        lm = name in LM_CARRY
+        # carry = launch-monitor number if we have one, else total x roll factor
+        carry = _round5(LM_CARRY[name]) if lm else _round5(best3 * factor)
         disp_clubs.append({
             "club": name, "category": cat, "group": GROUP_OF.get(cat, "Other"),
             # total = the real measured distance (what you see on course / Arccos)
             "total": _round5(best3),
-            # carry center = total x category roll factor (lines up with carry targets)
-            "carry": _round5(best3 * factor),
+            "carry": carry, "lm": lm,
             # spread = SD over the cleaned set (tops/hooks already dropped)
             "carry_sd": _round5(statistics.pstdev(kept) * factor) if len(kept) > 1 else 0,
             "lateral_sd": _round5(statistics.pstdev(lat)) if len(lat) > 1 else None,
@@ -669,10 +682,11 @@ def render_html(d: dict) -> str:
     for b in d["bag"]:
         flag = ' <span class="hold" title="held to keep the bag descending / low sample">hold</span>' if b["held"] else ""
         lc = ' <span class="lc" title="usage_count &lt; 5 — noisy">low n</span>' if b["low_conf"] else ""
+        lm = ' <span class="conf conf-high" title="launch-monitor carry — authoritative, overrides the modeled roll factor">LM</span>' if b.get("lm") else ""
         meas = _num(b["measured"], 0) if b["measured"] else "—"
         bag_rows += (
             f'<tr><td>{_esc(b["club"])}</td><td>{b["target"]}</td>'
-            f'<td>{meas}{lc}</td><td><b>{b["suggested"]}</b>{flag}</td>'
+            f'<td>{meas}{lm}{lc}</td><td><b>{b["suggested"]}</b>{flag}</td>'
             f'<td>{b["n"]}</td></tr>')
 
     # ---- dispersion table ----
@@ -683,9 +697,10 @@ def render_html(d: dict) -> str:
         used = (f'{c["n"]} of {total}'
                 + (f' <span class="lc" title="{drop} clear mishits (topped/hooked) '
                    f'removed before averaging">−{drop}</span>' if drop else ''))
+        lm = ' <span class="conf conf-high" title="launch-monitor carry">LM</span>' if c.get("lm") else ""
         disp_rows += (
             f'<tr data-group="{_esc(c["group"])}"><td>{_esc(c["club"])}</td>'
-            f'<td><b>{_num(c["total"],0)}</b></td><td>{_num(c["carry"],0)}</td>'
+            f'<td><b>{_num(c["total"],0)}</b></td><td>{_num(c["carry"],0)}{lm}</td>'
             f'<td>±{_num(c["carry_sd"],0)}</td>'
             f'<td>±{_num(c["lateral_sd"],0)}</td><td>{used}</td>'
             f'<td><span class="conf conf-{_esc(c["confidence"])}">{_esc(c["confidence"])}</span></td></tr>')
@@ -933,9 +948,10 @@ rounded to 5 yds. Also written to <code>club_distances.csv</code>.</p></section>
 <table><thead><tr><th>Club</th><th>Target carry</th><th>Measured (best-⅓)</th>
 <th>Suggested</th><th>n</th></tr></thead><tbody>{bag_rows}</tbody></table>
 <p class="note">Target = your 18Birdies carry set. Measured = best-third strike ×
-a modeled total→carry factor (on-course averages are poisoned by mishits). The bag
-is held <b>strictly descending</b>: a "hold" tag means a noisy data point would have
-put a club out of order, so the target stands.</p></section>
+a modeled total→carry factor — <b>except clubs tagged <span class="conf conf-high">LM</span></b>,
+which use your <b>launch-monitor carry</b> (authoritative; the roll factor is only a
+guess Arccos can't measure). The bag stays <b>strictly descending</b>: a "hold" tag
+means a noisy data point would have broken club order, so the target stands.</p></section>
 
 <section><h2>Round map</h2>
 <div class="tabs" id="round-tabs"></div>

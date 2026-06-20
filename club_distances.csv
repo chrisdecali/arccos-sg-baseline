@@ -1,5 +1,5 @@
 club,category,total_yd,carry_yd,carry_sd_yd,lateral_sd_yd,shots_used,shots_dropped_outliers,confidence
-Driver,Driver,270,245,20,35,24,9,high
+Driver,Driver,270,265,20,35,24,9,high
 3 Wood,Wood,240,225,0,25,2,2,low
 5 Wood,Wood,140,130,0,15,1,1,low
 Hybrid,Hybrid,205,190,65,15,5,2,low
