@@ -108,15 +108,31 @@ this repo. Only the optional PDF uses the golf-reports render layer.
   modeled estimates.
 * **SG levers overlap ~35–40%.** Don't additively stack strokes-gained estimates;
   apply a ~0.62 efficiency factor to combined totals.
-* **WHS reality:** the index uses your best differentials; with <20 scores only the
-  best 1–2 count (+ an adjustment that shrinks as you post), so the index rises
-  mechanically for several posts before settling. Don't read that as regression.
+* **Handicap index = GHIN's official number, verbatim.** `gen_tracker.py` reads
+  `handicap_index` from `ghin_profile.json` and shows that; the local `whs_index()`
+  is only a fallback (before GHIN establishes an index) and for the projection
+  what-if. Never override the official value with a local estimate — our WHS math
+  can't perfectly mirror GHIN's small-sample adjustment, 9-hole pairing, or low-HI
+  cap. **9-hole rounds are excluded from the index** (a lone nine posts a 9-hole
+  differential that WHS pairs with another nine; using it raw crashes the index) and
+  are flagged "9-hole / held" in posted scores. The projection is a labeled estimate
+  on the most-recent-20 window, not the official number.
 * **Equipment is low-leverage (~2 strokes max).** Short game + course management are
   ~75–80% of strokes over par. Spend recommendations accordingly.
 * **`clubs.csv` is noisy.** Trust a club only at `usage_count ≥ ~5`; convert
   `smart_distance` (≈ total) → carry by category before comparing to carry baselines;
   otherwise fall back to the 18B set. Watch for Arccos mis-tags (phantom 4-iron,
   wedges logged by wrong loft).
+* **Club distances are recomputed live from `shots.csv`, NOT from `dispersion.json`.**
+  The dispersion explorer drops clear mishits (carry floor 0.8× median for tops/chunks;
+  lateral IQR for hooks/pushes), takes the best-third strike, and shows BOTH **Total**
+  (best-third, the real measured distance ≈ what Arccos/you see, e.g. driver 270) and
+  **Carry** (Total × a category roll factor, e.g. 245) so the number stops looking
+  low. `dispersion.json` is now only read for `generated_at`/fallback. The cleaned
+  per-club numbers are also written to **`club_distances.csv`** (a generated artifact:
+  total, carry, carry SD, lateral SD, shots used/dropped, confidence). Note the
+  dispersion table shows *measured* numbers and may be non-monotonic; the
+  measured-vs-target **bag** is the prescriptive, strictly-descending view.
 * **Tee/aim bias** is measured to the pin line — note the dogleg caveat (you aim at
   the bend, not the flag, on doglegs). Don't surface an aim-change rec off < 6 clean
   shots. Bias ≥ ~5 yd (with enough n) → recommend aiming the opposite way; always add:

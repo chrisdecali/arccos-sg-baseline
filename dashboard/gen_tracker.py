@@ -179,7 +179,8 @@ def _iqr_filter(vals):
     vals = [v for v in vals if v is not None]
     if len(vals) < 4:
         return vals
-    q = statistics.quantiles(vals, n=4)
+    # inclusive method = robust on the small samples we have (n often 4–7)
+    q = statistics.quantiles(vals, n=4, method="inclusive")
     lo, hi = q[0] - 1.5 * (q[2] - q[0]), q[2] + 1.5 * (q[2] - q[0])
     return [v for v in vals if lo <= v <= hi]
 
@@ -214,7 +215,7 @@ def compute(store: str) -> dict:
     sg_arccos = career.get("strokes_gained_arccos", {})
 
     # ---- per-round (newest last) ----
-    rounds_sorted = sorted(rounds, key=lambda r: r.get("date", ""))
+    rounds_sorted = sorted(rounds, key=lambda r: r.get("date") or "")
     round_rows = []
     for r in rounds_sorted:
         round_rows.append({
@@ -284,7 +285,8 @@ def compute(store: str) -> dict:
     for h in holes:
         pin_of[(h.get("round_id"), h.get("hole_id"))] = (
             _f(h.get("pin_lat")), _f(h.get("pin_lng")))
-    lat_by_club: dict[str, list[float]] = {}
+    lat_by_club: dict[str, list[float]] = {}    # all shots — for dispersion spread
+    lat_aim: dict[str, list[float]] = {}        # non-tee only — for aim bias
     for s in shots:
         if _truthy(s.get("is_putt")):
             continue
@@ -298,6 +300,10 @@ def compute(store: str) -> dict:
             pin if pin and all(pin) else (None, None))
         if off is not None and abs(off) < 80:  # drop wild geo glitches
             lat_by_club.setdefault(club, []).append(off)
+            # Off the tee you aim at the fairway/dogleg, not the pin — so the offset
+            # to the pin line isn't "aim bias". Only non-tee shots inform aim.
+            if not _truthy(s.get("is_tee")):
+                lat_aim.setdefault(club, []).append(off)
 
     # ---- dispersion explorer (measured from shots, clear mishits removed) ----
     # Drop topped/chunked shots via a carry floor (0.8 x median carry) and
@@ -331,7 +337,7 @@ def compute(store: str) -> dict:
     # ---- aim-by-club (signed lateral bias to the pin line) ----
     aim = []
     for name, _t in TARGET_BAG:
-        offs = _iqr_filter(lat_by_club.get(name, []))
+        offs = _iqr_filter(lat_aim.get(name, []))
         if len(offs) < 3:
             continue
         bias = statistics.fmean(offs)
@@ -441,7 +447,7 @@ def compute(store: str) -> dict:
             "date": g.get("played_at"), "course": g.get("course_name"),
             "score": _i(g.get("adjusted_gross_score")), "holes": _i(g.get("holes")),
             "diff": _f(g.get("differential")), "used": _truthy(g.get("used")),
-        } for g in sorted(ghin, key=lambda g: g.get("played_at", ""), reverse=True)],
+        } for g in sorted(ghin, key=lambda g: g.get("played_at") or "", reverse=True)],
         "career": career,
         "holes_by_round": holes_by_round,
         # map payload: per round -> per hole -> shot polyline
@@ -656,6 +662,7 @@ def render_html(d: dict) -> str:
     # ---- index projection slider (client-side WHS recompute) ----
     diffs_json = json.dumps([g["diff"] for g in d["posted"]
                              if g["diff"] is not None and g.get("holes") == 18])
+    official_json = json.dumps(d["player"]["index"])
 
     # ---- bag table ----
     bag_rows = ""
@@ -774,7 +781,7 @@ def render_html(d: dict) -> str:
     map_json = json.dumps(d["map"])
 
     plan_html = "".join(f"<li>{x}</li>" for x in plan)
-    courses = ", ".join(m["courses"]) or "—"
+    courses = ", ".join(_esc(c) for c in m["courses"]) or "—"
 
     return f"""<!doctype html>
 <html lang="en"><head>
@@ -857,9 +864,11 @@ hole-by-hole, and strokes-gained for that round.</p>
 {nav_html or '<p class="note">No rounds yet.</p>'}</section>
 
 <section><h2>Index projection</h2>
-<p class="note">WHS uses your best differentials; with &lt;20 scores only the best
-1–2 count plus an adjustment that shrinks as you post — so the index drifts
-<i>up</i> for several rounds before settling. That's mechanical, not regression.</p>
+<p class="note">Your official index is <b>{_num(p['index'],1)}</b> (from GHIN). This is a
+rough <i>estimate</i> of where it heads — WHS counts your most recent 20 differentials,
+and with few scores a small-sample adjustment shrinks as you post, so the index can
+drift before settling. It can differ from GHIN by up to a stroke until ~20 scores are
+in; GHIN's number above is the truth.</p>
 <div class="slider-row">
   <label>If your next rounds average a differential of
   <b id="dval">18</b>:</label>
@@ -959,18 +968,23 @@ are the lever.
 <script>
 // ---- WHS index projection (client-side recompute) ----
 var DIFFS = {diffs_json};
+var OFFICIAL = {official_json};   // GHIN's authoritative current index
 var WHS = {{3:[1,2],4:[1,1],5:[1,0],6:[2,1],7:[2,0],8:[2,0],9:[3,0],10:[3,0],
 11:[3,0],12:[4,0],13:[4,0],14:[4,0],15:[5,0],16:[5,0],17:[6,0],18:[6,0],19:[7,0],20:[8,0]}};
 function whs(arr){{var a=arr.slice().filter(x=>x!=null).sort((p,q)=>p-q);
 var n=a.length; if(n<3) return null; var t=WHS[Math.min(n,20)]||[8,0];
-var s=0; for(var i=0;i<t[0];i++) s+=a[i]; return (s/t[0]-t[1]);}}
+var s=0; for(var i=0;i<t[0];i++) s+=a[i]; return Math.round((s/t[0]-t[1])*10)/10;}}
+// Estimate only. WHS uses your most recent 20 differentials; we can't perfectly
+// mirror GHIN's small-sample adjustment / 9-hole pairing, so this is a rough
+// trajectory, not the official number (which is shown above as 14.1).
 function proj(){{
  var dv=parseFloat(document.getElementById('dslider').value);
  var np=parseInt(document.getElementById('nposts').value);
  document.getElementById('dval').textContent=dv;
  var arr=DIFFS.slice(); for(var i=0;i<np;i++) arr.push(dv);
+ arr = arr.slice(-20);   // WHS counts only the most recent 20 scores
  var v=whs(arr);
- document.getElementById('projidx').textContent = v==null?'—':v.toFixed(1);
+ document.getElementById('projidx').textContent = v==null?'—':'~'+v.toFixed(1);
 }}
 document.getElementById('dslider').addEventListener('input',proj);
 document.getElementById('nposts').addEventListener('change',proj);
@@ -1043,9 +1057,11 @@ def render_round_page(d: dict, r: dict) -> str:
         for lab, k in [("Off the tee", "sg_off_tee"), ("Approach", "sg_approach"),
                        ("Short game", "sg_short"), ("Putting", "sg_putting")])
 
+    def _tp(v):
+        return "" if v is None else (f"+{v}" if v > 0 else str(v))
     hrows = "".join(
         f'<tr><td>#{h["hole"]}</td><td>{h["par"]}</td><td>{_num(h["len"],0)}</td>'
-        f'<td>{h["shots"]}</td><td>{("+%d"%h["to_par"]) if (h["to_par"] or 0)>0 else h["to_par"]}</td>'
+        f'<td>{h["shots"]}</td><td>{_tp(h["to_par"])}</td>'
         f'<td>{h["putts"]}</td><td>{"✓" if h["fairway"] else ""}</td>'
         f'<td>{"✓" if h["gir"] else ""}</td><td>{_num(h["drive"],0)}</td>'
         f'<td>{_num(h["proximity"],0)}</td><td>{_num(h["sg"],2,True)}</td></tr>'
@@ -1137,9 +1153,12 @@ var map=L.map('map',{{scrollWheelZoom:false}});
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{{z}}/{{y}}/{{x}}',
  {{maxZoom:19,attribution:'Esri'}}).addTo(map);
 var layer=L.layerGroup().addTo(map);
+// escape data-derived strings before they enter HTML sinks (tooltips/labels/innerHTML)
+function esc(s){{return String(s==null?'':s).replace(/[&<>"']/g,function(m){{
+ return {{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[m];}});}}
 function drawShot(sh,label){{
  if(!sh.s) return []; var c=colOf(sh.cat); var pts=[sh.s]; if(sh.e) pts.push(sh.e);
- var tip='#'+sh.n+' '+sh.club+' · '+sh.dist+'y'+(sh.lie?' · from '+sh.lie:'');
+ var tip='#'+esc(sh.n)+' '+esc(sh.club)+' · '+esc(sh.dist)+'y'+(sh.lie?' · from '+esc(sh.lie):'');
  if(pts.length===2){{
   L.polyline(pts,{{color:c,weight:3,opacity:.95}}).addTo(layer).bindTooltip(tip);
   L.circleMarker(sh.e,{{radius:3,color:c,fillColor:c,fillOpacity:1,weight:1}}).addTo(layer);
@@ -1149,7 +1168,7 @@ function drawShot(sh,label){{
  if(label && pts.length===2){{
   var mid=[(sh.s[0]+sh.e[0])/2,(sh.s[1]+sh.e[1])/2];
   L.marker(mid,{{icon:L.divIcon({{className:'shotlbl',
-   html:abbr(sh.club)+' '+sh.dist,iconSize:[64,14]}})}}).addTo(layer);
+   html:esc(abbr(sh.club))+' '+esc(sh.dist),iconSize:[64,14]}})}}).addTo(layer);
  }}
  return pts;
 }}
@@ -1159,13 +1178,13 @@ function show(idx){{
  hs.forEach(function(h){{(h.shots||[]).forEach(function(sh){{
   drawShot(sh, idx>=0).forEach(function(p){{all.push(p);}});
   if(idx>=0) rows+='<tr><td style="border-left:3px solid '+colOf(sh.cat)+
-   ';padding-left:6px">'+sh.n+'</td><td>'+sh.club+'</td><td>'+sh.dist+'y</td><td>'+
-   (sh.lie||'')+'</td><td>'+(sh.putt?'—':sh.dtp_e+'y')+'</td></tr>';
+   ';padding-left:6px">'+esc(sh.n)+'</td><td>'+esc(sh.club)+'</td><td>'+esc(sh.dist)+'y</td><td>'+
+   esc(sh.lie||'')+'</td><td>'+(sh.putt?'—':esc(sh.dtp_e)+'y')+'</td></tr>';
  }});}});
  if(all.length) map.fitBounds(all,{{padding:[25,25]}});
  var sl=document.getElementById('shotlist');
  if(idx>=0){{var h=SM[idx];
-  sl.innerHTML='<div class="sl-h">Hole '+h.hole+' · par '+(h.par||'?')+
+  sl.innerHTML='<div class="sl-h">Hole '+esc(h.hole)+' · par '+esc(h.par||'?')+
    (h.len?' · '+Math.round(h.len)+'y':'')+'</div>'+
    '<table><thead><tr><th>#</th><th>Club</th><th>Carry</th><th>Lie</th><th>To pin</th>'+
    '</tr></thead><tbody>'+rows+'</tbody></table>';
@@ -1195,23 +1214,12 @@ def main():
     os.makedirs(outdir, exist_ok=True)
     rounds_dir = os.path.join(outdir, "rounds")
     os.makedirs(rounds_dir, exist_ok=True)
-    # Persist the cleaned per-club distances as a data artifact so the outlier
-    # filter / best-third numbers live IN THE DATA (not just rendered live).
-    with open(os.path.join(store, "club_distances.csv"), "w", newline="",
-              encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow(["club", "category", "total_yd", "carry_yd", "carry_sd_yd",
-                    "lateral_sd_yd", "shots_used", "shots_dropped_outliers",
-                    "confidence"])
-        for c in data["dispersion"]:
-            w.writerow([c["club"], c["category"], c.get("total"), c["carry"],
-                        c["carry_sd"], c["lateral_sd"], c["n"], c.get("dropped", 0),
-                        c["confidence"]])
     # detect an existing shot-map PDF per round (generated separately) so we only
     # ever link a PDF that's really there — no dead links.
     for r in data["rounds"]:
         pdf = f'{r["slug"]}_shotmaps.pdf'
         r["pdf"] = pdf if os.path.exists(os.path.join(rounds_dir, pdf)) else None
+    # The dashboard HTML is the product — write it FIRST so nothing else can block it.
     with open(out, "w", encoding="utf-8") as f:
         f.write(render_html(data))
     # per-round full-review pages -> <outdir>/rounds/<slug>_review.html
@@ -1219,6 +1227,23 @@ def main():
         with open(os.path.join(rounds_dir, f'{r["slug"]}_review.html'), "w",
                   encoding="utf-8") as f:
             f.write(render_round_page(data, r))
+    # Persist the cleaned per-club distances as a data artifact so the outlier
+    # filter / best-third numbers live IN THE DATA. Secondary — never let a failure
+    # here (locked/missing store) block the dashboard above.
+    try:
+        if os.path.isdir(store):
+            with open(os.path.join(store, "club_distances.csv"), "w", newline="",
+                      encoding="utf-8") as f:
+                w = csv.writer(f)
+                w.writerow(["club", "category", "total_yd", "carry_yd", "carry_sd_yd",
+                            "lateral_sd_yd", "shots_used", "shots_dropped_outliers",
+                            "confidence"])
+                for c in data["dispersion"]:
+                    w.writerow([c["club"], c["category"], c.get("total"), c["carry"],
+                                c["carry_sd"], c["lateral_sd"], c["n"],
+                                c.get("dropped", 0), c["confidence"]])
+    except OSError as e:
+        print(f"warning: could not write club_distances.csv: {e}")
     m = data["meta"]
     print(f"wrote {out} + {len(data['rounds'])} round reviews  "
           f"({m['n_rounds']} rounds, {m['n_holes']} holes, {m['n_shots']} shots, "

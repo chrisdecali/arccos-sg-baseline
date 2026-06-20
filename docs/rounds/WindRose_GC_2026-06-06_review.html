@@ -78,9 +78,12 @@ var map=L.map('map',{scrollWheelZoom:false});
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
  {maxZoom:19,attribution:'Esri'}).addTo(map);
 var layer=L.layerGroup().addTo(map);
+// escape data-derived strings before they enter HTML sinks (tooltips/labels/innerHTML)
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){
+ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
 function drawShot(sh,label){
  if(!sh.s) return []; var c=colOf(sh.cat); var pts=[sh.s]; if(sh.e) pts.push(sh.e);
- var tip='#'+sh.n+' '+sh.club+' · '+sh.dist+'y'+(sh.lie?' · from '+sh.lie:'');
+ var tip='#'+esc(sh.n)+' '+esc(sh.club)+' · '+esc(sh.dist)+'y'+(sh.lie?' · from '+esc(sh.lie):'');
  if(pts.length===2){
   L.polyline(pts,{color:c,weight:3,opacity:.95}).addTo(layer).bindTooltip(tip);
   L.circleMarker(sh.e,{radius:3,color:c,fillColor:c,fillOpacity:1,weight:1}).addTo(layer);
@@ -90,7 +93,7 @@ function drawShot(sh,label){
  if(label && pts.length===2){
   var mid=[(sh.s[0]+sh.e[0])/2,(sh.s[1]+sh.e[1])/2];
   L.marker(mid,{icon:L.divIcon({className:'shotlbl',
-   html:abbr(sh.club)+' '+sh.dist,iconSize:[64,14]})}).addTo(layer);
+   html:esc(abbr(sh.club))+' '+esc(sh.dist),iconSize:[64,14]})}).addTo(layer);
  }
  return pts;
 }
@@ -100,13 +103,13 @@ function show(idx){
  hs.forEach(function(h){(h.shots||[]).forEach(function(sh){
   drawShot(sh, idx>=0).forEach(function(p){all.push(p);});
   if(idx>=0) rows+='<tr><td style="border-left:3px solid '+colOf(sh.cat)+
-   ';padding-left:6px">'+sh.n+'</td><td>'+sh.club+'</td><td>'+sh.dist+'y</td><td>'+
-   (sh.lie||'')+'</td><td>'+(sh.putt?'—':sh.dtp_e+'y')+'</td></tr>';
+   ';padding-left:6px">'+esc(sh.n)+'</td><td>'+esc(sh.club)+'</td><td>'+esc(sh.dist)+'y</td><td>'+
+   esc(sh.lie||'')+'</td><td>'+(sh.putt?'—':esc(sh.dtp_e)+'y')+'</td></tr>';
  });});
  if(all.length) map.fitBounds(all,{padding:[25,25]});
  var sl=document.getElementById('shotlist');
  if(idx>=0){var h=SM[idx];
-  sl.innerHTML='<div class="sl-h">Hole '+h.hole+' · par '+(h.par||'?')+
+  sl.innerHTML='<div class="sl-h">Hole '+esc(h.hole)+' · par '+esc(h.par||'?')+
    (h.len?' · '+Math.round(h.len)+'y':'')+'</div>'+
    '<table><thead><tr><th>#</th><th>Club</th><th>Carry</th><th>Lie</th><th>To pin</th>'+
    '</tr></thead><tbody>'+rows+'</tbody></table>';
