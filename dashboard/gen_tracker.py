@@ -197,7 +197,11 @@ def compute(store: str) -> dict:
     profile = _read_json(os.path.join(store, "player_profile.json"), {})
 
     # ---- player / index ----
-    diffs = [_f(r.get("differential")) for r in ghin]
+    # Only 18-hole Score Differentials feed the WHS index. A 9-hole round posts a
+    # 9-hole differential that WHS pairs with another nine (or an expected nine) into
+    # an 18-hole differential — using it raw would crash the index, so exclude lone
+    # 9-hole scores here.
+    diffs = [_f(r.get("differential")) for r in ghin if _i(r.get("holes")) == 18]
     idx = whs_index(diffs)
     if idx is None:
         idx = (disp.get("player") or {}).get("hcp_index")
@@ -306,10 +310,13 @@ def compute(store: str) -> dict:
         kept = [v for v in ds if v >= 0.8 * med] or ds        # drop tops/chunks
         factor = CARRY_FACTOR.get(cat, 0.97)
         lat = _iqr_filter(lat_by_club.get(name, []))          # drop hooks/pushes
+        best3 = _clean_third(ds) or 0   # best-third strike (total = carry + roll)
         disp_clubs.append({
             "club": name, "category": cat, "group": GROUP_OF.get(cat, "Other"),
-            # carry center = best-third strike (robust to partials/tops), like the bag
-            "carry": _round5((_clean_third(ds) or 0) * factor),
+            # total = the real measured distance (what you see on course / Arccos)
+            "total": _round5(best3),
+            # carry center = total x category roll factor (lines up with carry targets)
+            "carry": _round5(best3 * factor),
             # spread = SD over the cleaned set (tops/hooks already dropped)
             "carry_sd": _round5(statistics.pstdev(kept) * factor) if len(kept) > 1 else 0,
             "lateral_sd": _round5(statistics.pstdev(lat)) if len(lat) > 1 else None,
@@ -429,7 +436,7 @@ def compute(store: str) -> dict:
         "recoverable": {"raw": round(raw_recoverable, 1), "effective": eff_recoverable},
         "posted": [{
             "date": g.get("played_at"), "course": g.get("course_name"),
-            "score": _i(g.get("adjusted_gross_score")),
+            "score": _i(g.get("adjusted_gross_score")), "holes": _i(g.get("holes")),
             "diff": _f(g.get("differential")), "used": _truthy(g.get("used")),
         } for g in sorted(ghin, key=lambda g: g.get("played_at", ""), reverse=True)],
         "career": career,
@@ -644,7 +651,8 @@ def render_html(d: dict) -> str:
         for lab, v, sub in kpis)
 
     # ---- index projection slider (client-side WHS recompute) ----
-    diffs_json = json.dumps([g["diff"] for g in d["posted"] if g["diff"] is not None])
+    diffs_json = json.dumps([g["diff"] for g in d["posted"]
+                             if g["diff"] is not None and g.get("holes") == 18])
 
     # ---- bag table ----
     bag_rows = ""
@@ -667,7 +675,8 @@ def render_html(d: dict) -> str:
                    f'removed before averaging">−{drop}</span>' if drop else ''))
         disp_rows += (
             f'<tr data-group="{_esc(c["group"])}"><td>{_esc(c["club"])}</td>'
-            f'<td>{_num(c["carry"],0)}</td><td>±{_num(c["carry_sd"],0)}</td>'
+            f'<td><b>{_num(c["total"],0)}</b></td><td>{_num(c["carry"],0)}</td>'
+            f'<td>±{_num(c["carry_sd"],0)}</td>'
             f'<td>±{_num(c["lateral_sd"],0)}</td><td>{used}</td>'
             f'<td><span class="conf conf-{_esc(c["confidence"])}">{_esc(c["confidence"])}</span></td></tr>')
 
@@ -722,7 +731,8 @@ def render_html(d: dict) -> str:
     # ---- posted scores ----
     posted_rows = "".join(
         f'<tr><td>{_esc(g["date"])}</td><td>{_esc(g["course"])}</td>'
-        f'<td>{g["score"]}</td><td>{_num(g["diff"],1)}</td>'
+        f'<td>{g["holes"] or 18}</td><td>{g["score"]}</td><td>{_num(g["diff"],1)}'
+        f'{"" if g.get("holes")==18 else " <span class=\"lc\" title=\"9-hole differential — not used in the 18-hole index until paired with another nine\">9-hole</span>"}</td>'
         f'<td>{"✓" if g["used"] else ""}</td></tr>' for g in d["posted"])
 
     # ---- rounds navigator (grouped by course -> round, newest first) ----
@@ -897,14 +907,15 @@ finishes. Fix the chunk first.</p></section>
 <div class="tabs" id="disp-tabs" style="margin:12px 0 8px">
  <button class="on" data-g="all">All</button><button data-g="Woods">Woods</button>
  <button data-g="Irons">Irons</button><button data-g="Wedges">Wedges</button></div>
-<table><thead><tr><th>Club</th><th>Carry (best ⅓)</th><th>Carry ±SD</th>
+<table><thead><tr><th>Club</th><th>Total (best ⅓)</th><th>Carry</th><th>Carry ±SD</th>
 <th>Lateral ±SD</th><th>Shots used</th><th>Confidence</th></tr></thead>
 <tbody id="disp-body">{disp_rows}</tbody></table>
-<p class="note"><b>Outlier filter is on.</b> The "Shots used" column shows how many of
-your shots survived after dropping clear mishits — topped/chunked (carry &lt; 0.8× your
-median) and hooks/pushes (lateral IQR outliers). Carry is the <b>best-third</b> strike;
-carry/spread rounded to the nearest 5 yds. These exact numbers are also written to
-<code>club_distances.csv</code> in the repo.</p></section>
+<p class="note"><b>Total</b> is your real measured distance (carry + roll) — what you
+see on the course and what Arccos reports (e.g. driver ≈ 270). <b>Carry</b> is the
+in-air distance (total × a roll factor), shown to line up with your carry target bag.
+Both use your <b>best-third</b> strike with clear mishits removed (the "Shots used"
+column shows how many survived — topped/chunked and hook/push outliers dropped), all
+rounded to 5 yds. Also written to <code>club_distances.csv</code>.</p></section>
 
 <section><h2>Measured vs target bag</h2>
 <table><thead><tr><th>Club</th><th>Target carry</th><th>Measured (best-⅓)</th>
@@ -926,8 +937,11 @@ shot path from GPS. No GPS on a round → it won't appear here.</p></section>
 <p class="note">Needs ~5+ rounds before this is signal rather than noise.</p></section>
 
 <section><h2>Posted scores (GHIN)</h2>
-<table><thead><tr><th>Date</th><th>Course</th><th>Score</th><th>Differential</th>
-<th>Counts</th></tr></thead><tbody>{posted_rows}</tbody></table></section>
+<table><thead><tr><th>Date</th><th>Course</th><th>Holes</th><th>Score</th>
+<th>Differential</th><th>Counts</th></tr></thead><tbody>{posted_rows}</tbody></table>
+<p class="note">Only 18-hole differentials feed the WHS index. A 9-hole round posts a
+9-hole differential that's held until it pairs with another nine — so it's shown here
+but flagged, not counted in your index yet.</p></section>
 
 </main>
 <footer>
@@ -1183,11 +1197,13 @@ def main():
     with open(os.path.join(store, "club_distances.csv"), "w", newline="",
               encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow(["club", "category", "carry_yd", "carry_sd_yd", "lateral_sd_yd",
-                    "shots_used", "shots_dropped_outliers", "confidence"])
+        w.writerow(["club", "category", "total_yd", "carry_yd", "carry_sd_yd",
+                    "lateral_sd_yd", "shots_used", "shots_dropped_outliers",
+                    "confidence"])
         for c in data["dispersion"]:
-            w.writerow([c["club"], c["category"], c["carry"], c["carry_sd"],
-                        c["lateral_sd"], c["n"], c.get("dropped", 0), c["confidence"]])
+            w.writerow([c["club"], c["category"], c.get("total"), c["carry"],
+                        c["carry_sd"], c["lateral_sd"], c["n"], c.get("dropped", 0),
+                        c["confidence"]])
     # detect an existing shot-map PDF per round (generated separately) so we only
     # ever link a PDF that's really there — no dead links.
     for r in data["rounds"]:
