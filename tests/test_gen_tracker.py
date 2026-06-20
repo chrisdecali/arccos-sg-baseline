@@ -79,6 +79,38 @@ def test_enu_yards_directions():
     assert e > 0 and abs(n) < 1
 
 
+def test_recency_weight_decays():
+    # a more recent shot weighs more; one half-life back weighs ~0.5
+    newest = g.date(2026, 6, 20).toordinal()
+    assert g._recency_weight(newest, newest) == 1.0
+    half = g.date(2026, 6, 20).toordinal() - g.RECENCY_HALF_LIFE_DAYS
+    assert abs(g._recency_weight(half, newest) - 0.5) < 1e-9
+    assert g._recency_weight(None, newest) == 1.0   # missing date -> neutral
+
+
+def test_mc_best_third_band_and_determinism():
+    shots = [(d, 1.0) for d in [100, 150, 200, 250, 260, 270, 280]]
+    a = g._mc_best_third(shots, seed=123)
+    b = g._mc_best_third(shots, seed=123)
+    assert a == b                       # deterministic for a given seed
+    med, lo, hi, n = a
+    assert n == 7
+    assert lo <= med <= hi              # median inside the band
+    assert med > 200                    # best-third skews toward the long shots
+    # single shot -> point estimate, no spread
+    assert g._mc_best_third([(265, 1.0)], seed=1) == (265, 265, 265, 1)
+    assert g._mc_best_third([], seed=1) is None
+
+
+def test_dashboard_is_deterministic():
+    # same data in -> identical Monte-Carlo output (no churn, reproducible)
+    d1 = g.compute(REPO)
+    d2 = g.compute(REPO)
+    for a, b in zip(d1["dispersion"], d2["dispersion"]):
+        assert (a["total"], a["total_lo"], a["total_hi"], a["carry"]) == \
+               (b["total"], b["total_lo"], b["total_hi"], b["carry"])
+
+
 # ------------------------------------------------- against the real data store
 def _compute():
     return g.compute(REPO)

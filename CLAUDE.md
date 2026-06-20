@@ -97,9 +97,12 @@ this repo. Only the optional PDF uses the golf-reports render layer.
 
 ## Analysis conventions (hard-won — keep these)
 
-* **Distances: use the BEST-THIRD strike, not the average.** On-course averages are
-  poisoned by mishits and partial wedges. Driver "avg" is meaningless; the clean third
-  is real.
+* **Distances: best-third strike, recency-weighted, Monte-Carlo validated.** Use the
+  top-⅓ for every club/shot (on-course averages are poisoned by mishits/partials).
+  Weight recent rounds more (`RECENCY_HALF_LIFE_DAYS`, exp decay). Then bootstrap
+  (`_mc_best_third`, recency-weighted resampling, fixed seed → deterministic) to get a
+  robust median + an 80% band, so thin samples read as uncertain (e.g. a 4-shot club
+  shows a wide range). One estimate per club feeds BOTH the bag and dispersion.
 * **Dispersion cleaning:** drop mishits with a carry floor = 0.8 × median carry, then
   drop lateral outliers via IQR (1.5×). Apply per selection.
 * **The bag must stay strictly DESCENDING.** Never emit a yardage suggestion that puts
@@ -127,15 +130,14 @@ this repo. Only the optional PDF uses the golf-reports render layer.
   otherwise fall back to the 18B set. Watch for Arccos mis-tags (phantom 4-iron,
   wedges logged by wrong loft).
 * **Club distances are recomputed live from `shots.csv`, NOT from `dispersion.json`.**
-  The dispersion explorer drops clear mishits (carry floor 0.8× median for tops/chunks;
-  lateral IQR for hooks/pushes), takes the best-third strike, and shows BOTH **Total**
-  (best-third, the real measured distance ≈ what Arccos/you see, e.g. driver 270) and
-  **Carry** (Total × a category roll factor, e.g. 245) so the number stops looking
-  low. `dispersion.json` is now only read for `generated_at`/fallback. The cleaned
-  per-club numbers are also written to **`club_distances.csv`** (a generated artifact:
-  total, carry, carry SD, lateral SD, shots used/dropped, confidence). Note the
-  dispersion table shows *measured* numbers and may be non-monotonic; the
-  measured-vs-target **bag** is the prescriptive, strictly-descending view.
+  The dispersion explorer shows BOTH **Total** (recency-weighted Monte-Carlo best-third
+  = the real measured distance ≈ what Arccos/you see, e.g. driver 270, with an 80%
+  band) and **Carry** (Total × a category roll factor, e.g. 245 — modeled, see roll
+  factor below). `dispersion.json` is now only read for `generated_at`/fallback. The
+  numbers are also written to **`club_distances.csv`** (generated artifact: total,
+  total_lo/hi, carry, carry SD, lateral SD, shots, confidence). The dispersion table
+  shows *measured* numbers and may be non-monotonic; the measured-vs-target **bag** is
+  the prescriptive, strictly-descending view.
 * **Tee/aim bias** is measured to the pin line — note the dogleg caveat (you aim at
   the bend, not the flag, on doglegs). Don't surface an aim-change rec off < 6 clean
   shots. Bias ≥ ~5 yd (with enough n) → recommend aiming the opposite way; always add:
@@ -143,22 +145,25 @@ this repo. Only the optional PDF uses the golf-reports render layer.
 
 ## Player context (calibrate recs to this)
 
-* ~13 GHIN (rising toward mid-teens mechanically; realistic true level 14–17, not 12).
+* Official GHIN index **14.1** (use the official number; realistic true level 14–17).
   Plays Augusta Pines blue (6,446 / 71.4/125); practices at WindRose; Frisco
   Oct 21–24, 2026.
-* **Strength:** driving distance. Driver clean carry ~244 (~270 total), modeled CHS
-  ~108–110 → X-flex is correct.
+* **Strength:** driving distance. Driver **total ~270** (best-third), launches it
+  ~260–270 **carry** (modeled carry reads 245 until LM data); CHS ~108–110 → X-flex.
 * **Primary leak:** short game — greenside CONTACT. 0/26 up-and-down, chips finishing
   ~27 ft from the hole (the chunk, not the putt). Then approach (low GIR) and 3-putts.
 * **Bag:** Cobra DS-Adapt LS Dr/3W, DS-Adapt Max 5W, DS-Adapt 4H; Srixon ZX7 5i–PW
   (SteelFiber i110 S); Cleveland RTX6 GW/SW/LW (SteelFiber FC115 S); Tour Edge ZT-4
   putter. 18B carries: Dr 250, 3W 225, 5W 200, 4H 185, 5i 175, 6i 165, 7i 155, 8i 145,
   9i 135, PW 120, GW 105, SW 90, LW 80. Only data-backed change so far: 5-iron → ~165–170.
-* **Launch-monitor carries (authoritative — override the modeled roll factor).** Lives
-  in `LM_CARRY` in `gen_tracker.py`; tagged `LM` on the dashboard. **Driver = 265
-  carry** (player launches it 260–270; little rollout — his Arccos *total* best-third
-  is ~270, so the old 0.90 roll haircut under-read carry at 245). Add clubs to
-  `LM_CARRY` as he measures them; those beat the modeled carry every time.
+* **Carry is modeled (roll factor), launch monitor is the FUTURE source of truth.**
+  Until LM data exists, carry = Total × `CARRY_FACTOR` (a roll-haircut guess; Arccos
+  has no launch data). The player launches the driver ~260–270 carry (Arccos *total*
+  best-third ~270, so little rollout — the modeled 245 carry under-reads it; that's
+  expected and labeled "modeled" on the dashboard). **Plan:** he hits a launch monitor
+  at **Tee Box in July**; that becomes its own authoritative carry source then. Do NOT
+  hardcode LM carries before that — for now the dashboard is Arccos-only
+  (recency-weighted, Monte-Carlo, top-⅓).
 * **Medical:** small-fiber neuropathy, fibromyalgia, ataxia → graphite is required (not
   a compromise) and fitting must be launch-monitor/dispersion-driven — he can't feel
   spec changes. Never recommend steel or feel-based fitting.

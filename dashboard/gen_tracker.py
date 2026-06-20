@@ -34,8 +34,11 @@ import io
 import json
 import math
 import os
+import random
 import statistics
 import sys
+import zlib
+from datetime import date
 
 # matplotlib only for static charts; force a headless backend before pyplot.
 import matplotlib
@@ -135,15 +138,13 @@ TARGET_BAG = [
     ("54 Wedge", 90), ("58 Wedge", 80),
 ]
 # Modeled total->carry haircut by category (woods roll out more than wedges).
-# Only used when there's no LAUNCH-MONITOR carry for a club (see LM_CARRY).
+# Arccos has no launch data, so carry is modeled until launch-monitor data exists
+# (planned: Tee Box, July) which will become its own authoritative source.
 CARRY_FACTOR = {"Driver": 0.90, "Wood": 0.93, "Hybrid": 0.95, "Iron": 0.97,
                 "Wedge": 0.98, "Putter": 1.0}
-# Launch-monitor (or player-known) CARRY by club — authoritative. These override the
-# modeled total->carry factor entirely, because Arccos has no launch data and the
-# roll haircut is a guess. Add a club here as you measure it on a launch monitor.
-LM_CARRY = {
-    "Driver": 265,   # player measured 260-270 carry; little rollout on his launch
-}
+# Distance estimate = recency-weighted best-third, validated by Monte Carlo bootstrap.
+RECENCY_HALF_LIFE_DAYS = 21   # a round this many days old counts half as much
+MC_ITERS = 1500               # bootstrap resamples per club (deterministic per seed)
 GROUP_OF = {"Driver": "Woods", "Wood": "Woods", "Hybrid": "Woods",
             "Iron": "Irons", "Wedge": "Wedges"}
 
@@ -180,6 +181,48 @@ def _clean_third(vals):
         return None
     k = max(1, round(len(vals) / 3))
     return statistics.fmean(vals[-k:])
+
+
+def _date_ord(s):
+    """'YYYY-MM-DD' -> day ordinal (for spacing recency weights). None if unparsable."""
+    try:
+        y, m, d = (int(x) for x in str(s).split("-")[:3])
+        return date(y, m, d).toordinal()
+    except (ValueError, TypeError):
+        return None
+
+
+def _recency_weight(day_ord, newest_ord):
+    """Exponential decay: a shot RECENCY_HALF_LIFE_DAYS older counts half."""
+    if day_ord is None or newest_ord is None:
+        return 1.0
+    return 0.5 ** ((newest_ord - day_ord) / RECENCY_HALF_LIFE_DAYS)
+
+
+def _mc_best_third(weighted, seed, iters=MC_ITERS):
+    """Monte-Carlo (recency-weighted bootstrap) of the best-third distance.
+
+    `weighted` is a list of (distance, recency_weight). Resample n shots with
+    replacement weighted by recency, take the best third, average; repeat. Returns
+    (median, lo10, hi90, n) — the median is the robust estimate, lo/hi an 80%
+    band so small samples read as uncertain. Deterministic given `seed`.
+    """
+    dists = [d for d, w in weighted if d and d > 0]
+    wts = [w for d, w in weighted if d and d > 0]
+    n = len(dists)
+    if n == 0:
+        return None
+    if n == 1:
+        return (dists[0], dists[0], dists[0], 1)
+    rng = random.Random(seed)
+    k = max(1, round(n / 3))
+    means = []
+    for _ in range(iters):
+        samp = rng.choices(dists, weights=wts, k=n)
+        samp.sort(reverse=True)
+        means.append(sum(samp[:k]) / k)
+    means.sort()
+    return (means[iters // 2], means[int(0.10 * iters)], means[int(0.90 * iters)], n)
 
 
 def _iqr_filter(vals):
@@ -242,38 +285,41 @@ def compute(store: str) -> dict:
             "weather": r.get("weather") or r.get("conditions"),
         })
 
-    # ---- measured carry per club (best-third * category factor) ----
+    # ---- per-club distance: recency-weighted best-third, Monte-Carlo validated ----
+    # One estimate per club, used by BOTH the bag and the dispersion explorer so they
+    # never disagree. shots carry their round date so recent rounds weigh more.
     club_meta = {c.get("club"): c for c in clubs}
-    shots_by_club: dict[str, list[float]] = {}
+    shots_by_club: dict[str, list[tuple]] = {}   # club -> [(distance, day_ord)]
     for s in shots:
         if _truthy(s.get("is_putt")) or _i(s.get("penalties")):
             continue
         club = s.get("club")
         if not club or club == "Putter":
             continue
-        shots_by_club.setdefault(club, []).append(_f(s.get("shot_distance_yd")))
+        d = _f(s.get("shot_distance_yd"))
+        if d:
+            shots_by_club.setdefault(club, []).append((d, _date_ord(s.get("date"))))
+    newest_ord = max((o for sh in shots_by_club.values() for _d, o in sh
+                      if o is not None), default=None)
+    club_mc = {}   # club -> (median_total, lo, hi, n)
+    for name, sh in shots_by_club.items():
+        weighted = [(d, _recency_weight(o, newest_ord)) for d, o in sh]
+        club_mc[name] = _mc_best_third(weighted, seed=zlib.crc32(name.encode()))
 
     bag = []
     prev_carry = None  # enforce strictly descending
     for name, target in TARGET_BAG:
         cm = club_meta.get(name, {})
         cat = cm.get("club_category") or _club_cat(name)
-        n = _i(cm.get("usage_count")) or len(
-            [v for v in shots_by_club.get(name, []) if v])
-        clean_total = _clean_third(shots_by_club.get(name, []))
-        if clean_total is None:
-            clean_total = _f(cm.get("smart_distance_yd"))
-        measured = _round5(clean_total * CARRY_FACTOR.get(cat, 0.97)
-                           ) if clean_total else None
-        # A launch-monitor carry, if we have one, is authoritative — it overrides the
-        # modeled (total x roll-factor) estimate entirely.
-        lm = name in LM_CARRY
-        if lm:
-            measured = _round5(LM_CARRY[name])
-        # Use MEASURED when it's trustworthy: a launch-monitor number always, else
-        # enough on-course samples AND within ~15% of target (else it's noise).
-        confident = lm or (measured is not None and n and n >= 8
-                           and abs(measured - target) <= 0.15 * target)
+        mc = club_mc.get(name)
+        n = mc[3] if mc else 0
+        total_est = mc[0] if mc else _f(cm.get("smart_distance_yd"))
+        measured = _round5(total_est * CARRY_FACTOR.get(cat, 0.97)
+                           ) if total_est else None
+        # Use MEASURED when it's trustworthy: enough on-course samples AND within
+        # ~15% of target (else it's noise/mis-tag). Otherwise trust the target.
+        confident = (measured is not None and n >= 8
+                     and abs(measured - target) <= 0.15 * target)
         candidate = _round5(measured if confident else target)
         # Enforce strictly descending in 5-yard steps: never emit a club carrying
         # >= the one above it. If the candidate would break order, step down by 5.
@@ -287,8 +333,7 @@ def compute(store: str) -> dict:
         bag.append({
             "club": name, "category": cat, "group": GROUP_OF.get(cat, "Other"),
             "target": target, "measured": measured, "suggested": suggested,
-            "n": n or 0, "held": held, "lm": lm,
-            "low_conf": (n or 0) < 5 and not lm,
+            "n": n or 0, "held": held, "low_conf": (n or 0) < 5,
         })
 
     # ---- lateral offsets per club (one pass; shared by dispersion + aim) ----
@@ -321,29 +366,25 @@ def compute(store: str) -> dict:
     # hooked/pushed shots via lateral IQR (1.5x); round carry + spread to 5 yds.
     bag_order = {name: i for i, (name, _t) in enumerate(TARGET_BAG)}
     disp_clubs = []
-    for name, dists in shots_by_club.items():
-        ds = sorted(v for v in dists if v)
-        if not ds:
+    for name, sh in shots_by_club.items():
+        mc = club_mc.get(name)
+        if not mc:
             continue
+        med, lo, hi, n = mc                       # recency-weighted best-third (MC)
         cat = (club_meta.get(name, {}) or {}).get("club_category") or _club_cat(name)
-        med = statistics.median(ds)
-        kept = [v for v in ds if v >= 0.8 * med] or ds        # drop tops/chunks
         factor = CARRY_FACTOR.get(cat, 0.97)
-        lat = _iqr_filter(lat_by_club.get(name, []))          # drop hooks/pushes
-        best3 = _clean_third(ds) or 0   # best-third strike (total = carry + roll)
-        lm = name in LM_CARRY
-        # carry = launch-monitor number if we have one, else total x roll factor
-        carry = _round5(LM_CARRY[name]) if lm else _round5(best3 * factor)
+        kept = sorted(d for d, _o in sh)          # for the shot-to-shot spread
+        lat = _iqr_filter(lat_by_club.get(name, []))   # drop hooks/pushes
         disp_clubs.append({
             "club": name, "category": cat, "group": GROUP_OF.get(cat, "Other"),
-            # total = the real measured distance (what you see on course / Arccos)
-            "total": _round5(best3),
-            "carry": carry, "lm": lm,
-            # spread = SD over the cleaned set (tops/hooks already dropped)
+            # total = real measured distance; carry = total x modeled roll factor
+            "total": _round5(med), "total_lo": _round5(lo), "total_hi": _round5(hi),
+            "carry": _round5(med * factor),
+            # spread = SD of the club's shots (shot-to-shot consistency)
             "carry_sd": _round5(statistics.pstdev(kept) * factor) if len(kept) > 1 else 0,
             "lateral_sd": _round5(statistics.pstdev(lat)) if len(lat) > 1 else None,
-            "n": len(kept), "dropped": len(ds) - len(kept),
-            "confidence": "high" if len(kept) >= 12 else "medium" if len(kept) >= 6 else "low",
+            "n": n,
+            "confidence": "high" if n >= 12 else "medium" if n >= 6 else "low",
         })
     disp_clubs.sort(key=lambda d: bag_order.get(d["club"], 99))   # natural club order
 
@@ -682,27 +723,24 @@ def render_html(d: dict) -> str:
     for b in d["bag"]:
         flag = ' <span class="hold" title="held to keep the bag descending / low sample">hold</span>' if b["held"] else ""
         lc = ' <span class="lc" title="usage_count &lt; 5 — noisy">low n</span>' if b["low_conf"] else ""
-        lm = ' <span class="conf conf-high" title="launch-monitor carry — authoritative, overrides the modeled roll factor">LM</span>' if b.get("lm") else ""
         meas = _num(b["measured"], 0) if b["measured"] else "—"
         bag_rows += (
             f'<tr><td>{_esc(b["club"])}</td><td>{b["target"]}</td>'
-            f'<td>{meas}{lm}{lc}</td><td><b>{b["suggested"]}</b>{flag}</td>'
+            f'<td>{meas}{lc}</td><td><b>{b["suggested"]}</b>{flag}</td>'
             f'<td>{b["n"]}</td></tr>')
 
     # ---- dispersion table ----
     disp_rows = ""
     for c in d["dispersion"]:
-        drop = c.get("dropped") or 0
-        total = (c["n"] or 0) + drop
-        used = (f'{c["n"]} of {total}'
-                + (f' <span class="lc" title="{drop} clear mishits (topped/hooked) '
-                   f'removed before averaging">−{drop}</span>' if drop else ''))
-        lm = ' <span class="conf conf-high" title="launch-monitor carry">LM</span>' if c.get("lm") else ""
+        # Monte-Carlo 80% band on the total — shows how (un)certain the estimate is
+        rng = (f' <span class="rng" title="Monte-Carlo 80% range from your shots">'
+               f'{_num(c.get("total_lo"),0)}–{_num(c.get("total_hi"),0)}</span>'
+               if c.get("total_lo") is not None else "")
         disp_rows += (
             f'<tr data-group="{_esc(c["group"])}"><td>{_esc(c["club"])}</td>'
-            f'<td><b>{_num(c["total"],0)}</b></td><td>{_num(c["carry"],0)}{lm}</td>'
+            f'<td><b>{_num(c["total"],0)}</b>{rng}</td><td>{_num(c["carry"],0)}</td>'
             f'<td>±{_num(c["carry_sd"],0)}</td>'
-            f'<td>±{_num(c["lateral_sd"],0)}</td><td>{used}</td>'
+            f'<td>±{_num(c["lateral_sd"],0)}</td><td>{c["n"]}</td>'
             f'<td><span class="conf conf-{_esc(c["confidence"])}">{_esc(c["confidence"])}</span></td></tr>')
 
     # ---- aim table ----
@@ -827,6 +865,7 @@ td b{{color:var(--accent)}}
 .note{{color:var(--mut);font-size:12.5px;margin:10px 0 0}}
 .hold,.lc{{font-size:10px;padding:1px 5px;border-radius:6px;background:#3a2c12;color:#f3c969}}
 .lc{{background:#3a1f1f;color:#f3a0a0}}
+.rng{{font-size:10px;color:var(--mut)}}
 .conf{{font-size:11px;padding:1px 7px;border-radius:10px}}
 .conf-high{{background:#1b3a22;color:#7fd18c}} .conf-medium{{background:#3a3212;color:#e8d27a}}
 .conf-low{{background:#3a1f1f;color:#f3a0a0}}
@@ -935,23 +974,23 @@ finishes. Fix the chunk first.</p></section>
  <button class="on" data-g="all">All</button><button data-g="Woods">Woods</button>
  <button data-g="Irons">Irons</button><button data-g="Wedges">Wedges</button></div>
 <table><thead><tr><th>Club</th><th>Total (best ⅓)</th><th>Carry</th><th>Carry ±SD</th>
-<th>Lateral ±SD</th><th>Shots used</th><th>Confidence</th></tr></thead>
+<th>Lateral ±SD</th><th>Shots</th><th>Confidence</th></tr></thead>
 <tbody id="disp-body">{disp_rows}</tbody></table>
-<p class="note"><b>Total</b> is your real measured distance (carry + roll) — what you
-see on the course and what Arccos reports (e.g. driver ≈ 270). <b>Carry</b> is the
-in-air distance (total × a roll factor), shown to line up with your carry target bag.
-Both use your <b>best-third</b> strike with clear mishits removed (the "Shots used"
-column shows how many survived — topped/chunked and hook/push outliers dropped), all
-rounded to 5 yds. Also written to <code>club_distances.csv</code>.</p></section>
+<p class="note"><b>Total</b> is your real measured distance (carry + roll) from Arccos —
+the <b>best-third</b> strike, <b>recency-weighted</b> (recent rounds count more), and
+<b>Monte-Carlo bootstrapped</b> (the small grey range is the 80% band, so a thin sample
+reads as uncertain). <b>Carry</b> = total × a modeled roll factor — modeled for now
+because Arccos has no launch data; <i>launch-monitor carries (Tee Box, July) will
+replace it as the source of truth.</i> Rounded to 5 yds; also in
+<code>club_distances.csv</code>.</p></section>
 
 <section><h2>Measured vs target bag</h2>
 <table><thead><tr><th>Club</th><th>Target carry</th><th>Measured (best-⅓)</th>
 <th>Suggested</th><th>n</th></tr></thead><tbody>{bag_rows}</tbody></table>
-<p class="note">Target = your 18Birdies carry set. Measured = best-third strike ×
-a modeled total→carry factor — <b>except clubs tagged <span class="conf conf-high">LM</span></b>,
-which use your <b>launch-monitor carry</b> (authoritative; the roll factor is only a
-guess Arccos can't measure). The bag stays <b>strictly descending</b>: a "hold" tag
-means a noisy data point would have broken club order, so the target stands.</p></section>
+<p class="note">Target = your 18Birdies carry set. Measured = your recency-weighted,
+Monte-Carlo best-third <b>carry</b> (total × roll factor — modeled until launch-monitor
+data lands in July). The bag stays <b>strictly descending</b>: a "hold" tag means a
+noisy data point would have broken club order, so the target stands.</p></section>
 
 <section><h2>Round map</h2>
 <div class="tabs" id="round-tabs"></div>
@@ -1251,13 +1290,14 @@ def main():
             with open(os.path.join(store, "club_distances.csv"), "w", newline="",
                       encoding="utf-8") as f:
                 w = csv.writer(f)
-                w.writerow(["club", "category", "total_yd", "carry_yd", "carry_sd_yd",
-                            "lateral_sd_yd", "shots_used", "shots_dropped_outliers",
-                            "confidence"])
+                w.writerow(["club", "category", "total_yd", "total_lo_yd",
+                            "total_hi_yd", "carry_yd", "carry_sd_yd", "lateral_sd_yd",
+                            "shots", "confidence"])
                 for c in data["dispersion"]:
-                    w.writerow([c["club"], c["category"], c.get("total"), c["carry"],
+                    w.writerow([c["club"], c["category"], c.get("total"),
+                                c.get("total_lo"), c.get("total_hi"), c["carry"],
                                 c["carry_sd"], c["lateral_sd"], c["n"],
-                                c.get("dropped", 0), c["confidence"]])
+                                c["confidence"]])
     except OSError as e:
         print(f"warning: could not write club_distances.csv: {e}")
     m = data["meta"]
