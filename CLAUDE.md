@@ -148,22 +148,23 @@ this repo. Only the optional PDF uses the golf-reports render layer.
 * Official GHIN index **14.1** (use the official number; realistic true level 14–17).
   Plays Augusta Pines blue (6,446 / 71.4/125); practices at WindRose; Frisco
   Oct 21–24, 2026.
-* **Strength:** driving distance. Driver **total ~270** (best-third), launches it
-  ~260–270 **carry** (modeled carry reads 245 until LM data); CHS ~108–110 → X-flex.
+* **Strength:** driving distance. Driver **total ~270**, **carry ~265** (plays wet, so
+  little rollout — he confirms 265–275 carry); CHS ~108–110 → X-flex.
 * **Primary leak:** short game — greenside CONTACT. 0/26 up-and-down, chips finishing
   ~27 ft from the hole (the chunk, not the putt). Then approach (low GIR) and 3-putts.
 * **Bag:** Cobra DS-Adapt LS Dr/3W, DS-Adapt Max 5W, DS-Adapt 4H; Srixon ZX7 5i–PW
   (SteelFiber i110 S); Cleveland RTX6 GW/SW/LW (SteelFiber FC115 S); Tour Edge ZT-4
   putter. 18B carries: Dr 250, 3W 225, 5W 200, 4H 185, 5i 175, 6i 165, 7i 155, 8i 145,
   9i 135, PW 120, GW 105, SW 90, LW 80. Only data-backed change so far: 5-iron → ~165–170.
-* **Carry is modeled (roll factor), launch monitor is the FUTURE source of truth.**
-  Until LM data exists, carry = Total × `CARRY_FACTOR` (a roll-haircut guess; Arccos
-  has no launch data). The player launches the driver ~260–270 carry (Arccos *total*
-  best-third ~270, so little rollout — the modeled 245 carry under-reads it; that's
-  expected and labeled "modeled" on the dashboard). **Plan:** he hits a launch monitor
-  at **Tee Box in July**; that becomes its own authoritative carry source then. Do NOT
-  hardcode LM carries before that — for now the dashboard is Arccos-only
-  (recency-weighted, Monte-Carlo, top-⅓).
+* **Carry is modeled with a CONDITION-AWARE roll factor; launch monitor is the FUTURE
+  source of truth.** Carry = Total × a roll factor blended between `CARRY_FACTOR`
+  (dry/firm) and `WET_FACTOR` (rain/soft) by how wet each club's shots were (from the
+  round `weather` field; `_is_wet`). He plays **~100% wet** (all rounds drizzle/rain),
+  so rollout is tiny and carry ≈ total — driver total ~270 → carry **265** (not the old
+  flat-0.90 → 245). On dry rounds it would subtract more. Still modeled until he hits a
+  launch monitor at **Tee Box in July**, which becomes its own authoritative carry
+  source. Do NOT hardcode LM carries before that — for now Arccos-only (recency-weighted,
+  Monte-Carlo, top-⅓, wet-adjusted).
 * **Medical:** small-fiber neuropathy, fibromyalgia, ataxia → graphite is required (not
   a compromise) and fitting must be launch-monitor/dispersion-driven — he can't feel
   spec changes. Never recommend steel or feel-based fitting.

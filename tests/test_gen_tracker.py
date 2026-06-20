@@ -79,6 +79,21 @@ def test_enu_yards_directions():
     assert e > 0 and abs(n) < 1
 
 
+def test_wet_classifier_and_roll_factor():
+    assert g._is_wet("Drizzle") and g._is_wet("Rain") and g._is_wet("Thunderstorm")
+    assert not g._is_wet("Clear") and not g._is_wet("Partly cloudy") and not g._is_wet("")
+    # wet ground -> less roll -> carry factor closer to 1 than dry
+    dry = g._roll_factor("Driver", 0.0)
+    wet = g._roll_factor("Driver", 1.0)
+    assert wet > dry
+    assert wet == g.WET_FACTOR["Driver"] and dry == g.CARRY_FACTOR["Driver"]
+    # all rounds are wet in the store, so the driver carry should sit near its total,
+    # not 25 yards under it
+    d = _compute()
+    drv = [c for c in d["dispersion"] if c["club"] == "Driver"][0]
+    assert drv["carry"] >= drv["total"] - 10   # wet: small rollout, not ~25
+
+
 def test_recency_weight_decays():
     # a more recent shot weighs more; one half-life back weighs ~0.5
     newest = g.date(2026, 6, 20).toordinal()

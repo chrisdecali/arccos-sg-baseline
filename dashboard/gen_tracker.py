@@ -137,11 +137,14 @@ TARGET_BAG = [
     ("9 Iron", 135), ("Pitching Wedge", 120), ("50 Wedge", 105),
     ("54 Wedge", 90), ("58 Wedge", 80),
 ]
-# Modeled total->carry haircut by category (woods roll out more than wedges).
-# Arccos has no launch data, so carry is modeled until launch-monitor data exists
-# (planned: Tee Box, July) which will become its own authoritative source.
+# Modeled total->carry haircut by category. CONDITION-AWARE: firm/dry ground rolls
+# out (DRY); wet ground (rain/drizzle) barely rolls so carry ~= total (WET). The
+# per-club factor is blended by how wet that club's shots actually were. Carry stays
+# modeled until launch-monitor data exists (planned: Tee Box, July).
 CARRY_FACTOR = {"Driver": 0.90, "Wood": 0.93, "Hybrid": 0.95, "Iron": 0.97,
-                "Wedge": 0.98, "Putter": 1.0}
+                "Wedge": 0.98, "Putter": 1.0}                                 # dry/firm
+WET_FACTOR = {"Driver": 0.98, "Wood": 0.98, "Hybrid": 0.98, "Iron": 0.99,
+              "Wedge": 0.99, "Putter": 1.0}                                   # rain/soft
 # Distance estimate = recency-weighted best-third, validated by Monte Carlo bootstrap.
 RECENCY_HALF_LIFE_DAYS = 21   # a round this many days old counts half as much
 MC_ITERS = 1500               # bootstrap resamples per club (deterministic per seed)
@@ -197,6 +200,21 @@ def _recency_weight(day_ord, newest_ord):
     if day_ord is None or newest_ord is None:
         return 1.0
     return 0.5 ** ((newest_ord - day_ord) / RECENCY_HALF_LIFE_DAYS)
+
+
+_WET_WORDS = ("rain", "drizzle", "shower", "thunder", "storm", "snow", "sleet", "wet")
+
+
+def _is_wet(weather) -> bool:
+    """True if the round's conditions imply soft, low-rollout ground."""
+    return any(w in (weather or "").lower() for w in _WET_WORDS)
+
+
+def _roll_factor(cat, frac_wet):
+    """Blend the dry and wet total->carry factor by how wet the shots were."""
+    dry = CARRY_FACTOR.get(cat, 0.97)
+    wet = WET_FACTOR.get(cat, 0.99)
+    return dry + (wet - dry) * max(0.0, min(1.0, frac_wet))
 
 
 def _mc_best_third(weighted, seed, iters=MC_ITERS):
@@ -287,9 +305,12 @@ def compute(store: str) -> dict:
 
     # ---- per-club distance: recency-weighted best-third, Monte-Carlo validated ----
     # One estimate per club, used by BOTH the bag and the dispersion explorer so they
-    # never disagree. shots carry their round date so recent rounds weigh more.
+    # never disagree. Shots carry their round date (recency) and whether the round was
+    # wet (rollout) so the total->carry factor reflects real conditions.
     club_meta = {c.get("club"): c for c in clubs}
-    shots_by_club: dict[str, list[tuple]] = {}   # club -> [(distance, day_ord)]
+    wet_by_date = {r.get("date"): _is_wet(r.get("weather") or r.get("conditions"))
+                   for r in rounds}
+    shots_by_club: dict[str, list[tuple]] = {}   # club -> [(distance, day_ord, is_wet)]
     for s in shots:
         if _truthy(s.get("is_putt")) or _i(s.get("penalties")):
             continue
@@ -298,13 +319,23 @@ def compute(store: str) -> dict:
             continue
         d = _f(s.get("shot_distance_yd"))
         if d:
-            shots_by_club.setdefault(club, []).append((d, _date_ord(s.get("date"))))
-    newest_ord = max((o for sh in shots_by_club.values() for _d, o in sh
+            shots_by_club.setdefault(club, []).append(
+                (d, _date_ord(s.get("date")), wet_by_date.get(s.get("date"), False)))
+    newest_ord = max((o for sh in shots_by_club.values() for _d, o, _w in sh
                       if o is not None), default=None)
-    club_mc = {}   # club -> (median_total, lo, hi, n)
+    club_mc = {}      # club -> (median_total, lo, hi, n)
+    club_factor = {}  # club -> condition-blended total->carry factor
+    club_wet = {}     # club -> recency-weighted fraction of shots played wet
     for name, sh in shots_by_club.items():
-        weighted = [(d, _recency_weight(o, newest_ord)) for d, o in sh]
-        club_mc[name] = _mc_best_third(weighted, seed=zlib.crc32(name.encode()))
+        cat = (club_meta.get(name, {}) or {}).get("club_category") or _club_cat(name)
+        ws = [_recency_weight(o, newest_ord) for _d, o, _w in sh]
+        club_mc[name] = _mc_best_third(
+            [(d, w) for (d, _o, _x), w in zip(sh, ws)],
+            seed=zlib.crc32(name.encode()))
+        wsum = sum(ws)
+        frac_wet = (sum(w for (_d, _o, x), w in zip(sh, ws) if x) / wsum) if wsum else 0.0
+        club_wet[name] = frac_wet
+        club_factor[name] = _roll_factor(cat, frac_wet)
 
     bag = []
     prev_carry = None  # enforce strictly descending
@@ -314,8 +345,8 @@ def compute(store: str) -> dict:
         mc = club_mc.get(name)
         n = mc[3] if mc else 0
         total_est = mc[0] if mc else _f(cm.get("smart_distance_yd"))
-        measured = _round5(total_est * CARRY_FACTOR.get(cat, 0.97)
-                           ) if total_est else None
+        factor = club_factor.get(name, CARRY_FACTOR.get(cat, 0.97))   # wet-aware
+        measured = _round5(total_est * factor) if total_est else None
         # Use MEASURED when it's trustworthy: enough on-course samples AND within
         # ~15% of target (else it's noise/mis-tag). Otherwise trust the target.
         confident = (measured is not None and n >= 8
@@ -361,9 +392,7 @@ def compute(store: str) -> dict:
             if not _truthy(s.get("is_tee")):
                 lat_aim.setdefault(club, []).append(off)
 
-    # ---- dispersion explorer (measured from shots, clear mishits removed) ----
-    # Drop topped/chunked shots via a carry floor (0.8 x median carry) and
-    # hooked/pushed shots via lateral IQR (1.5x); round carry + spread to 5 yds.
+    # ---- dispersion explorer (recency-weighted best-third, MC; wet-aware carry) ----
     bag_order = {name: i for i, (name, _t) in enumerate(TARGET_BAG)}
     disp_clubs = []
     for name, sh in shots_by_club.items():
@@ -372,14 +401,14 @@ def compute(store: str) -> dict:
             continue
         med, lo, hi, n = mc                       # recency-weighted best-third (MC)
         cat = (club_meta.get(name, {}) or {}).get("club_category") or _club_cat(name)
-        factor = CARRY_FACTOR.get(cat, 0.97)
-        kept = sorted(d for d, _o in sh)          # for the shot-to-shot spread
+        factor = club_factor.get(name, CARRY_FACTOR.get(cat, 0.97))   # wet-aware
+        kept = sorted(d for d, _o, _w in sh)      # for the shot-to-shot spread
         lat = _iqr_filter(lat_by_club.get(name, []))   # drop hooks/pushes
         disp_clubs.append({
             "club": name, "category": cat, "group": GROUP_OF.get(cat, "Other"),
-            # total = real measured distance; carry = total x modeled roll factor
+            # total = real measured distance; carry = total x condition-aware factor
             "total": _round5(med), "total_lo": _round5(lo), "total_hi": _round5(hi),
-            "carry": _round5(med * factor),
+            "carry": _round5(med * factor), "wet": club_wet.get(name, 0.0),
             # spread = SD of the club's shots (shot-to-shot consistency)
             "carry_sd": _round5(statistics.pstdev(kept) * factor) if len(kept) > 1 else 0,
             "lateral_sd": _round5(statistics.pstdev(lat)) if len(lat) > 1 else None,
@@ -979,10 +1008,11 @@ finishes. Fix the chunk first.</p></section>
 <p class="note"><b>Total</b> is your real measured distance (carry + roll) from Arccos —
 the <b>best-third</b> strike, <b>recency-weighted</b> (recent rounds count more), and
 <b>Monte-Carlo bootstrapped</b> (the small grey range is the 80% band, so a thin sample
-reads as uncertain). <b>Carry</b> = total × a modeled roll factor — modeled for now
-because Arccos has no launch data; <i>launch-monitor carries (Tee Box, July) will
-replace it as the source of truth.</i> Rounded to 5 yds; also in
-<code>club_distances.csv</code>.</p></section>
+reads as uncertain). <b>Carry</b> = total × a roll factor that's
+<b>adjusted for conditions</b> — your rounds are played wet (rain/drizzle), so the
+ground barely rolls and carry sits just under total (it would subtract more on firm,
+dry turf). Still modeled until <i>launch-monitor carries (Tee Box, July)</i> become the
+source of truth. Rounded to 5 yds; also in <code>club_distances.csv</code>.</p></section>
 
 <section><h2>Measured vs target bag</h2>
 <table><thead><tr><th>Club</th><th>Target carry</th><th>Measured (best-⅓)</th>
