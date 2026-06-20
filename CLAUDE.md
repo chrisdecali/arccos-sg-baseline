@@ -67,6 +67,9 @@ python pull_ghin.py                                   # official GHIN scores/ind
 # 2) Build the dashboard + per-round review pages (-> docs/index.html + docs/rounds/):
 python dashboard/gen_tracker.py .  docs/index.html
 
+# Tests (dependency-free; guards index/distance/bag-order/geometry math):
+python tests/test_gen_tracker.py     # the weekly refresh runs these before publishing
+
 # 3) (optional) Shareable shot-map PDF per round — uses the golf-reports render layer:
 #    python <golf-reports>/render/build_round_pages.py . docs/rounds --all
 #    gen_tracker auto-links any *_shotmaps.pdf it finds in docs/rounds/.
