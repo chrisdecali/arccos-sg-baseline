@@ -1,14 +1,14 @@
 club,category,total_yd,total_lo_yd,total_hi_yd,carry_yd,carry_sd_yd,lateral_sd_yd,shots,confidence
-Driver,Driver,270,265,275,265,55,35,33,high
-3 Wood,Wood,240,120,240,235,85,25,4,low
-5 Wood,Wood,140,80,140,140,30,15,2,low
+Driver,Driver,270,265,275,265,25,35,33,high
+3 Wood,Wood,240,120,240,235,0,25,4,low
+5 Wood,Wood,140,80,140,140,0,15,2,low
 Hybrid,Hybrid,205,125,220,200,65,15,7,medium
-5 Iron,Iron,170,160,180,170,45,20,19,high
-6 Iron,Iron,165,135,165,160,35,10,5,low
-7 Iron,Iron,160,150,160,155,30,20,8,medium
+5 Iron,Iron,170,160,180,170,20,20,19,high
+6 Iron,Iron,165,135,165,160,25,10,5,low
+7 Iron,Iron,160,150,160,155,10,20,8,medium
 8 Iron,Iron,170,120,170,170,25,5,2,low
-9 Iron,Iron,150,145,150,150,25,20,4,low
-Pitching Wedge,Wedge,125,115,130,120,40,5,10,medium
-50 Wedge,Wedge,95,65,115,95,40,0,11,medium
-54 Wedge,Wedge,65,45,80,60,25,0,16,high
-58 Wedge,Wedge,80,65,90,75,25,5,20,high
+9 Iron,Iron,150,145,150,150,10,20,4,low
+Pitching Wedge,Wedge,125,115,130,120,15,5,10,medium
+50 Wedge,Wedge,95,65,115,95,30,0,11,medium
+56 Wedge,Wedge,60,45,80,60,25,0,16,high
+60 Wedge,Wedge,75,65,90,75,20,5,20,high

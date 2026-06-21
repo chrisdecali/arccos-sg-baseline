@@ -56,24 +56,43 @@ holed iff it's the max `shot_num` among that hole's putts.
 
 ## Build commands
 
-```powershell
-# Only hard dep is matplotlib; the HTML uses CDNs (Leaflet + Esri) client-side.
-# A local venv at .venv already has it (see MIGRATION below).
+`gen_tracker.py` is now **pure stdlib** — charts are inline SVG, no matplotlib. Output
+is one self-contained `docs/index.html`. (The optional PDF step still uses the
+golf-reports render layer, which has matplotlib.)
 
+```powershell
 # 1) Refresh data — MUST set GPS or every shot map goes blank (see warning below):
 $env:GOLF_INCLUDE_GPS = "1"; python pull_arccos.py   # fetch+build; needs weather.py + openpyxl
 python pull_ghin.py                                   # official GHIN scores/index
 
-# 2) Build the dashboard + per-round review pages (-> docs/index.html + docs/rounds/):
+# 2) Backfill any empty weather (drives the wet-aware carry), then validate:
+python backfill_weather.py .                          # Open-Meteo by round date + pin
+python validate.py .                                  # data-health warnings; never fatal
+
+# 3) Build the dashboard + per-round review pages (-> docs/index.html + docs/rounds/):
 python dashboard/gen_tracker.py .  docs/index.html
 
-# Tests (dependency-free; guards index/distance/bag-order/geometry math):
+# Tests (dependency-free; guards index/distance/bag/geometry/club-map math):
 python tests/test_gen_tracker.py     # the weekly refresh runs these before publishing
 
-# 3) (optional) Shareable shot-map PDF per round — uses the golf-reports render layer:
+# 4) (optional) Shareable shot-map PDF per round — uses the golf-reports render layer:
 #    python <golf-reports>/render/build_round_pages.py . docs/rounds --all
-#    gen_tracker auto-links any *_shotmaps.pdf it finds in docs/rounds/.
 ```
+
+## Config / single-source-of-truth files (edit these, not the code)
+
+* **`bag.csv`** — your clubs + target carries (club, loft, lie, shaft, length,
+  target_carry), kept descending. gen_tracker reads it for the bag + "Your bag" card.
+* **`club_map.json`** — fixes Arccos mis-tags at ingest (`map`: wrong→right, e.g.
+  `4 Iron`→`Hybrid`, `54 Wedge`→`56 Wedge`, `58 Wedge`→`60 Wedge`). Applied to every
+  shot/club row before analysis.
+* **`launch_monitor.csv`** — measured carries (date, club, chs_mph, ball_mph, smash,
+  launch_deg, spin_rpm, carry_yd). When a club has a row, its carry_yd is used as the
+  carry (PREFERRED over the modeled wet-aware value) and tagged **"measured"**. Empty
+  template for now — fill it after Tee Box (July).
+* **`validate.py`** — data-health check (missing GPS, schema drift, out-of-range, stale
+  >10 days, empty weather). Warnings only, never crashes the build.
+* **`backfill_weather.py`** — fills empty temp_f/wind_mph/weather from Open-Meteo.
 
 > ⚠️ **GPS flag is load-bearing.** `pull_arccos.py` strips shot lat/lng from
 > `shots.csv`/`holes.csv` UNLESS `GOLF_INCLUDE_GPS=1` (or `--include-gps`). Without

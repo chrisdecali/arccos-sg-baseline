@@ -157,6 +157,23 @@ def test_club_chart_rounded_to_5():
             assert v is None or v % 5 == 0, f'{c["club"]}.{k}={v} not a multiple of 5'
 
 
+def test_club_map_remaps_wedges():
+    # club_map.json renames 54->56 and 58->60 at ingest; the old names must be gone
+    d = _compute()
+    names = [c["club"] for c in d["dispersion"]] + [b["club"] for b in d["bag"]]
+    assert "54 Wedge" not in names and "58 Wedge" not in names
+    assert "56 Wedge" in [b["club"] for b in d["bag"]]
+    assert "60 Wedge" in [b["club"] for b in d["bag"]]
+
+
+def test_bag_targets_come_from_bag_csv():
+    # bag.csv is the source of truth: descending Driver 250 -> 60 Wedge 80, 5i 170
+    d = _compute()
+    tg = {b["club"]: b["target"] for b in d["bag"]}
+    assert tg["Driver"] == 250 and tg["60 Wedge"] == 80 and tg["5 Iron"] == 170
+    assert len(d["bag_specs"]) >= 10   # spec card populated from bag.csv
+
+
 def test_aim_excludes_tee_shots():
     # Driver is hit off the tee, so it must NOT appear in aim-by-club (pin-line
     # offset off the tee is a dogleg artifact, not aim).

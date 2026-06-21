@@ -1,0 +1,8 @@
+{
+  "_note": "Fixes Arccos mis-tags at ingest. gen_tracker.py renames the club on each shot/club row through this map before analysis. Keys = the (wrong) name Arccos logs; values = your real club. Edit freely.",
+  "map": {
+    "4 Iron": "Hybrid",
+    "54 Wedge": "56 Wedge",
+    "58 Wedge": "60 Wedge"
+  }
+}

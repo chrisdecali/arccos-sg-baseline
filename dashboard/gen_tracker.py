@@ -17,8 +17,8 @@ Design rules (see CLAUDE.md — these are load-bearing):
   * Label measured vs modeled everywhere.
   * SG levers overlap ~35-40% — don't additively stack; apply a 0.62 efficiency
     factor to combined totals.
-  * matplotlib is the only hard dependency; interactive map uses CDN (Leaflet+Esri),
-    which loads client-side only when the HTML is opened in a browser.
+  * PURE STDLIB — no third-party deps. Charts are inline SVG; the interactive map uses
+    a CDN (Leaflet+Esri) that loads client-side only when the HTML opens in a browser.
 
 Usage:
     python dashboard/gen_tracker.py [store_dir=.] [out=docs/index.html]
@@ -27,10 +27,8 @@ compute(store_dir) is pure (files in -> dict out) so a trend module can call it.
 """
 from __future__ import annotations
 
-import base64
 import csv
 import html
-import io
 import json
 import math
 import os
@@ -40,11 +38,8 @@ import sys
 import zlib
 from datetime import date
 
-# matplotlib only for static charts; force a headless backend before pyplot.
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-
+# Pure stdlib — charts are hand-rolled inline SVG (no matplotlib), so the only output
+# is one self-contained HTML file.
 YARD_PER_M = 1.0936132983
 
 
@@ -265,6 +260,27 @@ def compute(store: str) -> dict:
     disp = _read_json(os.path.join(store, "dispersion.json"), {})
     profile = _read_json(os.path.join(store, "player_profile.json"), {})
 
+    # ---- single-source-of-truth config files ----
+    # club_map.json fixes Arccos mis-tags at ingest — rename each shot/club's club.
+    club_map = (_read_json(os.path.join(store, "club_map.json"), {}) or {}).get("map", {})
+    for row in shots + clubs:
+        if row.get("club") in club_map:
+            row["club"] = club_map[row["club"]]
+    # bag.csv = source of truth for clubs + target carries (kept descending).
+    bag_csv = _read_csv(os.path.join(store, "bag.csv"))
+    if bag_csv:
+        target_bag = [(b["club"], _i(b.get("target_carry")) or 0) for b in bag_csv
+                      if b.get("club") and _i(b.get("target_carry"))]
+        bag_specs = {b["club"]: b for b in bag_csv if b.get("club")}
+    else:
+        target_bag, bag_specs = list(TARGET_BAG), {}   # built-in fallback
+    # launch_monitor.csv = MEASURED carries; prefer over modeled when present.
+    lm_acc: dict[str, list] = {}
+    for r in _read_csv(os.path.join(store, "launch_monitor.csv")):
+        if r.get("club") and _f(r.get("carry_yd")):
+            lm_acc.setdefault(r["club"], []).append(_f(r["carry_yd"]))
+    lm_carry = {c: statistics.fmean(v) for c, v in lm_acc.items()}
+
     # ---- player / index ----
     # GHIN's official WHS Handicap Index is authoritative — use it verbatim. Our own
     # whs_index() is only a fallback (for the projection what-if, or before GHIN has
@@ -339,18 +355,23 @@ def compute(store: str) -> dict:
 
     bag = []
     prev_carry = None  # enforce strictly descending
-    for name, target in TARGET_BAG:
+    for name, target in target_bag:
         cm = club_meta.get(name, {})
         cat = cm.get("club_category") or _club_cat(name)
         mc = club_mc.get(name)
         n = mc[3] if mc else 0
         total_est = mc[0] if mc else _f(cm.get("smart_distance_yd"))
         factor = club_factor.get(name, CARRY_FACTOR.get(cat, 0.97))   # wet-aware
-        measured = _round5(total_est * factor) if total_est else None
-        # Use MEASURED when it's trustworthy: enough on-course samples AND within
-        # ~15% of target (else it's noise/mis-tag). Otherwise trust the target.
-        confident = (measured is not None and n >= 8
-                     and abs(measured - target) <= 0.15 * target)
+        # PREFER a launch-monitor (measured) carry when we have one for this club.
+        lm = name in lm_carry
+        if lm:
+            measured = _round5(lm_carry[name])
+        else:
+            measured = _round5(total_est * factor) if total_est else None
+        # Trust MEASURED when it's a launch-monitor number, OR enough on-course
+        # samples AND within ~15% of target (else it's noise/mis-tag).
+        confident = lm or (measured is not None and n >= 8
+                           and abs(measured - target) <= 0.15 * target)
         candidate = _round5(measured if confident else target)
         # Enforce strictly descending in 5-yard steps: never emit a club carrying
         # >= the one above it. If the candidate would break order, step down by 5.
@@ -364,7 +385,8 @@ def compute(store: str) -> dict:
         bag.append({
             "club": name, "category": cat, "group": GROUP_OF.get(cat, "Other"),
             "target": target, "measured": measured, "suggested": suggested,
-            "n": n or 0, "held": held, "low_conf": (n or 0) < 5,
+            "n": n or 0, "held": held, "low_conf": (n or 0) < 5 and not lm,
+            "measured_src": lm,   # True = launch-monitor measured
         })
 
     # ---- lateral offsets per club (one pass; shared by dispersion + aim) ----
@@ -393,7 +415,7 @@ def compute(store: str) -> dict:
                 lat_aim.setdefault(club, []).append(off)
 
     # ---- dispersion explorer (recency-weighted best-third, MC; wet-aware carry) ----
-    bag_order = {name: i for i, (name, _t) in enumerate(TARGET_BAG)}
+    bag_order = {name: i for i, (name, _t) in enumerate(target_bag)}
     disp_clubs = []
     for name, sh in shots_by_club.items():
         mc = club_mc.get(name)
@@ -402,13 +424,18 @@ def compute(store: str) -> dict:
         med, lo, hi, n = mc                       # recency-weighted best-third (MC)
         cat = (club_meta.get(name, {}) or {}).get("club_category") or _club_cat(name)
         factor = club_factor.get(name, CARRY_FACTOR.get(cat, 0.97))   # wet-aware
-        kept = sorted(d for d, _o, _w in sh)      # for the shot-to-shot spread
+        # spread = SD over the cleaned set (drop topped/chunked via carry floor)
+        ds = sorted(d for d, _o, _w in sh)
+        kept = [d for d in ds if d >= 0.8 * statistics.median(ds)] or ds
         lat = _iqr_filter(lat_by_club.get(name, []))   # drop hooks/pushes
+        # PREFER a launch-monitor (measured) carry over the modeled one
+        lm = name in lm_carry
+        carry = _round5(lm_carry[name]) if lm else _round5(med * factor)
         disp_clubs.append({
             "club": name, "category": cat, "group": GROUP_OF.get(cat, "Other"),
-            # total = real measured distance; carry = total x condition-aware factor
+            # total = real measured distance; carry = LM if measured, else wet-modeled
             "total": _round5(med), "total_lo": _round5(lo), "total_hi": _round5(hi),
-            "carry": _round5(med * factor), "wet": club_wet.get(name, 0.0),
+            "carry": carry, "measured_src": lm, "wet": club_wet.get(name, 0.0),
             # spread = SD of the club's shots (shot-to-shot consistency)
             "carry_sd": _round5(statistics.pstdev(kept) * factor) if len(kept) > 1 else 0,
             "lateral_sd": _round5(statistics.pstdev(lat)) if len(lat) > 1 else None,
@@ -419,7 +446,7 @@ def compute(store: str) -> dict:
 
     # ---- aim-by-club (signed lateral bias to the pin line) ----
     aim = []
-    for name, _t in TARGET_BAG:
+    for name, _t in target_bag:
         offs = _iqr_filter(lat_aim.get(name, []))
         if len(offs) < 3:
             continue
@@ -520,6 +547,7 @@ def compute(store: str) -> dict:
         "sg_career": cat_sg,
         "rounds": round_rows,
         "bag": bag,
+        "bag_specs": [bag_specs[c] for c, _t in target_bag if c in bag_specs],
         "dispersion": disp_clubs,
         "aim": aim,
         "bands": band_rows,
@@ -633,63 +661,97 @@ def _shotmap_payload(shots, holes):
 
 
 # ----------------------------------------------------------------- charts (PNG)
-def _png(fig) -> str:
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=110, bbox_inches="tight",
-                facecolor=fig.get_facecolor())
-    plt.close(fig)
-    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+def _svg_sg_by_round(rounds) -> str:
+    """Inline SVG stacked-bar of SG categories per round (pure stdlib)."""
+    if not rounds:
+        return ""
+    cats = [("sg_off_tee", "#43a047", "off tee"), ("sg_approach", "#4f9cf9", "approach"),
+            ("sg_short", "#fb8c00", "short"), ("sg_putting", "#ab47bc", "putting")]
+    W, H, padL, padT, padB = 680, 250, 30, 26, 34
+    n = len(rounds)
+    pos = [sum((r.get(k) or 0) for k, _c, _l in cats if (r.get(k) or 0) > 0) for r in rounds]
+    neg = [sum((r.get(k) or 0) for k, _c, _l in cats if (r.get(k) or 0) < 0) for r in rounds]
+    ymax = max(pos + [0.5])
+    ymin = min(neg + [-0.5])
+    span = (ymax - ymin) or 1
+    plotH = H - padT - padB
 
+    def yf(v):
+        return padT + (ymax - v) / span * plotH
 
-def chart_sg_by_round(rounds) -> str:
-    cats = [("sg_off_tee", "#2e7d32"), ("sg_approach", "#1565c0"),
-            ("sg_short", "#ef6c00"), ("sg_putting", "#6a1b9a")]
-    labels = [r["date"] for r in rounds]
-    fig, ax = plt.subplots(figsize=(7, 3.2), facecolor="white")
-    x = range(len(rounds))
-    bottom_pos = [0.0] * len(rounds)
-    bottom_neg = [0.0] * len(rounds)
-    for key, color in cats:
-        vals = [r.get(key) or 0 for r in rounds]
-        bottoms = [bottom_neg[i] if v < 0 else bottom_pos[i]
-                   for i, v in enumerate(vals)]
-        ax.bar(x, vals, bottom=bottoms, color=color,
-               label=key.replace("sg_", "").replace("_", " "))
-        for i, v in enumerate(vals):
-            if v < 0:
-                bottom_neg[i] += v
+    step = (W - padL - 8) / n
+    bw = min(46, step * 0.55)
+    p = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '
+         f'style="width:100%;height:auto;background:#0f131a;border-radius:8px">']
+    y0 = yf(0)
+    p.append(f'<line x1="{padL}" y1="{y0:.1f}" x2="{W-6}" y2="{y0:.1f}" stroke="#444"/>')
+    for i, r in enumerate(rounds):
+        cx = padL + step * i + step / 2
+        up = dn = 0.0
+        for k, color, _l in cats:
+            v = r.get(k) or 0
+            if v >= 0:
+                y1, h = yf(up + v), yf(up) - yf(up + v)
+                up += v
             else:
-                bottom_pos[i] += v
-    ax.axhline(0, color="#444", lw=0.8)
-    ax.set_xticks(list(x))
-    ax.set_xticklabels(labels, fontsize=8)
-    ax.set_ylabel("Strokes gained vs scratch")
-    ax.legend(fontsize=7, ncol=4, loc="lower center", frameon=False)
-    ax.set_title("Strokes gained by round (Arccos, vs scratch)", fontsize=10)
-    ax.grid(axis="y", alpha=0.25)
-    return _png(fig)
+                y1, h = yf(dn), yf(dn + v) - yf(dn)
+                dn += v
+            if h > 0.4:
+                p.append(f'<rect x="{cx-bw/2:.1f}" y="{y1:.1f}" width="{bw:.1f}" '
+                         f'height="{h:.1f}" fill="{color}"/>')
+        p.append(f'<text x="{cx:.1f}" y="{yf(pos[i])-4:.1f}" font-size="10" '
+                 f'fill="#e8eaed" text-anchor="middle">{_num(r.get("sg_total"),1,True)}</text>')
+        p.append(f'<text x="{cx:.1f}" y="{H-padB+14}" font-size="9" fill="#9aa0aa" '
+                 f'text-anchor="middle">{_esc(r["date"])}</text>')
+    lx = padL
+    for _k, color, lbl in cats:
+        p.append(f'<rect x="{lx}" y="7" width="9" height="9" rx="2" fill="{color}"/>')
+        p.append(f'<text x="{lx+13}" y="15" font-size="9.5" fill="#9aa0aa">{lbl}</text>')
+        lx += 92
+    p.append("</svg>")
+    return "".join(p)
 
 
-def chart_dispersion(disp_clubs) -> str:
+def _svg_dispersion(disp_clubs) -> str:
+    """Inline SVG scatter of carry vs lateral spread, colored by confidence."""
     pts = [(d["carry"], d["lateral_sd"], d["club"], d["confidence"])
            for d in disp_clubs if d["carry"] and d["lateral_sd"]]
     if not pts:
         return ""
-    cmap = {"high": "#2e7d32", "medium": "#f9a825", "low": "#c62828"}
-    fig, ax = plt.subplots(figsize=(7, 3.6), facecolor="white")
+    cmap = {"high": "#43a047", "medium": "#f9a825", "low": "#e53935"}
+    W, H, padL, padR, padT, padB = 680, 280, 44, 12, 14, 30
+    xs = [c for c, _l, _n, _cf in pts]
+    ys = [l for _c, l, _n, _cf in pts]
+    xmin, xmax = min(xs) - 10, max(xs) + 10
+    ymax = max(ys + [5]) * 1.15
+    pw, ph = W - padL - padR, H - padT - padB
+
+    def xf(v):
+        return padL + (v - xmin) / ((xmax - xmin) or 1) * pw
+
+    def yf(v):
+        return padT + (ymax - v) / (ymax or 1) * ph
+
+    p = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '
+         f'style="width:100%;height:auto;background:#0f131a;border-radius:8px">']
+    # axes
+    p.append(f'<line x1="{padL}" y1="{padT}" x2="{padL}" y2="{H-padB}" stroke="#333"/>')
+    p.append(f'<line x1="{padL}" y1="{H-padB}" x2="{W-padR}" y2="{H-padB}" stroke="#333"/>')
+    p.append(f'<text x="{padL}" y="{H-4}" font-size="9" fill="#9aa0aa">carry →</text>')
+    p.append(f'<text transform="translate(12,{H-padB}) rotate(-90)" font-size="9" '
+             f'fill="#9aa0aa">lateral spread (±SD) →</text>')
     for carry, lat, club, conf in pts:
-        ax.scatter(carry, lat, s=44, color=cmap.get(conf, "#888"), zorder=3)
-        ax.annotate(club, (carry, lat), fontsize=7,
-                    xytext=(4, 3), textcoords="offset points")
-    ax.set_xlabel("Carry (yds, modeled)")
-    ax.set_ylabel("Lateral spread  (1 SD, yds)")
-    ax.set_title("Dispersion by club — lower is tighter", fontsize=10)
-    ax.grid(alpha=0.25)
-    handles = [plt.Line2D([0], [0], marker="o", ls="", color=c, label=k)
-               for k, c in cmap.items()]
-    ax.legend(handles=handles, title="confidence", fontsize=7, title_fontsize=7,
-              frameon=False)
-    return _png(fig)
+        x, y = xf(carry), yf(lat)
+        p.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5" fill="{cmap.get(conf,"#888")}"/>')
+        p.append(f'<text x="{x+7:.1f}" y="{y+3:.1f}" font-size="9" '
+                 f'fill="#cfd3da">{_esc(club)}</text>')
+    lx = padL + 60
+    for k, color in cmap.items():
+        p.append(f'<circle cx="{lx}" cy="11" r="4" fill="{color}"/>')
+        p.append(f'<text x="{lx+8}" y="14" font-size="9" fill="#9aa0aa">{k}</text>')
+        lx += 70
+    p.append("</svg>")
+    return "".join(p)
 
 
 # --------------------------------------------------------------------- render
@@ -752,11 +814,20 @@ def render_html(d: dict) -> str:
     for b in d["bag"]:
         flag = ' <span class="hold" title="held to keep the bag descending / low sample">hold</span>' if b["held"] else ""
         lc = ' <span class="lc" title="usage_count &lt; 5 — noisy">low n</span>' if b["low_conf"] else ""
+        ms = ' <span class="conf conf-high" title="launch-monitor measured carry">measured</span>' if b.get("measured_src") else ""
         meas = _num(b["measured"], 0) if b["measured"] else "—"
         bag_rows += (
             f'<tr><td>{_esc(b["club"])}</td><td>{b["target"]}</td>'
-            f'<td>{meas}{lc}</td><td><b>{b["suggested"]}</b>{flag}</td>'
+            f'<td>{meas}{ms}{lc}</td><td><b>{b["suggested"]}</b>{flag}</td>'
             f'<td>{b["n"]}</td></tr>')
+
+    # ---- bag spec card (from bag.csv) ----
+    spec_rows = "".join(
+        f'<tr><td>{_esc(s.get("club"))}</td>'
+        f'<td>{_esc(s.get("loft"))}{"°" if s.get("loft") else ""}</td>'
+        f'<td>{_esc(s.get("shaft"))}</td>'
+        f'<td>{_esc(s.get("length"))}{chr(34) if s.get("length") else ""}</td>'
+        f'<td>{_esc(s.get("target_carry"))}</td></tr>' for s in d.get("bag_specs", []))
 
     # ---- dispersion table ----
     disp_rows = ""
@@ -765,9 +836,10 @@ def render_html(d: dict) -> str:
         rng = (f' <span class="rng" title="Monte-Carlo 80% range from your shots">'
                f'{_num(c.get("total_lo"),0)}–{_num(c.get("total_hi"),0)}</span>'
                if c.get("total_lo") is not None else "")
+        ms = ' <span class="conf conf-high" title="launch-monitor measured">measured</span>' if c.get("measured_src") else ""
         disp_rows += (
             f'<tr data-group="{_esc(c["group"])}"><td>{_esc(c["club"])}</td>'
-            f'<td><b>{_num(c["total"],0)}</b>{rng}</td><td>{_num(c["carry"],0)}</td>'
+            f'<td><b>{_num(c["total"],0)}</b>{rng}</td><td>{_num(c["carry"],0)}{ms}</td>'
             f'<td>±{_num(c["carry_sd"],0)}</td>'
             f'<td>±{_num(c["lateral_sd"],0)}</td><td>{c["n"]}</td>'
             f'<td><span class="conf conf-{_esc(c["confidence"])}">{_esc(c["confidence"])}</span></td></tr>')
@@ -858,8 +930,8 @@ def render_html(d: dict) -> str:
                      f'<div class="rcards">{cards}</div></div>')
 
     # ---- SG-by-round chart + map payload ----
-    sg_png = chart_sg_by_round(d["rounds"]) if d["rounds"] else ""
-    disp_png = chart_dispersion(d["dispersion"]) if d["dispersion"] else ""
+    sg_svg = _svg_sg_by_round(d["rounds"]) if d["rounds"] else ""
+    disp_svg = _svg_dispersion(d["dispersion"]) if d["dispersion"] else ""
     map_json = json.dumps(d["map"])
 
     plan_html = "".join(f"<li>{x}</li>" for x in plan)
@@ -966,7 +1038,7 @@ in; GHIN's number above is the truth.</p>
 </div></section>
 
 <section><h2>Strokes gained by round</h2>
-{'<img class="chart" src="'+sg_png+'">' if sg_png else '<p class="note">No rounds yet.</p>'}
+{sg_svg or '<p class="note">No rounds yet.</p>'}
 </section>
 
 <section><h2>Cost of misses</h2>
@@ -998,7 +1070,7 @@ finishes. Fix the chunk first.</p></section>
 <section><h2>Aim by club</h2>{aim_block}</section>
 
 <section><h2>Dispersion explorer</h2>
-{'<img class="chart" src="'+disp_png+'">' if disp_png else ''}
+{disp_svg}
 <div class="tabs" id="disp-tabs" style="margin:12px 0 8px">
  <button class="on" data-g="all">All</button><button data-g="Woods">Woods</button>
  <button data-g="Irons">Irons</button><button data-g="Wedges">Wedges</button></div>
@@ -1014,13 +1086,20 @@ ground barely rolls and carry sits just under total (it would subtract more on f
 dry turf). Still modeled until <i>launch-monitor carries (Tee Box, July)</i> become the
 source of truth. Rounded to 5 yds; also in <code>club_distances.csv</code>.</p></section>
 
+<section><h2>Your bag</h2>
+<table><thead><tr><th>Club</th><th>Loft</th><th>Shaft</th><th>Length</th>
+<th>Target carry</th></tr></thead><tbody>{spec_rows}</tbody></table>
+<p class="note">From <code>bag.csv</code> — the single source of truth for your clubs
+and target carries. Edit that file to change the bag everywhere on the dashboard.</p></section>
+
 <section><h2>Measured vs target bag</h2>
-<table><thead><tr><th>Club</th><th>Target carry</th><th>Measured (best-⅓)</th>
+<table><thead><tr><th>Club</th><th>Target carry</th><th>Measured carry</th>
 <th>Suggested</th><th>n</th></tr></thead><tbody>{bag_rows}</tbody></table>
-<p class="note">Target = your 18Birdies carry set. Measured = your recency-weighted,
-Monte-Carlo best-third <b>carry</b> (total × roll factor — modeled until launch-monitor
-data lands in July). The bag stays <b>strictly descending</b>: a "hold" tag means a
-noisy data point would have broken club order, so the target stands.</p></section>
+<p class="note">Target = your <code>bag.csv</code> carries. Measured = your
+recency-weighted, Monte-Carlo best-third <b>carry</b> (total × wet-aware roll factor),
+or a <b>launch-monitor</b> number when <code>launch_monitor.csv</code> has one (tagged
+"measured"). The bag stays <b>strictly descending</b>: a "hold" tag means a noisy data
+point would have broken club order, so the target stands.</p></section>
 
 <section><h2>Round map</h2>
 <div class="tabs" id="round-tabs"></div>
