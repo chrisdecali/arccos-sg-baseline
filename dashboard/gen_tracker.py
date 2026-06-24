@@ -809,25 +809,19 @@ def render_html(d: dict) -> str:
                              if g["diff"] is not None and g.get("holes") == 18])
     official_json = json.dumps(d["player"]["index"])
 
-    # ---- bag table ----
+    # ---- bag + suggested carry table (merges specs from bag.csv with the suggestion) ----
+    specs_by = {s.get("club"): s for s in d.get("bag_specs", [])}
     bag_rows = ""
     for b in d["bag"]:
         flag = ' <span class="hold" title="held to keep the bag descending / low sample">hold</span>' if b["held"] else ""
-        lc = ' <span class="lc" title="usage_count &lt; 5 — noisy">low n</span>' if b["low_conf"] else ""
         ms = ' <span class="conf conf-high" title="launch-monitor measured carry">measured</span>' if b.get("measured_src") else ""
-        meas = _num(b["measured"], 0) if b["measured"] else "—"
+        s = specs_by.get(b["club"], {})
+        loft = f'{_esc(s.get("loft"))}°' if s.get("loft") else "—"
+        shaft = _esc(s.get("shaft")) or "—"
         bag_rows += (
-            f'<tr><td>{_esc(b["club"])}</td><td>{b["target"]}</td>'
-            f'<td>{meas}{ms}{lc}</td><td><b>{b["suggested"]}</b>{flag}</td>'
-            f'<td>{b["n"]}</td></tr>')
-
-    # ---- bag spec card (from bag.csv) ----
-    spec_rows = "".join(
-        f'<tr><td>{_esc(s.get("club"))}</td>'
-        f'<td>{_esc(s.get("loft"))}{"°" if s.get("loft") else ""}</td>'
-        f'<td>{_esc(s.get("shaft"))}</td>'
-        f'<td>{_esc(s.get("length"))}{chr(34) if s.get("length") else ""}</td>'
-        f'<td>{_esc(s.get("target_carry"))}</td></tr>' for s in d.get("bag_specs", []))
+            f'<tr><td>{_esc(b["club"])}</td><td>{loft}</td>'
+            f'<td class="shaft">{shaft}</td><td>{b["target"]}</td>'
+            f'<td><b>{b["suggested"]}</b>{ms}{flag}</td></tr>')
 
     # ---- dispersion table ----
     disp_rows = ""
@@ -967,6 +961,7 @@ td b{{color:var(--accent)}}
 .hold,.lc{{font-size:10px;padding:1px 5px;border-radius:6px;background:#3a2c12;color:#f3c969}}
 .lc{{background:#3a1f1f;color:#f3a0a0}}
 .rng{{font-size:10px;color:var(--mut)}}
+.shaft{{font-size:11px;color:var(--mut)}}
 .conf{{font-size:11px;padding:1px 7px;border-radius:10px}}
 .conf-high{{background:#1b3a22;color:#7fd18c}} .conf-medium{{background:#3a3212;color:#e8d27a}}
 .conf-low{{background:#3a1f1f;color:#f3a0a0}}
@@ -1069,7 +1064,7 @@ finishes. Fix the chunk first.</p></section>
 
 <section><h2>Aim by club</h2>{aim_block}</section>
 
-<section><h2>Dispersion explorer</h2>
+<section><h2>Measured distances &amp; dispersion</h2>
 {disp_svg}
 <div class="tabs" id="disp-tabs" style="margin:12px 0 8px">
  <button class="on" data-g="all">All</button><button data-g="Woods">Woods</button>
@@ -1086,20 +1081,15 @@ ground barely rolls and carry sits just under total (it would subtract more on f
 dry turf). Still modeled until <i>launch-monitor carries (Tee Box, July)</i> become the
 source of truth. Rounded to 5 yds; also in <code>club_distances.csv</code>.</p></section>
 
-<section><h2>Your bag</h2>
-<table><thead><tr><th>Club</th><th>Loft</th><th>Shaft</th><th>Length</th>
-<th>Target carry</th></tr></thead><tbody>{spec_rows}</tbody></table>
-<p class="note">From <code>bag.csv</code> — the single source of truth for your clubs
-and target carries. Edit that file to change the bag everywhere on the dashboard.</p></section>
-
-<section><h2>Measured vs target bag</h2>
-<table><thead><tr><th>Club</th><th>Target carry</th><th>Measured carry</th>
-<th>Suggested</th><th>n</th></tr></thead><tbody>{bag_rows}</tbody></table>
-<p class="note">Target = your <code>bag.csv</code> carries. Measured = your
-recency-weighted, Monte-Carlo best-third <b>carry</b> (total × wet-aware roll factor),
-or a <b>launch-monitor</b> number when <code>launch_monitor.csv</code> has one (tagged
-"measured"). The bag stays <b>strictly descending</b>: a "hold" tag means a noisy data
-point would have broken club order, so the target stands.</p></section>
+<section><h2>Your bag &amp; suggested carry</h2>
+<table><thead><tr><th>Club</th><th>Loft</th><th>Shaft</th><th>Target</th>
+<th>Carry to use</th></tr></thead><tbody>{bag_rows}</tbody></table>
+<p class="note">Your bag (from <code>bag.csv</code>) with the <b>"Carry to use"</b> — the
+single number to punch into your apps for each club. It's your data-driven suggestion:
+your measured carry when there's enough of it, otherwise your target, always kept
+<b>strictly descending</b> ("hold" = a noisy data point would have broken club order, so
+the target stands; "measured" = a launch-monitor number). The actual measured distances
++ spread are in the section above. Edit <code>bag.csv</code> to change clubs/targets.</p></section>
 
 <section><h2>Round map</h2>
 <div class="tabs" id="round-tabs"></div>
