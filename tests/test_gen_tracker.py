@@ -85,13 +85,14 @@ def test_wet_classifier_and_roll_factor():
     # wet ground -> less roll -> carry factor closer to 1 than dry
     dry = g._roll_factor("Driver", 0.0)
     wet = g._roll_factor("Driver", 1.0)
-    assert wet > dry
+    assert wet > dry                       # wet ground rolls less -> factor nearer 1
     assert wet == g.WET_FACTOR["Driver"] and dry == g.CARRY_FACTOR["Driver"]
-    # all rounds are wet in the store, so the driver carry should sit near its total,
-    # not 25 yards under it
+    # Integration: a club's carry == total x the roll factor blended for HOW WET its
+    # shots actually were — deterministic regardless of the wet/dry mix in the store.
     d = _compute()
     drv = [c for c in d["dispersion"] if c["club"] == "Driver"][0]
-    assert drv["carry"] >= drv["total"] - 10   # wet: small rollout, not ~25
+    expected = g._round5(drv["total"] * g._roll_factor("Driver", drv["wet"]))
+    assert drv["carry"] == expected
 
 
 def test_recency_weight_decays():
