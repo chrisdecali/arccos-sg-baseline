@@ -168,6 +168,22 @@ this repo. Only the optional PDF uses the golf-reports render layer.
   green-relative scatter + per-club short/long & left/right bias = "distance-control
   reality" (e.g. long irons ~30-40y short → take more club). Also: putting one-putt%/
   3-putts by first-putt distance, up-and-down by lie (chip/sand from career_stats).
+* **Shot-pattern miss is robust: median + IQR, never the mean** — `_agg` drops clear
+  outliers (chunks/blades/shanks/GPS glitches) via 1.5×IQR on each axis, then reports
+  the **median** (the marker is "median miss"). Same spirit as the distance/dispersion
+  cleaning. The mean got pulled by mishits (overall short was ~11 mean vs ~5 median).
+* **Woods/driver get direction off the tee from FAIRWAY FLAGS, not green center** —
+  off the tee you aim down the fairway, so green-center miss is meaningless for them
+  (and tee/layup shots are *excluded* from the approach patterns/aim to avoid the
+  dogleg artifact). `driving` = fairway% + miss-left/right by tee club from
+  `holes.fairway_hit / fw_miss_left / fw_miss_right` (joined to the tee club via
+  `shots.is_tee`). Rendered as the "Driving accuracy" section (L|fairway|R bar).
+* **Coaching engine = macro vs recent, kept explicitly separate** (`coaching` dict).
+  MACRO = recurring structural fixes over all rounds, ranked by SG leverage. RECENT =
+  last 2 rounds vs the player's own baseline (per-category SG macro/recent/Δ), so
+  recency bias is shown, not hidden. BY-CLUB recs come from the (median) shot patterns
+  + driving. `_pattern(..., rounds_set=)` lets the recent window reuse the exact macro
+  math. This replaced the old static 3-bullet "Game plan".
 
 ## Player context (calibrate recs to this)
 
