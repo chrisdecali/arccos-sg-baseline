@@ -1547,6 +1547,56 @@ face/path squares them all up at once.</li>
 rounds in, treat low-sample clubs as directional. "basis" = how many shots it's
 from.</span></div></section>"""
 
+    # ---- By-club tab: bag (top) -> merged stats -> what to try (bottom) ----
+    club_bag = f"""
+<section data-tab="club"><h2>Your bag &amp; distances</h2>
+<table><thead><tr><th>Club</th><th>Loft</th><th>Shaft</th><th>Target</th>
+<th>Carry to use</th></tr></thead><tbody>{bag_rows}</tbody></table>
+<p class="note">Your bag (from <code>bag.csv</code>) with the <b>"Carry to use"</b> &mdash;
+the single number to punch into your apps: your measured carry when there's enough of it,
+else your target, always kept <b>strictly descending</b> ("hold" = a noisy point would
+have broken club order; "measured" = a launch-monitor number).</p>
+<h3 class="sub">Measured distances &amp; dispersion</h3>
+{disp_svg}
+<div class="tabs" id="disp-tabs" style="margin:12px 0 8px">
+ <button class="on" data-g="all">All</button><button data-g="Woods">Woods</button>
+ <button data-g="Irons">Irons</button><button data-g="Wedges">Wedges</button></div>
+<table><thead><tr><th>Club</th><th>Total (best ⅓)</th><th>Carry</th><th>Carry ±SD</th>
+<th>Lateral ±SD</th><th>Shots</th><th>Confidence</th></tr></thead>
+<tbody id="disp-body">{disp_rows}</tbody></table>
+<p class="note"><b>Total</b> = real measured distance (carry + roll) from Arccos &mdash;
+best-third strike, recency-weighted, Monte-Carlo bootstrapped (grey range = 80% band).
+<b>Carry</b> = total × a condition-aware roll factor (you play wet, so carry sits just
+under total). Modeled until <i>launch-monitor carries (Tee Box, July)</i> take over.</p></section>"""
+
+    club_shots = f"""
+<section data-tab="club"><h2>Where your shots go</h2>
+<h3 class="sub">Off the tee &mdash; driving accuracy</h3>
+<table><thead><tr><th>Tee club</th><th>Tee shots</th><th>Fairways</th>
+<th>L &nbsp;|&nbsp; fairway &nbsp;|&nbsp; R</th><th>Miss split</th></tr></thead>
+<tbody>{drive_rows or '<tr><td colspan=5>—</td></tr>'}</tbody></table>
+<p class="note">Direction off the tee from Arccos's fairway hit + miss side (you aim down
+the fairway, not the green). {drive_note}</p>
+<h3 class="sub">Approaches &amp; chips &mdash; finish vs green center</h3>
+<p class="note">{ap_summary} Target = <b>green center</b> (you aim at the middle, not the
+flag). Up = long, down = short. Outliers dropped via IQR; the white ring is your
+<b>median miss</b>.</p>
+<div style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center">
+<div><div style="text-align:center;margin-bottom:6px"><span class="note">Approaches —
+filter by club: </span><select class="clubsel" onchange="filterPat('ap',this.value)">
+<option value="all">All clubs</option>{ap_opts}</select></div>{ap_svg}</div>
+<div><div style="text-align:center;margin-bottom:6px"><span class="note">Chips —
+filter by club: </span><select class="clubsel" onchange="filterPat('ch',this.value)">
+<option value="all">All clubs</option>{ch_opts}</select></div>{chip_svg}</div>
+</div>
+<h3 class="sub">Approach miss by club</h3>
+<table><thead><tr><th>Club</th><th>n</th><th>Short / long</th><th>Left / right</th>
+<th>±SD (l-s/l-r)</th><th>Tendency</th></tr></thead><tbody>{ap_rows or '<tr><td colspan=6>—</td></tr>'}</tbody></table>
+<p class="note">Distance-control reality: the <b>median</b> short/long (mishits excluded)
+is what your club <i>typically</i> does &mdash; long irons short = take more club.</p>
+<h3 class="sub">Aim by club</h3>
+{aim_block}</section>"""
+
     return f"""<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1679,6 +1729,8 @@ generated {_esc(m['generated_at'])}</div>
 <p class="note">Targets for PGA Frisco (Oct 21–24, 2026). All strokes-gained is
 Arccos, measured vs scratch — large negatives are normal for a mid-handicap.</p></section>
 {coach_overall}
+{club_bag}
+{club_shots}
 {coach_byclub}
 
 <section data-tab="round"><h2>Rounds — full reviews</h2>
@@ -1735,38 +1787,6 @@ realistic combined gain is about <b>{d['recoverable']['effective']}</b> strokes/
 <b>contact</b>, not the putt that follows — proximity is measured from where the chip
 finishes. Fix the chunk first.</p></section>
 
-<section data-tab="club"><h2>Aim by club</h2>{aim_block}</section>
-
-<section data-tab="club"><h2>Shot patterns — where your ball finishes</h2>
-<p class="note">{ap_summary} Target = <b>green center</b> (centroid of each hole's pins —
-sharpens as you log rounds), since you aim at the middle, not the flag. Up = long,
-down = short; left/right as you'd expect. Clear outliers (chunks/blades/shanks) are
-dropped via IQR and the white ring is your <b>median (typical) miss</b> — not the
-mean, so a few bad swings don't skew it.</p>
-<div style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center">
-<div><div style="text-align:center;margin-bottom:6px"><span class="note">Approaches —
-filter by club: </span><select class="clubsel" onchange="filterPat('ap',this.value)">
-<option value="all">All clubs</option>{ap_opts}</select></div>{ap_svg}</div>
-<div><div style="text-align:center;margin-bottom:6px"><span class="note">Chips —
-filter by club: </span><select class="clubsel" onchange="filterPat('ch',this.value)">
-<option value="all">All clubs</option>{ch_opts}</select></div>{chip_svg}</div>
-</div>
-<h3 style="font-size:14px;color:var(--mut);margin:14px 0 6px">Approach miss by club</h3>
-<table><thead><tr><th>Club</th><th>n</th><th>Short / long</th><th>Left / right</th>
-<th>±SD (l-s/l-r)</th><th>Tendency</th></tr></thead><tbody>{ap_rows or '<tr><td colspan=6>—</td></tr>'}</tbody></table>
-<p class="note">Distance-control reality: the <b>median</b> short/long here (clear
-mishits excluded) is what your club <i>typically</i> does on course — e.g. long irons
-coming up well short means take more club. 4 rounds in, treat low-n clubs as
-directional.</p></section>
-
-<section data-tab="club"><h2>Driving accuracy (off the tee)</h2>
-<table><thead><tr><th>Tee club</th><th>Tee shots</th><th>Fairways</th>
-<th>L &nbsp;|&nbsp; fairway &nbsp;|&nbsp; R</th><th>Miss split</th></tr></thead>
-<tbody>{drive_rows or '<tr><td colspan=5>—</td></tr>'}</tbody></table>
-<p class="note">This is where your <b>woods/driver</b> live — direction off the tee is
-measured by Arccos's fairway hit + miss side (you aim down the fairway, not at the
-green, so the green-center scatter above excludes tee shots on purpose). {drive_note}</p></section>
-
 <section data-tab="overall"><h2>Putting &amp; up-and-down</h2>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="twocol">
  <div><h3 style="font-size:14px;color:var(--mut)">One-putt % by first-putt distance</h3>
@@ -1785,33 +1805,6 @@ approach-proximity problem, not a stroke problem) and your greenside save rate b
 <p class="note">Your rounds average <b>{pace_txt} per 18 holes</b> (from Arccos round
 timestamps). For reference: a brisk pace is ~4h00m, ~4h30m is slow, and <b>5h+ is a
 grind</b>. Empirical backing for the pace-of-play conversation at WindRose.</p></section>
-
-<section data-tab="club"><h2>Measured distances &amp; dispersion</h2>
-{disp_svg}
-<div class="tabs" id="disp-tabs" style="margin:12px 0 8px">
- <button class="on" data-g="all">All</button><button data-g="Woods">Woods</button>
- <button data-g="Irons">Irons</button><button data-g="Wedges">Wedges</button></div>
-<table><thead><tr><th>Club</th><th>Total (best ⅓)</th><th>Carry</th><th>Carry ±SD</th>
-<th>Lateral ±SD</th><th>Shots</th><th>Confidence</th></tr></thead>
-<tbody id="disp-body">{disp_rows}</tbody></table>
-<p class="note"><b>Total</b> is your real measured distance (carry + roll) from Arccos —
-the <b>best-third</b> strike, <b>recency-weighted</b> (recent rounds count more), and
-<b>Monte-Carlo bootstrapped</b> (the small grey range is the 80% band, so a thin sample
-reads as uncertain). <b>Carry</b> = total × a roll factor that's
-<b>adjusted for conditions</b> — your rounds are played wet (rain/drizzle), so the
-ground barely rolls and carry sits just under total (it would subtract more on firm,
-dry turf). Still modeled until <i>launch-monitor carries (Tee Box, July)</i> become the
-source of truth. Rounded to 5 yds; also in <code>club_distances.csv</code>.</p></section>
-
-<section data-tab="club"><h2>Your bag &amp; suggested carry</h2>
-<table><thead><tr><th>Club</th><th>Loft</th><th>Shaft</th><th>Target</th>
-<th>Carry to use</th></tr></thead><tbody>{bag_rows}</tbody></table>
-<p class="note">Your bag (from <code>bag.csv</code>) with the <b>"Carry to use"</b> — the
-single number to punch into your apps for each club. It's your data-driven suggestion:
-your measured carry when there's enough of it, otherwise your target, always kept
-<b>strictly descending</b> ("hold" = a noisy data point would have broken club order, so
-the target stands; "measured" = a launch-monitor number). The actual measured distances
-+ spread are in the section above. Edit <code>bag.csv</code> to change clubs/targets.</p></section>
 
 <section data-tab="round"><h2>Round map</h2>
 <div class="tabs" id="round-tabs"></div>
