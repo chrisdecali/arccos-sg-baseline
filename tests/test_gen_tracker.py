@@ -129,12 +129,9 @@ def test_driving_accuracy():
         assert dd["chances"] >= 3
 
 
-def test_coaching_macro_recent_byclub():
+def test_coaching_recent_and_byclub():
     d = _compute()
     co = d["coaching"]
-    assert co["macro"], "macro recommendations should be populated"
-    for m in co["macro"]:
-        assert m["tag"] and m["head"] and m["body"]
     # recency split: all 4 SG categories compared macro vs recent
     cats = [c["cat"] for c in co["sg_compare"]]
     assert {"Off the tee", "Approach", "Short game", "Putting"} <= set(cats)
@@ -144,12 +141,10 @@ def test_coaching_macro_recent_byclub():
     # per-club coaching covers driver (woods) and at least one iron
     clubs = [c["club"] for c in co["by_club"]]
     assert "Driver" in clubs and any("Iron" in c for c in clubs)
-    # systemic swing-pattern card: the player hooks across the bag, so a "Swing pattern"
-    # card must surface (root-cause coaching, not just per-club aim band-aids)
-    tags = [m["tag"] for m in co["macro"]]
-    assert "Swing pattern" in tags
-    swing = next(m for m in co["macro"] if m["tag"] == "Swing pattern")
-    assert "LEFT" in swing["head"]          # his miss is left (hook/pull)
+    # the standalone Game-plan cards were removed (cannibalized by the Top 10)
+    assert "macro" not in co
+    # the systemic swing/hook fix now lives as the #1 Top-10 action
+    assert "hook" in co["top10"][0]["action"].lower()
 
 
 def test_launch_monitor_lights_up_swing_and_carry():
@@ -172,8 +167,10 @@ def test_launch_monitor_lights_up_swing_and_carry():
             fh.write(f"2026-07-12,{club},{carry},,86,123,1.43,17,1,6000,-3,-3,2,-2,{f2p},t\n")
     d = g.compute(tmp)
     assert any(b["club"] == "7 Iron" and b.get("measured_src") for b in d["bag"])
-    swing = next(m for m in d["coaching"]["macro"] if m["tag"] == "Swing pattern")
-    assert "Measured" in swing["body"] and "closed to the path" in swing["body"]
+    # the measured face-to-path now enriches the #1 Top-10 (hook) action
+    hook = d["coaching"]["top10"][0]
+    assert "hook" in hook["action"].lower()
+    assert "Measured" in hook["detail"] and "closed to the" in hook["detail"]
     shutil.rmtree(tmp, ignore_errors=True)
 
 

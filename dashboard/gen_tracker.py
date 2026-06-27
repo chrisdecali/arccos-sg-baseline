@@ -763,54 +763,6 @@ def compute(store: str) -> dict:
                  "fix": "the face is open relative to your swing path at impact",
                  "drv": drv_right}
 
-    macro_recs = []
-    if levers:
-        macro_recs.append({
-            "tag": "Priority", "head": f"Your #1 leak is {levers[0]['name'].lower()} "
-            f"({_num(levers[0]['sg'],1,True)} SG/round)",
-            "body": "Short game + approach are ~75–80% of your strokes over par — that's "
-            "where practice time converts to scores, not the driver."})
-    if swing:
-        s = swing["side"]
-        _body = (f"{swing['n']} clubs across the bag finish {s} of target"
-                 + (", driver included" if swing["drv"] else "")
-                 + f" — a textbook <b>{swing['miss']}</b> pattern. That's a face-to-path "
-                 f"issue ({swing['fix']}), so aiming the other way only hides it. "
-                 "Highest-leverage move by far: a lesson with a launch monitor to measure "
-                 "face-to-path and square it up — that fixes EVERY club at once. The "
-                 "per-club “aim” notes are interim patches until you do.")
-        if lm_bag_f2p is not None:
-            _fd = "closed" if lm_bag_f2p < 0 else "open"
-            _matches = (lm_bag_f2p < 0) == (s == "left")
-            _body += (f" <b>Measured (launch monitor): your face averages "
-                      f"{abs(lm_bag_f2p)}° {_fd} to the path</b> — "
-                      + ("confirms it; that's the number to get to ~0°."
-                         if _matches else "worth a second look vs the on-course miss."))
-        macro_recs.append({
-            "tag": "Swing pattern", "head": f"Your whole bag leaks {s.upper()} — that's "
-            f"one swing fault, not {swing['n']} separate aim problems", "body": _body})
-    if ov and ov["ls"] <= -4:
-        macro_recs.append({
-            "tag": "Approach", "head": f"Club up — you're a median {abs(ov['ls'])} yd short",
-            "body": "Take one more club, especially the long irons (5i / hybrid come up "
-            "~20–40 yd short). On-course you carry less than the range number."})
-    if chip_ud.get("att"):
-        macro_recs.append({
-            "tag": "Short game", "head": f"Greenside contact ({chip_ud['made']}/{chip_ud['att']} up-and-down)",
-            "body": "Chips finish short of the hole — a contact/technique fix (a lesson + a "
-            "low-spinning bump-and-run), not equipment. Goal: solid strike inside 15 ft."})
-    if tp_total:
-        macro_recs.append({
-            "tag": "Putting", "head": f"Lag from distance — all {tp_total} of your 3-putts are 30+ ft",
-            "body": "Not a stroke problem: it's long first putts from poor approach/chip "
-            "proximity. Drill lag (long putts to a 3-ft circle); 3-putts shrink as approaches improve."})
-    if drv and drv["left_pct"] - drv["right_pct"] >= 10:
-        macro_recs.append({
-            "tag": "Driving", "head": f"Play the hook off the tee ({drv['fw_pct']}% fairways)",
-            "body": f"You miss left {drv['left_pct']}% vs right {drv['right_pct']}%. Until the "
-            "face is fixed, aim down the right side and let it work back — and keep your "
-            "length, distance is your strength."})
-
     # ---- recent form (last n rounds vs your baseline) ----
     recent_items = []
     sgc = [c for c in sg_compare if c["recent"] is not None]
@@ -882,11 +834,18 @@ def compute(store: str) -> dict:
             cand.append({"sg": round(sg, 1), "cat": cat, "action": action, "detail": detail})
 
     if swing:
+        _hookdet = (f"Your whole bag leaks {swing['side']} ({swing['n']} clubs"
+                    + (", driver included" if swing["drv"] else "")
+                    + ") — a face-to-path issue, the root cause behind both lost fairways "
+                    "and missed greens. Squaring the face fixes every club at once; the "
+                    "per-club “aim” notes are just patches until you do. Nothing else "
+                    "here moves more strokes.")
+        if lm_bag_f2p is not None:
+            _fd = "closed" if lm_bag_f2p < 0 else "open"
+            _hookdet += (f" Measured: face averages {abs(lm_bag_f2p)}° {_fd} to the "
+                         "path — get it toward 0°.")
         _act(0.18 * A + 0.45 * T, "Swing",
-             "Fix the face-to-path hook (lesson + launch monitor)",
-             "Your whole bag leaks left — the one root cause behind both lost fairways "
-             "and missed greens. Squaring the face fixes every club at once; nothing "
-             "else on this list moves more strokes.")
+             "Fix the face-to-path hook (lesson + launch monitor)", _hookdet)
     _act(0.28 * A, "Approach", "Club up — stop leaving approaches short",
          f"GIR is only {_pct(gir, 0)} and you finish a median {abs(_ov['ls'])} yd short. "
          "One more club turns 'just short' into birdie looks — your biggest pure-stats gain.")
@@ -922,8 +881,8 @@ def compute(store: str) -> dict:
         t["rank"] = i
     top10_total = round(sum(t["sg"] for t in top10), 1)
 
-    coaching = {"macro": macro_recs, "recent_label": recent_label,
-                "recent": recent_items, "by_club": club_recs, "sg_compare": sg_compare,
+    coaching = {"recent_label": recent_label, "recent": recent_items,
+                "by_club": club_recs, "sg_compare": sg_compare,
                 "top10": top10, "top10_total": top10_total}
     # ===========================================================================
 
@@ -1543,11 +1502,6 @@ category losses (approach, putting, off-tee, short game). They overlap, so the r
 combined gain is about <b>{d['recoverable']['effective']}/round</b>, not the
 {co['top10_total']} straight sum. Work top-down: #1 is the highest-leverage thing you can
 do.</p></section>"""
-    macro_cards = "".join(
-        f'<div class="rec"><span class="rec-tag">{_esc(m2["tag"])}</span>'
-        f'<div class="rec-head">{m2["head"]}</div>'
-        f'<div class="rec-body">{m2["body"]}</div></div>' for m2 in co["macro"]
-    ) or '<p class="note">Not enough data for recommendations yet.</p>'
     recent_html = "".join(
         f'<li><b>{it["head"]}</b><br><span class="note">{it["body"]}</span></li>'
         for it in co["recent"]) or '<li class="note">Not enough recent rounds yet.</li>'
@@ -1564,18 +1518,15 @@ do.</p></section>"""
         f'<tr><td>{_esc(c["club"])}</td><td>{c["rec"]}</td>'
         f'<td class="note">{_esc(c["basis"])}</td></tr>' for c in co["by_club"])
     coach_overall = f"""
-<section data-tab="overall"><h2>Game plan</h2>
-<h3 class="sub">Your recurring fixes <span class="note">(all {m['n_rounds']} rounds, ranked by how many strokes they cost)</span></h3>
-<div class="recs">{macro_cards}</div>
-<h3 class="sub">Right now &mdash; recent rounds {('('+co['recent_label']+')') if co['recent_label'] else ''} vs your baseline</h3>
+<section data-tab="overall"><h2>Recent form {('&mdash; ' + co['recent_label']) if co['recent_label'] else ''} vs your baseline</h2>
 <table class="sgc"><thead><tr><th>Strokes gained</th><th>Macro</th><th>Recent</th><th>&Delta;</th></tr></thead>
 <tbody>{sgc_rows}</tbody></table>
 <ul class="recent">{recent_html}</ul>
-<p class="note"><b>Macro</b> = recurring tendencies across every round (the structural
-fixes that don't move week to week) &mdash; that's what to take to a lesson.
-<b>Recent</b> = your last 2 rounds vs your own baseline &mdash; what's hot or cold right
-now, so you warm up the right thing without over-reacting to one session. Negative SG =
-strokes lost vs a scratch player; less negative (greener &Delta;) is better.</p></section>"""
+<p class="note"><b>Macro</b> = your all-rounds baseline (the priorities are quantified in
+the Top 10 above). <b>Recent</b> = your last 2 rounds vs that baseline &mdash; what's hot
+or cold right now, so you warm up the right thing without over-reacting to one session.
+Negative SG = strokes lost vs a scratch player; less negative (greener &Delta;) is
+better.</p></section>"""
 
     coach_byclub = f"""
 <section data-tab="club"><h2>By club &mdash; what to try</h2>
@@ -1588,7 +1539,7 @@ strokes lost vs a scratch player; less negative (greener &Delta;) is better.</p>
 <li><b>Club down</b> = next shorter club; you're flying it past the target.</li>
 <li><b>Aim ~Xy right / left</b> = your typical finish is that many yards to one side, so
 start your aim the other way to bring it back to the middle. <i>This is a patch</i> —
-if most clubs lean the same way it's a swing fault (see the Game-plan tab); fixing the
+if most clubs lean the same way it's a swing fault (that's #1 in the Top 10); fixing the
 face/path squares them all up at once.</li>
 <li><b>Distance dialed / on line</b> = no change &mdash; keep doing it.</li>
 </ul>
