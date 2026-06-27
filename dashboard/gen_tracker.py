@@ -660,31 +660,50 @@ def _shotmap_payload(shots, holes):
     return out
 
 
-# ----------------------------------------------------------------- charts (PNG)
+# ----------------------------------------------------------------- charts (SVG)
+def _nice_ticks(lo, hi, step):
+    """Integer tick values at multiples of `step` spanning [lo, hi]."""
+    start = math.ceil(lo / step) * step
+    out, v = [], start
+    while v <= hi + 1e-6:
+        out.append(int(round(v)))
+        v += step
+    return out
+
+
 def _svg_sg_by_round(rounds) -> str:
-    """Inline SVG stacked-bar of SG categories per round (pure stdlib)."""
+    """Inline SVG stacked-bar of SG categories per round, with title + y-axis."""
     if not rounds:
         return ""
     cats = [("sg_off_tee", "#43a047", "off tee"), ("sg_approach", "#4f9cf9", "approach"),
             ("sg_short", "#fb8c00", "short"), ("sg_putting", "#ab47bc", "putting")]
-    W, H, padL, padT, padB = 680, 250, 30, 26, 34
+    W, H, padL, padR, padT, padB = 700, 290, 42, 14, 46, 36
     n = len(rounds)
     pos = [sum((r.get(k) or 0) for k, _c, _l in cats if (r.get(k) or 0) > 0) for r in rounds]
     neg = [sum((r.get(k) or 0) for k, _c, _l in cats if (r.get(k) or 0) < 0) for r in rounds]
-    ymax = max(pos + [0.5])
-    ymin = min(neg + [-0.5])
+    ymax = math.ceil(max(pos + [1]) / 5) * 5
+    ymin = math.floor(min(neg + [-1]) / 5) * 5
     span = (ymax - ymin) or 1
     plotH = H - padT - padB
 
     def yf(v):
         return padT + (ymax - v) / span * plotH
 
-    step = (W - padL - 8) / n
-    bw = min(46, step * 0.55)
     p = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '
          f'style="width:100%;height:auto;background:#0f131a;border-radius:8px">']
-    y0 = yf(0)
-    p.append(f'<line x1="{padL}" y1="{y0:.1f}" x2="{W-6}" y2="{y0:.1f}" stroke="#444"/>')
+    p.append(f'<text x="{W/2:.0f}" y="16" font-size="12" font-weight="bold" '
+             f'fill="#e8eaed" text-anchor="middle">Strokes gained by round (vs scratch)</text>')
+    # y gridlines + tick labels (SG values)
+    for yv in _nice_ticks(ymin, ymax, 5):
+        y = yf(yv)
+        p.append(f'<line x1="{padL}" y1="{y:.1f}" x2="{W-padR}" y2="{y:.1f}" '
+                 f'stroke="{"#555" if yv == 0 else "#222"}"/>')
+        p.append(f'<text x="{padL-5}" y="{y+3:.1f}" font-size="9" fill="#9aa0aa" '
+                 f'text-anchor="end">{yv:+d}</text>')
+    p.append(f'<text transform="translate(11,{(padT+H-padB)/2:.0f}) rotate(-90)" '
+             f'font-size="9" fill="#9aa0aa" text-anchor="middle">strokes gained</text>')
+    step = (W - padL - padR) / n
+    bw = min(46, step * 0.5)
     for i, r in enumerate(rounds):
         cx = padL + step * i + step / 2
         up = dn = 0.0
@@ -705,25 +724,26 @@ def _svg_sg_by_round(rounds) -> str:
                  f'text-anchor="middle">{_esc(r["date"])}</text>')
     lx = padL
     for _k, color, lbl in cats:
-        p.append(f'<rect x="{lx}" y="7" width="9" height="9" rx="2" fill="{color}"/>')
-        p.append(f'<text x="{lx+13}" y="15" font-size="9.5" fill="#9aa0aa">{lbl}</text>')
-        lx += 92
+        p.append(f'<rect x="{lx}" y="26" width="9" height="9" rx="2" fill="{color}"/>')
+        p.append(f'<text x="{lx+13}" y="34" font-size="9.5" fill="#9aa0aa">{lbl}</text>')
+        lx += 95
     p.append("</svg>")
     return "".join(p)
 
 
 def _svg_dispersion(disp_clubs) -> str:
-    """Inline SVG scatter of carry vs lateral spread, colored by confidence."""
+    """Inline SVG scatter of carry (x, yds) vs lateral spread (y, yds), with ticks."""
     pts = [(d["carry"], d["lateral_sd"], d["club"], d["confidence"])
            for d in disp_clubs if d["carry"] and d["lateral_sd"]]
     if not pts:
         return ""
     cmap = {"high": "#43a047", "medium": "#f9a825", "low": "#e53935"}
-    W, H, padL, padR, padT, padB = 680, 280, 44, 12, 14, 30
+    W, H, padL, padR, padT, padB = 700, 330, 50, 16, 40, 44
     xs = [c for c, _l, _n, _cf in pts]
     ys = [l for _c, l, _n, _cf in pts]
-    xmin, xmax = min(xs) - 10, max(xs) + 10
-    ymax = max(ys + [5]) * 1.15
+    xmin = math.floor((min(xs) - 15) / 25) * 25
+    xmax = math.ceil((max(xs) + 15) / 25) * 25
+    ymax = max(math.ceil((max(ys) + 5) / 10) * 10, 10)
     pw, ph = W - padL - padR, H - padT - padB
 
     def xf(v):
@@ -734,22 +754,35 @@ def _svg_dispersion(disp_clubs) -> str:
 
     p = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '
          f'style="width:100%;height:auto;background:#0f131a;border-radius:8px">']
-    # axes
-    p.append(f'<line x1="{padL}" y1="{padT}" x2="{padL}" y2="{H-padB}" stroke="#333"/>')
-    p.append(f'<line x1="{padL}" y1="{H-padB}" x2="{W-padR}" y2="{H-padB}" stroke="#333"/>')
-    p.append(f'<text x="{padL}" y="{H-4}" font-size="9" fill="#9aa0aa">carry →</text>')
-    p.append(f'<text transform="translate(12,{H-padB}) rotate(-90)" font-size="9" '
-             f'fill="#9aa0aa">lateral spread (±SD) →</text>')
+    p.append(f'<text x="{W/2:.0f}" y="16" font-size="12" font-weight="bold" '
+             f'fill="#e8eaed" text-anchor="middle">Carry distance vs lateral spread '
+             f'(lower = tighter)</text>')
+    # x gridlines + tick labels (carry yards)
+    for xv in _nice_ticks(xmin, xmax, 50):
+        x = xf(xv)
+        p.append(f'<line x1="{x:.1f}" y1="{padT}" x2="{x:.1f}" y2="{H-padB}" stroke="#222"/>')
+        p.append(f'<text x="{x:.1f}" y="{H-padB+15}" font-size="9" fill="#9aa0aa" '
+                 f'text-anchor="middle">{xv}</text>')
+    # y gridlines + tick labels (spread yards)
+    for yv in _nice_ticks(0, ymax, 10):
+        y = yf(yv)
+        p.append(f'<line x1="{padL}" y1="{y:.1f}" x2="{W-padR}" y2="{y:.1f}" stroke="#222"/>')
+        p.append(f'<text x="{padL-6}" y="{y+3:.1f}" font-size="9" fill="#9aa0aa" '
+                 f'text-anchor="end">{yv}</text>')
+    p.append(f'<text x="{(padL+W-padR)/2:.0f}" y="{H-6}" font-size="9.5" fill="#9aa0aa" '
+             f'text-anchor="middle">carry (yds)</text>')
+    p.append(f'<text transform="translate(12,{(padT+H-padB)/2:.0f}) rotate(-90)" '
+             f'font-size="9.5" fill="#9aa0aa" text-anchor="middle">lateral spread ±SD (yds)</text>')
     for carry, lat, club, conf in pts:
         x, y = xf(carry), yf(lat)
         p.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5" fill="{cmap.get(conf,"#888")}"/>')
         p.append(f'<text x="{x+7:.1f}" y="{y+3:.1f}" font-size="9" '
                  f'fill="#cfd3da">{_esc(club)}</text>')
-    lx = padL + 60
+    lx = W - padR - 200
     for k, color in cmap.items():
-        p.append(f'<circle cx="{lx}" cy="11" r="4" fill="{color}"/>')
-        p.append(f'<text x="{lx+8}" y="14" font-size="9" fill="#9aa0aa">{k}</text>')
-        lx += 70
+        p.append(f'<circle cx="{lx}" cy="30" r="4" fill="{color}"/>')
+        p.append(f'<text x="{lx+8}" y="33" font-size="9" fill="#9aa0aa">{k}</text>')
+        lx += 65
     p.append("</svg>")
     return "".join(p)
 
