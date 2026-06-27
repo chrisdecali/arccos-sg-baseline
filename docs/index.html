@@ -27,6 +27,20 @@ td b{color:var(--accent)}
 .note{color:var(--mut);font-size:12.5px;margin:10px 0 0}
 h3.sub{font-size:13.5px;color:var(--ink);margin:18px 0 8px;font-weight:600}
 h3.sub .note{display:inline;font-weight:400}
+ol.top10{list-style:none;margin:0;padding:0}
+ol.top10 li{display:flex;gap:12px;align-items:flex-start;padding:11px 2px;
+border-bottom:1px solid var(--line)}
+ol.top10 li:last-child{border-bottom:none}
+.t10-rank{flex:0 0 18px;color:var(--mut);font-weight:700;font-size:15px;
+text-align:right;padding-top:3px}
+.sgpill{flex:0 0 auto;min-width:54px;text-align:center;background:rgba(67,160,71,.14);
+color:var(--good);border:1px solid rgba(67,160,71,.4);border-radius:8px;padding:4px 8px;
+font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+.t10-body{flex:1 1 auto;min-width:0}
+.t10-head{font-weight:600;font-size:14.5px;line-height:1.35}
+.t10-cat{font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;
+margin-left:8px;white-space:nowrap}
+.t10-body .note{margin:3px 0 0}
 .tabbar{position:sticky;top:0;z-index:50;display:flex;gap:6px;flex-wrap:wrap;
 background:var(--bg);padding:12px 0 10px;margin:0 0 4px;border-bottom:1px solid var(--line)}
 .tabbar .tab{flex:1 1 auto;min-width:120px;background:#0f131a;color:var(--mut);
@@ -40,7 +54,13 @@ padding:10px 14px;margin-top:12px;font-size:12.5px;color:var(--mut)}
 .key ul{margin:6px 0 4px;padding-left:18px} .key li{margin:3px 0}
 .key b{color:var(--ink)}
 .recs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media(max-width:640px){.recs,.grid2{grid-template-columns:1fr}}
+@media(max-width:640px){.recs,.grid2{grid-template-columns:1fr}
+main{padding:8px 12px 60px} section{padding:14px 12px 16px}
+th,td{padding:6px 5px;font-size:12.5px}
+.tabbar .tab{font-size:12.5px;padding:9px 6px;min-width:0;flex:1 1 0}
+.t10-head{font-size:13.5px} .sgpill{min-width:46px;font-size:14px}
+table{display:block;overflow-x:auto;white-space:nowrap}
+table.sgc{white-space:normal}}
 .rec{background:#0f131a;border:1px solid var(--line);border-left:3px solid var(--accent);
 border-radius:8px;padding:11px 12px}
 .rec-tag{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);
@@ -103,6 +123,16 @@ generated 2026-06-15T12:00:13Z</div>
  <button class="tab" data-pane="club">By club</button>
  <button class="tab" data-pane="round">By round</button>
 </nav>
+
+
+<section data-tab="overall"><h2>Top 10 &mdash; what to do, by strokes gained</h2>
+<ol class="top10"><li><span class="t10-rank">1</span><span class="sgpill">+3.4</span><div class="t10-body"><div class="t10-head">Fix the face-to-path hook (lesson + launch monitor)<span class="t10-cat" style="color:#a78bfa">Swing</span></div><div class="note">Your whole bag leaks left — the one root cause behind both lost fairways and missed greens. Squaring the face fixes every club at once; nothing else on this list moves more strokes.</div></div></li><li><span class="t10-rank">2</span><span class="sgpill">+3.1</span><div class="t10-body"><div class="t10-head">Club up — stop leaving approaches short<span class="t10-cat" style="color:#4f9cf9">Approach</span></div><div class="note">GIR is only 29% and you finish a median 4.9 yd short. One more club turns 'just short' into birdie looks — your biggest pure-stats gain.</div></div></li><li><span class="t10-rank">3</span><span class="sgpill">+2.4</span><div class="t10-body"><div class="t10-head">Lag drill — kill the 3-putts (all 11 from 30+ ft)<span class="t10-cat" style="color:#43a047">Putting</span></div><div class="note">Long putts to a 3-ft circle. It's a distance-control problem, not your stroke; shrinks fast and compounds as approach proximity improves.</div></div></li><li><span class="t10-rank">4</span><span class="sgpill">+2.2</span><div class="t10-body"><div class="t10-head">Sharpen the wedges (50–125 yd scoring clubs)<span class="t10-cat" style="color:#4f9cf9">Approach</span></div><div class="note">Tight distance control here is where mid-handicaps make birdies. Build a carry ladder (¾, full) once you have launch-monitor numbers.</div></div></li><li><span class="t10-rank">5</span><span class="sgpill">+1.6</span><div class="t10-body"><div class="t10-head">Greenside contact — stop chunking chips (0/28 up-and-down)<span class="t10-cat" style="color:#fb8c00">Short game</span></div><div class="note">A strike/technique fix (lesson + a low, running bump-and-run). Goal: solid contact to inside 15 ft so the putt is makeable.</div></div></li><li><span class="t10-rank">6</span><span class="sgpill">+1.5</span><div class="t10-body"><div class="t10-head">Re-gap the long irons / hybrid<span class="t10-cat" style="color:#4f9cf9">Approach</span></div><div class="note">5i and hybrid come up ~20–40 yd short on course — get real carries off a launch monitor and trust the number, or replace them with clubs you can hit the green with.</div></div></li><li><span class="t10-rank">7</span><span class="sgpill">+1.1</span><div class="t10-body"><div class="t10-head">Aim at green center, never the pin<span class="t10-cat" style="color:#26c6da">Course mgmt</span></div><div class="note">You already do this — keep it. Center-of-green removes short-side disasters and is worth real strokes for a mid-handicap.</div></div></li><li><span class="t10-rank">8</span><span class="sgpill">+1.0</span><div class="t10-body"><div class="t10-head">Tee strategy — play for the hook<span class="t10-cat" style="color:#e879a6">Off the tee</span></div><div class="note">Driver finds 41% fairways. Aim down the right side, and take 3-wood on tight holes — managing the miss while you fix the swing.</div></div></li><li><span class="t10-rank">9</span><span class="sgpill">+1.0</span><div class="t10-body"><div class="t10-head">Own the 4–8 footers<span class="t10-cat" style="color:#43a047">Putting</span></div><div class="note">The makeable range that swings scores. 10 minutes a session on a gate drill; more pars saved than any long-putt practice.</div></div></li><li><span class="t10-rank">10</span><span class="sgpill">+0.6</span><div class="t10-body"><div class="t10-head">Speed first on every lag<span class="t10-cat" style="color:#43a047">Putting</span></div><div class="note">On 30+ footers, prioritize finishing within 3 ft over the line. Speed kills 3-putts more than aim does.</div></div></li></ol>
+<p class="note">Each <b style="color:var(--good)">+x.x</b> is the estimated strokes/round
+you'd gain by closing that gap toward a mid-handicap baseline &mdash; scaled from your own
+category losses (approach, putting, off-tee, short game). They overlap, so the realistic
+combined gain is about <b>12.5/round</b>, not the
+17.9 straight sum. Work top-down: #1 is the highest-leverage thing you can
+do.</p></section>
 
 <section data-tab="overall"><h2>Key numbers</h2><div class="kpis"><div class="kpi"><div class="kpi-v">14.1</div><div class="kpi-l">WHS Index</div><div class="kpi-s">official, vs USGA</div></div><div class="kpi"><div class="kpi-v">28.6%</div><div class="kpi-l">GIR</div><div class="kpi-s">greens in regulation</div></div><div class="kpi"><div class="kpi-v">42.9%</div><div class="kpi-l">Fairways</div><div class="kpi-s">off the tee</div></div><div class="kpi"><div class="kpi-v">33.2</div><div class="kpi-l">Putts / round</div><div class="kpi-s">lower is better</div></div><div class="kpi"><div class="kpi-v">17.5%</div><div class="kpi-l">3-putt %</div><div class="kpi-s">lower is better</div></div><div class="kpi"><div class="kpi-v">0.0%</div><div class="kpi-l">Chip save %</div><div class="kpi-s">up & down after a chip</div></div><div class="kpi"><div class="kpi-v">0.0%</div><div class="kpi-l">Sand save %</div><div class="kpi-s">up & down from sand</div></div><div class="kpi"><div class="kpi-v">11.4%</div><div class="kpi-l">Chip error %</div><div class="kpi-s">chunked / bladed</div></div></div>
 <p class="note">Targets for PGA Frisco (Oct 21–24, 2026). All strokes-gained is
@@ -389,5 +419,10 @@ document.querySelectorAll('.tabbar .tab').forEach(function(b){
   window.scrollTo({top:0,behavior:'smooth'});};});
 var _p=(location.hash||'').replace('#','');
 showPane(['overall','club','round'].indexOf(_p)>=0?_p:'overall');
+// keep tabs in sync with the hash (back/forward buttons, hash links)
+window.addEventListener('hashchange',function(){
+ var p=(location.hash||'').replace('#','');
+ if(['overall','club','round'].indexOf(p)>=0) showPane(p);
+});
 </script>
 </body></html>

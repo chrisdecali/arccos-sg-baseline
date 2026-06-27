@@ -152,6 +152,20 @@ def test_coaching_macro_recent_byclub():
     assert "LEFT" in swing["head"]          # his miss is left (hook/pull)
 
 
+def test_top10_actions_ranked_with_sg():
+    d = _compute()
+    t = d["coaching"]["top10"]
+    assert 1 <= len(t) <= 10
+    # every action carries a positive SG estimate and a rank
+    for i, x in enumerate(t, 1):
+        assert x["rank"] == i and x["sg"] > 0 and x["action"] and x["cat"]
+    # strictly ranked by strokes gained (descending)
+    sgs = [x["sg"] for x in t]
+    assert sgs == sorted(sgs, reverse=True)
+    # the swing/hook fix is the #1 leverage item for this player
+    assert "hook" in t[0]["action"].lower()
+
+
 def test_iqr_bounds_flags_outliers():
     lo, hi = g._iqr_bounds([10, 11, 12, 13, 14, 200])   # 200 is an outlier
     assert not (lo <= 200 <= hi)              # 200 is outside the fence

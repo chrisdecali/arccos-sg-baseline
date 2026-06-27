@@ -836,8 +836,68 @@ def compute(store: str) -> dict:
                           "rec": "Lag drill — long putts to a 3-ft circle; nearly all "
                           "3-putts come from 30+ ft.", "basis": "putting"})
 
+    # ---- Top 10 actions ranked by estimated strokes gained ----
+    # Each action captures a fraction of a category's per-round SG loss. The category
+    # losses are YOUR data (so the numbers scale as you play); the fractions are golf-
+    # domain judgment for how much of that loss the action addresses. Read as the
+    # upside if you close that gap toward a mid-handicap baseline.
+    _loss = {x["name"]: -x["sg"] for x in levers if x["sg"] < 0}
+    A = _loss.get("Approach", 0.0)
+    P = _loss.get("Putting", 0.0)
+    T = _loss.get("Off the tee", 0.0)
+    S = _loss.get("Short game", 0.0)
+    gir = kr.get("gir_pct")
+    _ov = ov or {"ls": 0, "lr": 0}     # safe refs even on an empty store
+    cand = []
+
+    def _act(sg, cat, action, detail):
+        if sg and sg > 0.05:
+            cand.append({"sg": round(sg, 1), "cat": cat, "action": action, "detail": detail})
+
+    if swing:
+        _act(0.18 * A + 0.45 * T, "Swing",
+             "Fix the face-to-path hook (lesson + launch monitor)",
+             "Your whole bag leaks left — the one root cause behind both lost fairways "
+             "and missed greens. Squaring the face fixes every club at once; nothing "
+             "else on this list moves more strokes.")
+    _act(0.28 * A, "Approach", "Club up — stop leaving approaches short",
+         f"GIR is only {_pct(gir, 0)} and you finish a median {abs(_ov['ls'])} yd short. "
+         "One more club turns 'just short' into birdie looks — your biggest pure-stats gain.")
+    _act(0.55 * P, "Putting", f"Lag drill — kill the 3-putts (all {tp_total} from 30+ ft)",
+         "Long putts to a 3-ft circle. It's a distance-control problem, not your stroke; "
+         "shrinks fast and compounds as approach proximity improves.")
+    _act(0.20 * A, "Approach", "Sharpen the wedges (50–125 yd scoring clubs)",
+         "Tight distance control here is where mid-handicaps make birdies. Build a "
+         "carry ladder (¾, full) once you have launch-monitor numbers.")
+    if chip_ud.get("att") and (chip_ud.get("made") or 0) / chip_ud["att"] < 0.25:
+        _act(S, "Short game",
+             f"Greenside contact — stop chunking chips ({chip_ud['made']}/{chip_ud['att']} up-and-down)",
+             "A strike/technique fix (lesson + a low, running bump-and-run). Goal: solid "
+             "contact to inside 15 ft so the putt is makeable.")
+    _act(0.14 * A, "Approach", "Re-gap the long irons / hybrid",
+         "5i and hybrid come up ~20–40 yd short on course — get real carries off a launch "
+         "monitor and trust the number, or replace them with clubs you can hit the green with.")
+    _act(0.32 * T, "Off the tee", "Tee strategy — play for the hook",
+         f"Driver finds {drv['fw_pct'] if drv else 0}% fairways. Aim down the right side, "
+         "and take 3-wood on tight holes — managing the miss while you fix the swing.")
+    _act(0.23 * P, "Putting", "Own the 4–8 footers",
+         "The makeable range that swings scores. 10 minutes a session on a gate drill; "
+         "more pars saved than any long-putt practice.")
+    _act(0.10 * A, "Course mgmt", "Aim at green center, never the pin",
+         "You already do this — keep it. Center-of-green removes short-side disasters and "
+         "is worth real strokes for a mid-handicap.")
+    _act(0.14 * P, "Putting", "Speed first on every lag",
+         "On 30+ footers, prioritize finishing within 3 ft over the line. Speed kills "
+         "3-putts more than aim does.")
+
+    top10 = sorted(cand, key=lambda x: x["sg"], reverse=True)[:10]
+    for i, t in enumerate(top10, 1):
+        t["rank"] = i
+    top10_total = round(sum(t["sg"] for t in top10), 1)
+
     coaching = {"macro": macro_recs, "recent_label": recent_label,
-                "recent": recent_items, "by_club": club_recs, "sg_compare": sg_compare}
+                "recent": recent_items, "by_club": club_recs, "sg_compare": sg_compare,
+                "top10": top10, "top10_total": top10_total}
     # ===========================================================================
 
     # ---- per-round hole detail (for the full round-review pages) ----
@@ -1438,6 +1498,24 @@ def render_html(d: dict) -> str:
 
     # ---- coaching: macro game plan + recent form + per-club ----
     co = d["coaching"]
+    _catcol = {"Swing": "#a78bfa", "Approach": "#4f9cf9", "Putting": "#43a047",
+               "Short game": "#fb8c00", "Off the tee": "#e879a6", "Course mgmt": "#26c6da"}
+    top10_rows = "".join(
+        f'<li><span class="t10-rank">{t["rank"]}</span>'
+        f'<span class="sgpill">+{t["sg"]}</span>'
+        f'<div class="t10-body"><div class="t10-head">{_esc(t["action"])}'
+        f'<span class="t10-cat" style="color:{_catcol.get(t["cat"], "#9aa0aa")}">'
+        f'{_esc(t["cat"])}</span></div>'
+        f'<div class="note">{t["detail"]}</div></div></li>' for t in co["top10"])
+    top10_section = f"""
+<section data-tab="overall"><h2>Top 10 &mdash; what to do, by strokes gained</h2>
+<ol class="top10">{top10_rows}</ol>
+<p class="note">Each <b style="color:var(--good)">+x.x</b> is the estimated strokes/round
+you'd gain by closing that gap toward a mid-handicap baseline &mdash; scaled from your own
+category losses (approach, putting, off-tee, short game). They overlap, so the realistic
+combined gain is about <b>{d['recoverable']['effective']}/round</b>, not the
+{co['top10_total']} straight sum. Work top-down: #1 is the highest-leverage thing you can
+do.</p></section>"""
     macro_cards = "".join(
         f'<div class="rec"><span class="rec-tag">{_esc(m2["tag"])}</span>'
         f'<div class="rec-head">{m2["head"]}</div>'
@@ -1520,6 +1598,20 @@ td b{{color:var(--accent)}}
 .note{{color:var(--mut);font-size:12.5px;margin:10px 0 0}}
 h3.sub{{font-size:13.5px;color:var(--ink);margin:18px 0 8px;font-weight:600}}
 h3.sub .note{{display:inline;font-weight:400}}
+ol.top10{{list-style:none;margin:0;padding:0}}
+ol.top10 li{{display:flex;gap:12px;align-items:flex-start;padding:11px 2px;
+border-bottom:1px solid var(--line)}}
+ol.top10 li:last-child{{border-bottom:none}}
+.t10-rank{{flex:0 0 18px;color:var(--mut);font-weight:700;font-size:15px;
+text-align:right;padding-top:3px}}
+.sgpill{{flex:0 0 auto;min-width:54px;text-align:center;background:rgba(67,160,71,.14);
+color:var(--good);border:1px solid rgba(67,160,71,.4);border-radius:8px;padding:4px 8px;
+font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}}
+.t10-body{{flex:1 1 auto;min-width:0}}
+.t10-head{{font-weight:600;font-size:14.5px;line-height:1.35}}
+.t10-cat{{font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;
+margin-left:8px;white-space:nowrap}}
+.t10-body .note{{margin:3px 0 0}}
 .tabbar{{position:sticky;top:0;z-index:50;display:flex;gap:6px;flex-wrap:wrap;
 background:var(--bg);padding:12px 0 10px;margin:0 0 4px;border-bottom:1px solid var(--line)}}
 .tabbar .tab{{flex:1 1 auto;min-width:120px;background:#0f131a;color:var(--mut);
@@ -1533,7 +1625,13 @@ padding:10px 14px;margin-top:12px;font-size:12.5px;color:var(--mut)}}
 .key ul{{margin:6px 0 4px;padding-left:18px}} .key li{{margin:3px 0}}
 .key b{{color:var(--ink)}}
 .recs{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
-@media(max-width:640px){{.recs,.grid2{{grid-template-columns:1fr}}}}
+@media(max-width:640px){{.recs,.grid2{{grid-template-columns:1fr}}
+main{{padding:8px 12px 60px}} section{{padding:14px 12px 16px}}
+th,td{{padding:6px 5px;font-size:12.5px}}
+.tabbar .tab{{font-size:12.5px;padding:9px 6px;min-width:0;flex:1 1 0}}
+.t10-head{{font-size:13.5px}} .sgpill{{min-width:46px;font-size:14px}}
+table{{display:block;overflow-x:auto;white-space:nowrap}}
+table.sgc{{white-space:normal}}}}
 .rec{{background:#0f131a;border:1px solid var(--line);border-left:3px solid var(--accent);
 border-radius:8px;padding:11px 12px}}
 .rec-tag{{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);
@@ -1596,6 +1694,8 @@ generated {_esc(m['generated_at'])}</div>
  <button class="tab" data-pane="club">By club</button>
  <button class="tab" data-pane="round">By round</button>
 </nav>
+
+{top10_section}
 
 <section data-tab="overall"><h2>Key numbers</h2><div class="kpis">{kpi_html}</div>
 <p class="note">Targets for PGA Frisco (Oct 21–24, 2026). All strokes-gained is
@@ -1853,6 +1953,11 @@ document.querySelectorAll('.tabbar .tab').forEach(function(b){{
   window.scrollTo({{top:0,behavior:'smooth'}});}};}});
 var _p=(location.hash||'').replace('#','');
 showPane(['overall','club','round'].indexOf(_p)>=0?_p:'overall');
+// keep tabs in sync with the hash (back/forward buttons, hash links)
+window.addEventListener('hashchange',function(){{
+ var p=(location.hash||'').replace('#','');
+ if(['overall','club','round'].indexOf(p)>=0) showPane(p);
+}});
 </script>
 </body></html>"""
 
