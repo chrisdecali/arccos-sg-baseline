@@ -119,6 +119,16 @@ def test_shot_patterns_present():
         assert c["used"] <= c["n"]            # some shots may be dropped as outliers
 
 
+def test_driving_accuracy():
+    d = _compute()
+    assert d["driving"], "driving accuracy should be populated from fairway flags"
+    for dd in d["driving"]:
+        # fairway + miss-left + miss-right should roughly account for the tee shots
+        assert 0 <= dd["fw_pct"] <= 100
+        assert dd["fw_pct"] + dd["left_pct"] + dd["right_pct"] <= 101  # rounding slack
+        assert dd["chances"] >= 3
+
+
 def test_iqr_bounds_flags_outliers():
     lo, hi = g._iqr_bounds([10, 11, 12, 13, 14, 200])   # 200 is an outlier
     assert not (lo <= 200 <= hi)              # 200 is outside the fence

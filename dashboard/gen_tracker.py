@@ -594,6 +594,35 @@ def compute(store: str) -> dict:
         aim.append({"club": c["club"], "bias": bias, "n": nb,
                     "side": "right" if bias > 0 else "left", "rec": rec})
 
+    # ---- driving accuracy (fairway hit / miss L-R by tee club) ----
+    # Woods/driver are aimed down the fairway, not at the green — so direction off the
+    # tee is measured by Arccos's fairway-hit + miss-side flags, not vs green center.
+    tee_club = {}
+    for s in shots:
+        if _truthy(s.get("is_tee")):
+            tee_club[(s.get("round_id"), s.get("hole_id"))] = s.get("club")
+    dacc: dict = {}
+    for h in holes:
+        if (_i(h.get("par")) or 0) < 4:
+            continue                       # par 3s have no fairway off the tee
+        tc = tee_club.get((h.get("round_id"), h.get("hole_id"))) or "?"
+        a = dacc.setdefault(tc, [0, 0, 0, 0])   # [hit, left, right, chances]
+        a[3] += 1
+        if _truthy(h.get("fairway_hit")):
+            a[0] += 1
+        elif _truthy(h.get("fw_miss_left")):
+            a[1] += 1
+        elif _truthy(h.get("fw_miss_right")):
+            a[2] += 1
+    driving = []
+    for c, a in dacc.items():
+        if a[3] >= 3 and c and c != "?":
+            driving.append({"club": c, "chances": a[3],
+                            "fw_pct": round(100 * a[0] / a[3]),
+                            "left_pct": round(100 * a[1] / a[3]),
+                            "right_pct": round(100 * a[2] / a[3])})
+    driving.sort(key=lambda x: bag_ord.get(x["club"], 99))
+
     # ---- pace of play (round duration) ----
     def _dur_min(s):
         try:
@@ -689,7 +718,7 @@ def compute(store: str) -> dict:
         "bag_specs": [bag_specs[c] for c, _t in target_bag if c in bag_specs],
         "dispersion": disp_clubs,
         "patterns": patterns, "putting_dist": putting_dist, "updown": updown,
-        "pace": pace, "pace_avg18": pace_avg18,
+        "driving": driving, "pace": pace, "pace_avg18": pace_avg18,
         "aim": aim,
         "bands": band_rows,
         "trouble": trouble[:6],
@@ -1208,6 +1237,26 @@ def render_html(d: dict) -> str:
         f'{" ("+str(round(100*u["made"]/u["att"]))+"%)" if u["att"] else ""}</td></tr>'
         for u in d["updown"] if u["att"] is not None)
 
+    # ---- driving accuracy (off the tee) ----
+    def _fwbar(le, fw, ri):
+        w = 130
+        lw, fwd = le / 100 * w, fw / 100 * w
+        return (f'<svg width="{w}" height="13" style="vertical-align:middle">'
+                f'<rect x="0" width="{lw:.0f}" height="13" fill="#e53935"/>'
+                f'<rect x="{lw:.0f}" width="{fwd:.0f}" height="13" fill="#43a047"/>'
+                f'<rect x="{lw+fwd:.0f}" width="{ri/100*w:.0f}" height="13" '
+                f'fill="#fb8c00"/></svg>')
+    drive_rows = "".join(
+        f'<tr><td>{_esc(dd["club"])}</td><td>{dd["chances"]}</td>'
+        f'<td><b>{dd["fw_pct"]}%</b></td>'
+        f'<td>{_fwbar(dd["left_pct"], dd["fw_pct"], dd["right_pct"])}</td>'
+        f'<td>{dd["left_pct"]}% L &nbsp; {dd["right_pct"]}% R</td></tr>'
+        for dd in d["driving"])
+    drv = next((x for x in d["driving"] if x["club"] == "Driver"), None)
+    drive_note = (f'Your driver finds <b>{drv["fw_pct"]}%</b> of fairways and misses '
+                  f'<b>left {drv["left_pct"]}%</b> vs right {drv["right_pct"]}% — the hook '
+                  f'shows off the tee too.') if drv else ""
+
     # ---- pace of play ----
     def _hm(mins):
         return f'{mins // 60}h {mins % 60:02d}m'
@@ -1375,6 +1424,14 @@ filter by club: </span><select class="clubsel" onchange="filterPat('ch',this.val
 mishits excluded) is what your club <i>typically</i> does on course — e.g. long irons
 coming up well short means take more club. 4 rounds in, treat low-n clubs as
 directional.</p></section>
+
+<section><h2>Driving accuracy (off the tee)</h2>
+<table><thead><tr><th>Tee club</th><th>Tee shots</th><th>Fairways</th>
+<th>L &nbsp;|&nbsp; fairway &nbsp;|&nbsp; R</th><th>Miss split</th></tr></thead>
+<tbody>{drive_rows or '<tr><td colspan=5>—</td></tr>'}</tbody></table>
+<p class="note">This is where your <b>woods/driver</b> live — direction off the tee is
+measured by Arccos's fairway hit + miss side (you aim down the fairway, not at the
+green, so the green-center scatter above excludes tee shots on purpose). {drive_note}</p></section>
 
 <section><h2>Putting &amp; up-and-down</h2>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="twocol">
