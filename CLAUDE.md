@@ -161,6 +161,13 @@ this repo. Only the optional PDF uses the golf-reports render layer.
   the bend, not the flag, on doglegs). Don't surface an aim-change rec off < 6 clean
   shots. Bias ≥ ~5 yd (with enough n) → recommend aiming the opposite way; always add:
   confirm push-vs-aim on a launch monitor, don't aim into hazards.
+* **Shot patterns (2D miss) target the GREEN CENTER, not the pin** — the player aims at
+  the middle, and pin position is daily noise. Green center = centroid of each hole's
+  pins across rounds (`green_center`, sharpens over time). `_miss_vs(start,end,target)`
+  returns (long_short, left_right): +long past target, +right of line. Surfaced as the
+  green-relative scatter + per-club short/long & left/right bias = "distance-control
+  reality" (e.g. long irons ~30-40y short → take more club). Also: putting one-putt%/
+  3-putts by first-putt distance, up-and-down by lie (chip/sand from career_stats).
 
 ## Player context (calibrate recs to this)
 

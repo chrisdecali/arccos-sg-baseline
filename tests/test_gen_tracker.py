@@ -95,6 +95,29 @@ def test_wet_classifier_and_roll_factor():
     assert drv["carry"] == expected
 
 
+def test_miss_vs_sign_convention():
+    # target due north of start; +long = past target, +right = right of the line
+    start = (30.0000, -95.0000)
+    target = (30.0200, -95.0000)
+    past = (30.0300, -95.0000)     # beyond the target -> long
+    short = (30.0100, -95.0000)    # not reached -> short
+    east = (30.0200, -94.9900)     # at target depth but east -> right
+    assert g._miss_vs(start, past, target)[0] > 0     # long
+    assert g._miss_vs(start, short, target)[0] < 0    # short
+    assert g._miss_vs(start, east, target)[1] > 0     # right
+    assert g._miss_vs(start, (30.02, -95.01), target)[1] < 0   # left
+    assert g._miss_vs(start, past, (None, None)) is None
+
+
+def test_shot_patterns_present():
+    d = _compute()
+    ap = d["patterns"]["approach"]
+    assert ap["overall"] and ap["overall"]["n"] > 0
+    # every club row has both miss axes
+    for c in ap["by_club"]:
+        assert "ls" in c and "lr" in c and c["n"] >= 4
+
+
 def test_recency_weight_decays():
     # a more recent shot weighs more; one half-life back weighs ~0.5
     newest = g.date(2026, 6, 20).toordinal()

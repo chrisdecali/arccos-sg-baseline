@@ -172,6 +172,22 @@ def _lateral_offset(s, e, pin):
     return -cross / L
 
 
+def _miss_vs(start, end, target):
+    """Miss of END relative to the START->TARGET line, in yards:
+    (long_short, left_right) where +long = past the target, +right = right of line.
+    Reuses _lateral_offset for the (tested) right-positive lateral. None if missing."""
+    lr = _lateral_offset(start, end, target)
+    if lr is None:
+        return None
+    tx, ty = _enu_yards(target[0], target[1], start[0], start[1])
+    L = math.hypot(tx, ty)
+    if L < 1.0:
+        return None
+    ex, ey = _enu_yards(end[0], end[1], start[0], start[1])
+    along = (ex * tx + ey * ty) / L          # progress toward the target
+    return (along - L, lr)                    # +long (past), +right
+
+
 def _clean_third(vals):
     """Average of the best (longest) third — robust 'clean strike' distance."""
     vals = sorted(v for v in vals if v is not None and v > 0)
@@ -507,6 +523,93 @@ def compute(store: str) -> dict:
     raw_recoverable = -sum(min(0, x["sg"]) for x in levers)
     eff_recoverable = round(raw_recoverable * 0.62, 1)
 
+    # ---- green centers (centroid of a hole's pins across rounds) = aim proxy ----
+    round_course = {h.get("round_id"): h.get("course") for h in holes}
+    _gc: dict = {}
+    for h in holes:
+        la, ln = _f(h.get("pin_lat")), _f(h.get("pin_lng"))
+        if la is not None and ln is not None:
+            _gc.setdefault((h.get("course"), h.get("hole_id")), []).append((la, ln))
+    green_center = {k: (statistics.fmean([p[0] for p in v]),
+                        statistics.fmean([p[1] for p in v])) for k, v in _gc.items()}
+
+    def _green_for(rid, hid):
+        return green_center.get((round_course.get(rid), hid))
+
+    # ---- shot patterns: 2D miss (short/long x left/right) vs GREEN CENTER ----
+    bag_ord = {n: i for i, (n, _t) in enumerate(target_bag)}
+
+    def _agg(ms):
+        a = [x[0] for x in ms]
+        b = [x[1] for x in ms]
+        return {"n": len(ms),
+                "ls": round(statistics.fmean(a), 1), "lr": round(statistics.fmean(b), 1),
+                "ls_sd": round(statistics.pstdev(a), 1) if len(a) > 1 else 0,
+                "lr_sd": round(statistics.pstdev(b), 1) if len(b) > 1 else 0}
+
+    def _pattern(category, min_n=4):
+        pts, by = [], {}
+        for s in shots:
+            if (s.get("category_approx") or "") != category:
+                continue
+            tgt = _green_for(s.get("round_id"), s.get("hole_id"))
+            st = (_f(s.get("start_lat")), _f(s.get("start_lng")))
+            en = (_f(s.get("end_lat")), _f(s.get("end_lng")))
+            if not tgt or None in tgt or None in st or None in en:
+                continue
+            m = _miss_vs(st, en, tgt)
+            if not m or abs(m[0]) > 80 or abs(m[1]) > 80:
+                continue
+            club = s.get("club") or ""
+            pts.append({"club": club, "ls": round(m[0], 1), "lr": round(m[1], 1),
+                        "cat": (club_meta.get(club, {}) or {}).get("club_category")
+                               or _club_cat(club)})
+            by.setdefault(club, []).append(m)
+        by_club = []
+        for c, ms in by.items():
+            if len(ms) >= min_n:
+                a = _agg(ms)
+                a["club"] = c
+                by_club.append(a)
+        by_club.sort(key=lambda x: bag_ord.get(x["club"], 99))
+        return {"points": pts, "by_club": by_club,
+                "overall": _agg([(p["ls"], p["lr"]) for p in pts]) if pts else None}
+
+    patterns = {"approach": _pattern("approach"), "short": _pattern("short_game", 3)}
+
+    # ---- putting: one-putt % + 3-putts by first-putt distance band ----
+    PB = [("0-3 ft", 0, 1), ("3-6 ft", 1, 2), ("6-10 ft", 2, 10 / 3),
+          ("10-20 ft", 10 / 3, 20 / 3), ("20-30 ft", 20 / 3, 10), ("30+ ft", 10, 1e9)]
+    pholes: dict = {}
+    for s in shots:
+        if _truthy(s.get("is_putt")):
+            pholes.setdefault((s.get("round_id"), s.get("hole_id")), []).append(s)
+    pacc = {b[0]: {"made": 0, "att": 0, "tp": 0} for b in PB}
+    for key, ps in pholes.items():
+        ps.sort(key=lambda s: _i(s.get("shot_num")) or 0)
+        d_ft = (_f(ps[0].get("start_dist_to_pin_yd")) or 0) * 3
+        band = next((b[0] for b in PB if b[1] <= d_ft < b[2]), PB[-1][0])
+        pacc[band]["att"] += 1
+        if len(ps) == 1:
+            pacc[band]["made"] += 1
+        if len(ps) >= 3:
+            pacc[band]["tp"] += 1
+    putting_dist = [{"band": b[0], "made": pacc[b[0]]["made"], "att": pacc[b[0]]["att"],
+                     "make_pct": round(100 * pacc[b[0]]["made"] / pacc[b[0]]["att"])
+                     if pacc[b[0]]["att"] else 0, "tp": pacc[b[0]]["tp"]}
+                    for b in PB if pacc[b[0]]["att"]]
+
+    # ---- up & down by lie (from Arccos career rates) ----
+    cby = career.get("career_by_category", {})
+    updown = [
+        {"lie": "Chip (around green)",
+         "made": (cby.get("chip", {}) or {}).get("noOfChipSaveSuccesses"),
+         "att": (cby.get("chip", {}) or {}).get("noOfChipSaveChances")},
+        {"lie": "Sand (bunker)",
+         "made": (cby.get("sand", {}) or {}).get("noOfSandSaveSuccesses"),
+         "att": (cby.get("sand", {}) or {}).get("noOfSandSaveChances")},
+    ]
+
     # ---- per-round hole detail (for the full round-review pages) ----
     holes_by_round: dict[str, list[dict]] = {}
     for h in holes:
@@ -549,6 +652,7 @@ def compute(store: str) -> dict:
         "bag": bag,
         "bag_specs": [bag_specs[c] for c, _t in target_bag if c in bag_specs],
         "dispersion": disp_clubs,
+        "patterns": patterns, "putting_dist": putting_dist, "updown": updown,
         "aim": aim,
         "bands": band_rows,
         "trouble": trouble[:6],
@@ -787,6 +891,60 @@ def _svg_dispersion(disp_clubs) -> str:
     return "".join(p)
 
 
+def _svg_pattern(pts, overall, title) -> str:
+    """Green-relative shot scatter: target (green center) at origin, each dot a shot's
+    finish — up=long, down=short, left/right = left/right. Pure stdlib SVG."""
+    if not pts:
+        return ""
+    catcol = {"Driver": "#e53935", "Wood": "#fb8c00", "Hybrid": "#fdd835",
+              "Iron": "#43a047", "Wedge": "#29b6f6", "Putter": "#ab47bc"}
+    W = Hh = 440
+    cx, cy = W / 2, Hh / 2 + 8
+    rmax = max([abs(p["lr"]) for p in pts] + [abs(p["ls"]) for p in pts] + [15])
+    rmax = math.ceil(rmax / 10) * 10
+    R = min(W, Hh) / 2 - 40
+
+    def X(lr):
+        return cx + lr / rmax * R
+
+    def Y(ls):
+        return cy - ls / rmax * R
+
+    p = [f'<svg viewBox="0 0 {W} {Hh}" xmlns="http://www.w3.org/2000/svg" '
+         f'style="width:100%;max-width:440px;height:auto;background:#0f131a;border-radius:8px">']
+    p.append(f'<text x="{cx:.0f}" y="16" font-size="12" font-weight="bold" '
+             f'fill="#e8eaed" text-anchor="middle">{_esc(title)}</text>')
+    # range rings
+    for r in range(10, int(rmax) + 1, 10):
+        rr = r / rmax * R
+        p.append(f'<circle cx="{cx}" cy="{cy}" r="{rr:.1f}" fill="none" stroke="#2a2e37"/>')
+        p.append(f'<text x="{cx:.0f}" y="{cy-rr-2:.1f}" font-size="8" fill="#5a6068" '
+                 f'text-anchor="middle">{r}yd</text>')
+    # crosshair + direction labels
+    p.append(f'<line x1="{cx}" y1="{cy-R}" x2="{cx}" y2="{cy+R}" stroke="#444"/>')
+    p.append(f'<line x1="{cx-R}" y1="{cy}" x2="{cx+R}" y2="{cy}" stroke="#444"/>')
+    for txt, x, y, anc in [("long", cx, cy - R - 4, "middle"),
+                           ("short", cx, cy + R + 12, "middle"),
+                           ("left", cx - R - 4, cy - 4, "end"),
+                           ("right", cx + R + 4, cy - 4, "start")]:
+        p.append(f'<text x="{x:.0f}" y="{y:.0f}" font-size="9" fill="#9aa0aa" '
+                 f'text-anchor="{anc}">{txt}</text>')
+    # shots
+    for pt in pts:
+        p.append(f'<circle cx="{X(pt["lr"]):.1f}" cy="{Y(pt["ls"]):.1f}" r="3" '
+                 f'fill="{catcol.get(pt["cat"], "#888")}" opacity="0.8"/>')
+    # green-center target + average-miss marker
+    p.append(f'<circle cx="{cx}" cy="{cy}" r="4" fill="#fff"/>')
+    if overall:
+        mx, my = X(overall["lr"]), Y(overall["ls"])
+        p.append(f'<circle cx="{mx:.1f}" cy="{my:.1f}" r="7" fill="none" '
+                 f'stroke="#fff" stroke-width="2"/>')
+        p.append(f'<text x="{mx+10:.1f}" y="{my+3:.1f}" font-size="9" '
+                 f'fill="#fff">avg miss</text>')
+    p.append("</svg>")
+    return "".join(p)
+
+
 # --------------------------------------------------------------------- render
 def _pct(v, d=0):
     return "—" if v is None else f"{v:.{d}f}%"
@@ -961,6 +1119,40 @@ def render_html(d: dict) -> str:
     disp_svg = _svg_dispersion(d["dispersion"]) if d["dispersion"] else ""
     map_json = json.dumps(d["map"])
 
+    # ---- shot patterns (approach + chip, vs green center) ----
+    def _tend(ls, lr):
+        a = []
+        if abs(ls) >= 5:
+            a.append(f'{abs(ls):.0f}y {"short" if ls < 0 else "long"}')
+        if abs(lr) >= 4:
+            a.append(f'{abs(lr):.0f}y {"left" if lr < 0 else "right"}')
+        return " · ".join(a) or "on target"
+
+    ap = d["patterns"]["approach"]
+    ap_svg = _svg_pattern(ap["points"], ap["overall"], "Approach finish vs green center")
+    ap_rows = "".join(
+        f'<tr><td>{_esc(c["club"])}</td><td>{c["n"]}</td>'
+        f'<td>{abs(c["ls"]):.0f} yd {"short" if c["ls"] < 0 else "long"}</td>'
+        f'<td>{abs(c["lr"]):.0f} yd {"left" if c["lr"] < 0 else "right"}</td>'
+        f'<td>±{c["ls_sd"]:.0f}/{c["lr_sd"]:.0f}</td><td>{_tend(c["ls"],c["lr"])}</td></tr>'
+        for c in ap["by_club"])
+    sp = d["patterns"]["short"]
+    chip_svg = _svg_pattern(sp["points"], sp["overall"], "Chip finish vs green center")
+    ov = ap["overall"]
+    ap_summary = (f'Across {ov["n"]} approaches you finish on average '
+                  f'<b>{abs(ov["ls"]):.0f} yd {"short" if ov["ls"] < 0 else "long"}</b> and '
+                  f'<b>{abs(ov["lr"]):.0f} yd {"left" if ov["lr"] < 0 else "right"}</b> '
+                  f'of green center.') if ov else "Not enough geo-tagged approaches yet."
+
+    # ---- putting by distance + up & down by lie ----
+    putt_rows = "".join(
+        f'<tr><td>{_esc(pp["band"])}</td><td>{pp["make_pct"]}% ({pp["made"]}/{pp["att"]})'
+        f'</td><td>{pp["tp"]}</td></tr>' for pp in d["putting_dist"])
+    ud_rows = "".join(
+        f'<tr><td>{_esc(u["lie"])}</td><td>{u["made"]}/{u["att"]}'
+        f'{" ("+str(round(100*u["made"]/u["att"]))+"%)" if u["att"] else ""}</td></tr>'
+        for u in d["updown"] if u["att"] is not None)
+
     plan_html = "".join(f"<li>{x}</li>" for x in plan)
     courses = ", ".join(_esc(c) for c in m["courses"]) or "—"
 
@@ -1096,6 +1288,33 @@ realistic combined gain is about <b>{d['recoverable']['effective']}</b> strokes/
 finishes. Fix the chunk first.</p></section>
 
 <section><h2>Aim by club</h2>{aim_block}</section>
+
+<section><h2>Shot patterns — where your ball finishes</h2>
+<p class="note">{ap_summary} Target = <b>green center</b> (centroid of each hole's pins —
+sharpens as you log rounds), since you aim at the middle, not the flag. Up = long,
+down = short; left/right as you'd expect. The white ring is your <b>average miss</b>.</p>
+<div style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center">
+<div>{ap_svg}<div class="note" style="text-align:center">Approaches</div></div>
+<div>{chip_svg}<div class="note" style="text-align:center">Chips</div></div>
+</div>
+<h3 style="font-size:14px;color:var(--mut);margin:14px 0 6px">Approach miss by club</h3>
+<table><thead><tr><th>Club</th><th>n</th><th>Short / long</th><th>Left / right</th>
+<th>±SD (l-s/l-r)</th><th>Tendency</th></tr></thead><tbody>{ap_rows or '<tr><td colspan=6>—</td></tr>'}</tbody></table>
+<p class="note">Distance-control reality: the avg short/long here is what your club
+<i>actually</i> does on course — e.g. long irons coming up well short means take more
+club. 4 rounds in, treat low-n clubs as directional.</p></section>
+
+<section><h2>Putting &amp; up-and-down</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="twocol">
+ <div><h3 style="font-size:14px;color:var(--mut)">One-putt % by first-putt distance</h3>
+ <table><thead><tr><th>Distance</th><th>One-putt</th><th>3-putts</th></tr></thead>
+ <tbody>{putt_rows or '<tr><td colspan=3>—</td></tr>'}</tbody></table></div>
+ <div><h3 style="font-size:14px;color:var(--mut)">Up &amp; down by lie</h3>
+ <table><thead><tr><th>From</th><th>Saved</th></tr></thead>
+ <tbody>{ud_rows or '<tr><td colspan=2>—</td></tr>'}</tbody></table></div>
+</div>
+<p class="note">Where your 3-putts come from (almost always long range → it's a lag /
+approach-proximity problem, not a stroke problem) and your greenside save rate by lie.</p></section>
 
 <section><h2>Measured distances &amp; dispersion</h2>
 {disp_svg}
