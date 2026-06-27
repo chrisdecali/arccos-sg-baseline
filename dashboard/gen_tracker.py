@@ -790,12 +790,12 @@ def compute(store: str) -> dict:
                               "basis": f"{dd['chances']} tee shots"})
         elif pc:
             ls, lr = pc["ls"], pc["lr"]
-            dist = (f"take 1 more club (~{abs(ls)}y short)" if ls <= -8 else
-                    "favor more club (a touch short)" if ls <= -4 else
-                    f"can take 1 less (~{ls}y long)" if ls >= 8 else "distance dialed")
-            direc = (f"aim ~{abs(lr)}y right (pull-left)" if lr <= -8 else
-                     "starts a touch left" if lr <= -4 else
-                     f"aim ~{lr}y left (push-right)" if lr >= 8 else "on line")
+            dist = (f"Club up (~{abs(ls)}y short)" if ls <= -8 else
+                    f"Lean to more club (~{abs(ls)}y short)" if ls <= -4 else
+                    f"Club down (~{ls}y long)" if ls >= 8 else "Distance dialed")
+            direc = (f"aim ~{abs(lr)}y right" if lr <= -8 else
+                     "start it a touch right" if lr <= -4 else
+                     f"aim ~{lr}y left" if lr >= 8 else "on line")
             club_recs.append({"club": name, "rec": f"{dist}; {direc}.",
                               "basis": f"{pc['used']} approaches"})
     if tp_total:
@@ -1425,9 +1425,9 @@ def render_html(d: dict) -> str:
     club_rec_rows = "".join(
         f'<tr><td>{_esc(c["club"])}</td><td>{c["rec"]}</td>'
         f'<td class="note">{_esc(c["basis"])}</td></tr>' for c in co["by_club"])
-    coach_section = f"""
-<section><h2>Coaching</h2>
-<h3 class="sub">Macro game plan &mdash; your recurring fixes <span class="note">(all {m['n_rounds']} rounds)</span></h3>
+    coach_overall = f"""
+<section data-tab="overall"><h2>Game plan</h2>
+<h3 class="sub">Your recurring fixes <span class="note">(all {m['n_rounds']} rounds, ranked by how many strokes they cost)</span></h3>
 <div class="recs">{macro_cards}</div>
 <h3 class="sub">Right now &mdash; recent rounds {('('+co['recent_label']+')') if co['recent_label'] else ''} vs your baseline</h3>
 <div class="grid2">
@@ -1435,14 +1435,28 @@ def render_html(d: dict) -> str:
 <table class="sgc"><thead><tr><th>Strokes gained</th><th>Macro</th><th>Recent</th><th>&Delta;</th></tr></thead>
 <tbody>{sgc_rows}</tbody></table>
 </div>
-<h3 class="sub">By club &mdash; what to try <span class="note">(structural; 4 rounds in, treat as directional)</span></h3>
+<p class="note"><b>Macro</b> = recurring tendencies across every round (the structural
+fixes that don't move week to week) &mdash; that's what to take to a lesson.
+<b>Recent</b> = your last 2 rounds vs your own baseline &mdash; what's hot or cold right
+now, so you warm up the right thing without over-reacting to one session. Negative SG =
+strokes lost vs a scratch player; less negative (greener &Delta;) is better.</p></section>"""
+
+    coach_byclub = f"""
+<section data-tab="club"><h2>By club &mdash; what to try</h2>
 <table><thead><tr><th>Club</th><th>Try this</th><th>basis</th></tr></thead>
 <tbody>{club_rec_rows}</tbody></table>
-<p class="note"><b>Macro</b> = recurring tendencies across every round (the structural
-fixes that don't move week to week). <b>Recent</b> = your last 2 rounds vs your own
-baseline &mdash; what's hot or cold right now, so you don't over-react to one bad
-session or chase a hot streak. Negative SG = strokes lost to a scratch baseline; less
-negative is better.</p></section>"""
+<div class="key"><b>Reading this:</b>
+<ul>
+<li><b>Club up</b> = use the next longer club (one lower number / less loft &mdash; e.g.
+6-iron instead of 7-iron). You're landing short, so you need more club.</li>
+<li><b>Club down</b> = next shorter club; you're flying it past the target.</li>
+<li><b>Aim ~Xy right / left</b> = your typical finish is that many yards to one side, so
+start your aim the other way to bring it back to the middle.</li>
+<li><b>Distance dialed / on line</b> = no change &mdash; keep doing it.</li>
+</ul>
+<span class="note">Structural tendencies from your median (outlier-cleaned) shots; 4
+rounds in, treat low-sample clubs as directional. "basis" = how many shots it's
+from.</span></div></section>"""
 
     return f"""<!doctype html>
 <html lang="en"><head>
@@ -1473,6 +1487,18 @@ td b{{color:var(--accent)}}
 .note{{color:var(--mut);font-size:12.5px;margin:10px 0 0}}
 h3.sub{{font-size:13.5px;color:var(--ink);margin:18px 0 8px;font-weight:600}}
 h3.sub .note{{display:inline;font-weight:400}}
+.tabbar{{position:sticky;top:0;z-index:50;display:flex;gap:6px;flex-wrap:wrap;
+background:var(--bg);padding:12px 0 10px;margin:0 0 4px;border-bottom:1px solid var(--line)}}
+.tabbar .tab{{flex:1 1 auto;min-width:120px;background:#0f131a;color:var(--mut);
+border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;
+font-weight:600;cursor:pointer;transition:.12s}}
+.tabbar .tab:hover{{color:var(--ink);border-color:#3a4150}}
+.tabbar .tab.on{{background:var(--accent);color:#06101f;border-color:var(--accent)}}
+section[data-tab]{{display:none}}
+.key{{background:#0f131a;border:1px solid var(--line);border-radius:8px;
+padding:10px 14px;margin-top:12px;font-size:12.5px;color:var(--mut)}}
+.key ul{{margin:6px 0 4px;padding-left:18px}} .key li{{margin:3px 0}}
+.key b{{color:var(--ink)}}
 .recs{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
 @media(max-width:640px){{.recs,.grid2{{grid-template-columns:1fr}}}}
 .rec{{background:#0f131a;border:1px solid var(--line);border-left:3px solid var(--accent);
@@ -1529,17 +1555,24 @@ generated {_esc(m['generated_at'])}</div>
 </header>
 <main>
 
-<section><h2>Key numbers</h2><div class="kpis">{kpi_html}</div>
+<nav class="tabbar" role="tablist">
+ <button class="tab on" data-pane="overall">Overall &mdash; game &amp; handicap</button>
+ <button class="tab" data-pane="club">By club</button>
+ <button class="tab" data-pane="round">By round</button>
+</nav>
+
+<section data-tab="overall"><h2>Key numbers</h2><div class="kpis">{kpi_html}</div>
 <p class="note">Targets for PGA Frisco (Oct 21–24, 2026). All strokes-gained is
 Arccos, measured vs scratch — large negatives are normal for a mid-handicap.</p></section>
-{coach_section}
+{coach_overall}
+{coach_byclub}
 
-<section><h2>Rounds — full reviews</h2>
+<section data-tab="round"><h2>Rounds — full reviews</h2>
 <p class="note">Click any round to open its full review: satellite shot map,
 hole-by-hole, and strokes-gained for that round.</p>
 {nav_html or '<p class="note">No rounds yet.</p>'}</section>
 
-<section><h2>Index projection</h2>
+<section data-tab="overall"><h2>Index projection</h2>
 <p class="note">Your official index is <b>{_num(p['index'],1)}</b> (from GHIN). This is a
 rough <i>estimate</i> of where it heads — WHS counts your most recent 20 differentials,
 and with few scores a small-sample adjustment shrinks as you post, so the index can
@@ -1558,11 +1591,11 @@ in; GHIN's number above is the truth.</p>
   projected index <span class="proj" id="projidx">—</span></span>
 </div></section>
 
-<section><h2>Strokes gained by round</h2>
+<section data-tab="overall"><h2>Strokes gained by round</h2>
 {sg_svg or '<p class="note">No rounds yet.</p>'}
 </section>
 
-<section><h2>Cost of misses</h2>
+<section data-tab="overall"><h2>Cost of misses</h2>
 <table><thead><tr><th>Category</th><th>SG / round</th><th>Lever</th></tr></thead>
 <tbody>{lever_rows}</tbody></table>
 <p class="note">Recoverable if you stopped bleeding strokes in the negative
@@ -1570,7 +1603,7 @@ categories: <b>{d['recoverable']['raw']}</b> raw. SG levers overlap ~35–40%, s
 realistic combined gain is about <b>{d['recoverable']['effective']}</b> strokes/round
 (0.62 efficiency factor — don't add them straight up).</p></section>
 
-<section><h2>Approach & putting</h2>
+<section data-tab="overall"><h2>Approach & putting</h2>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="twocol">
  <div><h3 style="font-size:14px;color:var(--mut)">Approach SG by pin distance</h3>
  <table><thead><tr><th>Band</th><th>SG</th><th>n</th></tr></thead>
@@ -1580,7 +1613,7 @@ realistic combined gain is about <b>{d['recoverable']['effective']}</b> strokes/
  <tbody>{putt_rows or '<tr><td colspan=3>—</td></tr>'}</tbody></table></div>
 </div></section>
 
-<section><h2>Scrambling — the priority</h2>
+<section data-tab="overall"><h2>Scrambling — the priority</h2>
 <table><thead><tr><th>Chip distance</th><th>Avg proximity</th><th>Target</th></tr></thead>
 <tbody>{chip_rows or '<tr><td colspan=3>—</td></tr>'}</tbody></table>
 <p class="note">Chip save {_pct(k['chip_save_pct'])} · sand save
@@ -1588,9 +1621,9 @@ realistic combined gain is about <b>{d['recoverable']['effective']}</b> strokes/
 <b>contact</b>, not the putt that follows — proximity is measured from where the chip
 finishes. Fix the chunk first.</p></section>
 
-<section><h2>Aim by club</h2>{aim_block}</section>
+<section data-tab="club"><h2>Aim by club</h2>{aim_block}</section>
 
-<section><h2>Shot patterns — where your ball finishes</h2>
+<section data-tab="club"><h2>Shot patterns — where your ball finishes</h2>
 <p class="note">{ap_summary} Target = <b>green center</b> (centroid of each hole's pins —
 sharpens as you log rounds), since you aim at the middle, not the flag. Up = long,
 down = short; left/right as you'd expect. Clear outliers (chunks/blades/shanks) are
@@ -1612,7 +1645,7 @@ mishits excluded) is what your club <i>typically</i> does on course — e.g. lon
 coming up well short means take more club. 4 rounds in, treat low-n clubs as
 directional.</p></section>
 
-<section><h2>Driving accuracy (off the tee)</h2>
+<section data-tab="club"><h2>Driving accuracy (off the tee)</h2>
 <table><thead><tr><th>Tee club</th><th>Tee shots</th><th>Fairways</th>
 <th>L &nbsp;|&nbsp; fairway &nbsp;|&nbsp; R</th><th>Miss split</th></tr></thead>
 <tbody>{drive_rows or '<tr><td colspan=5>—</td></tr>'}</tbody></table>
@@ -1620,7 +1653,7 @@ directional.</p></section>
 measured by Arccos's fairway hit + miss side (you aim down the fairway, not at the
 green, so the green-center scatter above excludes tee shots on purpose). {drive_note}</p></section>
 
-<section><h2>Putting &amp; up-and-down</h2>
+<section data-tab="overall"><h2>Putting &amp; up-and-down</h2>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="twocol">
  <div><h3 style="font-size:14px;color:var(--mut)">One-putt % by first-putt distance</h3>
  <table><thead><tr><th>Distance</th><th>One-putt</th><th>3-putts</th></tr></thead>
@@ -1632,14 +1665,14 @@ green, so the green-center scatter above excludes tee shots on purpose). {drive_
 <p class="note">Where your 3-putts come from (almost always long range → it's a lag /
 approach-proximity problem, not a stroke problem) and your greenside save rate by lie.</p></section>
 
-<section><h2>Pace of play</h2>
+<section data-tab="round"><h2>Pace of play</h2>
 <table><thead><tr><th>Date</th><th>Course</th><th>Holes</th><th>Round time</th>
 <th>Pace / 18</th></tr></thead><tbody>{pace_rows or '<tr><td colspan=5>—</td></tr>'}</tbody></table>
 <p class="note">Your rounds average <b>{pace_txt} per 18 holes</b> (from Arccos round
 timestamps). For reference: a brisk pace is ~4h00m, ~4h30m is slow, and <b>5h+ is a
 grind</b>. Empirical backing for the pace-of-play conversation at WindRose.</p></section>
 
-<section><h2>Measured distances &amp; dispersion</h2>
+<section data-tab="club"><h2>Measured distances &amp; dispersion</h2>
 {disp_svg}
 <div class="tabs" id="disp-tabs" style="margin:12px 0 8px">
  <button class="on" data-g="all">All</button><button data-g="Woods">Woods</button>
@@ -1656,7 +1689,7 @@ ground barely rolls and carry sits just under total (it would subtract more on f
 dry turf). Still modeled until <i>launch-monitor carries (Tee Box, July)</i> become the
 source of truth. Rounded to 5 yds; also in <code>club_distances.csv</code>.</p></section>
 
-<section><h2>Your bag &amp; suggested carry</h2>
+<section data-tab="club"><h2>Your bag &amp; suggested carry</h2>
 <table><thead><tr><th>Club</th><th>Loft</th><th>Shaft</th><th>Target</th>
 <th>Carry to use</th></tr></thead><tbody>{bag_rows}</tbody></table>
 <p class="note">Your bag (from <code>bag.csv</code>) with the <b>"Carry to use"</b> — the
@@ -1666,18 +1699,18 @@ your measured carry when there's enough of it, otherwise your target, always kep
 the target stands; "measured" = a launch-monitor number). The actual measured distances
 + spread are in the section above. Edit <code>bag.csv</code> to change clubs/targets.</p></section>
 
-<section><h2>Round map</h2>
+<section data-tab="round"><h2>Round map</h2>
 <div class="tabs" id="round-tabs"></div>
 <div id="map"></div>
 <p class="note">Satellite tiles (Esri) load in the browser only. Each line is a hole's
 shot path from GPS. No GPS on a round → it won't appear here.</p></section>
 
-<section><h2>Trouble holes</h2>
+<section data-tab="round"><h2>Trouble holes</h2>
 <table><thead><tr><th>Hole</th><th>Par</th><th>Length</th><th>Avg vs par</th>
 <th>n</th></tr></thead><tbody>{trouble_rows}</tbody></table>
 <p class="note">Needs ~5+ rounds before this is signal rather than noise.</p></section>
 
-<section><h2>Posted scores (GHIN)</h2>
+<section data-tab="overall"><h2>Posted scores (GHIN)</h2>
 <table><thead><tr><th>Date</th><th>Course</th><th>Holes</th><th>Score</th>
 <th>Differential</th><th>Counts</th></tr></thead><tbody>{posted_rows}</tbody></table>
 <p class="note">Only 18-hole differentials feed the WHS index. A 9-hole round posts a
@@ -1767,6 +1800,23 @@ if(ROUNDS.length){{
 }}else{{
  document.getElementById('map').innerHTML='<p class="note" style="padding:20px">No GPS rounds to map yet.</p>';
 }}
+
+// ---- top-level tabs (Overall / By club / By round) ----
+function showPane(pane){{
+ document.querySelectorAll('section[data-tab]').forEach(function(s){{
+  s.style.display=(s.dataset.tab===pane)?'block':'none';}});
+ document.querySelectorAll('.tabbar .tab').forEach(function(b){{
+  b.classList.toggle('on', b.dataset.pane===pane);}});
+ if(pane==='round' && typeof map!=='undefined'){{
+  setTimeout(function(){{map.invalidateSize();
+   var r=ROUNDS&&ROUNDS.length?ROUNDS[ROUNDS.length-1]:null; if(r) drawRound(r);}},60);}}
+ if(history.replaceState) history.replaceState(null,'','#'+pane);
+}}
+document.querySelectorAll('.tabbar .tab').forEach(function(b){{
+ b.onclick=function(){{showPane(b.dataset.pane);
+  window.scrollTo({{top:0,behavior:'smooth'}});}};}});
+var _p=(location.hash||'').replace('#','');
+showPane(['overall','club','round'].indexOf(_p)>=0?_p:'overall');
 </script>
 </body></html>"""
 
