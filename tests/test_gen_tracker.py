@@ -152,6 +152,31 @@ def test_coaching_macro_recent_byclub():
     assert "LEFT" in swing["head"]          # his miss is left (hook/pull)
 
 
+def test_launch_monitor_lights_up_swing_and_carry():
+    # Dormant until logged: a Trackman session (face closed to path) must (a) flip that
+    # club's bag number to MEASURED and (b) add a measured face-to-path line to the
+    # swing-pattern card. Guards the "waiting for Tee Box" wiring.
+    import shutil
+    import tempfile
+    tmp = tempfile.mkdtemp()
+    for f in os.listdir(REPO):
+        s = os.path.join(REPO, f)
+        if os.path.isfile(s):
+            shutil.copy(s, tmp)
+    hdr = ("date,club,carry_yd,total_yd,club_mph,ball_mph,smash,launch_deg,launch_dir_deg,"
+           "spin_rpm,spin_axis_deg,attack_deg,club_path_deg,face_angle_deg,face_to_path_deg,notes\n")
+    with open(os.path.join(tmp, "launch_monitor.csv"), "w") as fh:
+        fh.write(hdr)
+        for club, carry, f2p in [("7 Iron", 168, -4.5), ("5 Iron", 190, -3.8),
+                                 ("Driver", 268, -5.2)]:
+            fh.write(f"2026-07-12,{club},{carry},,86,123,1.43,17,1,6000,-3,-3,2,-2,{f2p},t\n")
+    d = g.compute(tmp)
+    assert any(b["club"] == "7 Iron" and b.get("measured_src") for b in d["bag"])
+    swing = next(m for m in d["coaching"]["macro"] if m["tag"] == "Swing pattern")
+    assert "Measured" in swing["body"] and "closed to the path" in swing["body"]
+    shutil.rmtree(tmp, ignore_errors=True)
+
+
 def test_top10_actions_ranked_with_sg():
     d = _compute()
     t = d["coaching"]["top10"]

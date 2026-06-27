@@ -311,6 +311,26 @@ def compute(store: str) -> dict:
         if r.get("club") and _f(r.get("carry_yd")):
             lm_acc.setdefault(r["club"], []).append(_f(r["carry_yd"]))
     lm_carry = {c: statistics.fmean(v) for c, v in lm_acc.items()}
+    # Optional Trackman swing metrics — dormant until you log a Tee Box session, then
+    # they sharpen the swing-pattern coaching (face_to_path: - = closed/draw-hook bias,
+    # + = open/fade-slice bias; club_path: + = in-to-out; attack: + = up).
+    lm_metrics: dict = {}
+    _macc: dict = {}
+    for r in _read_csv(os.path.join(store, "launch_monitor.csv")):
+        c, f2p = r.get("club"), _f(r.get("face_to_path_deg"))
+        if not c or f2p is None:
+            continue
+        _macc.setdefault(c, []).append(
+            (f2p, _f(r.get("club_path_deg")), _f(r.get("face_angle_deg")),
+             _f(r.get("attack_deg"))))
+    for c, vs in _macc.items():
+        def _mavg(j, rows=vs):
+            xs = [t[j] for t in rows if t[j] is not None]
+            return round(statistics.fmean(xs), 1) if xs else None
+        lm_metrics[c] = {"f2p": _mavg(0), "club_path": _mavg(1),
+                         "face_angle": _mavg(2), "attack": _mavg(3), "n": len(vs)}
+    _f2ps = [m["f2p"] for m in lm_metrics.values() if m["f2p"] is not None]
+    lm_bag_f2p = round(statistics.fmean(_f2ps), 1) if _f2ps else None
 
     # ---- player / index ----
     # GHIN's official WHS Handicap Index is authoritative — use it verbatim. Our own
@@ -752,16 +772,23 @@ def compute(store: str) -> dict:
             "where practice time converts to scores, not the driver."})
     if swing:
         s = swing["side"]
+        _body = (f"{swing['n']} clubs across the bag finish {s} of target"
+                 + (", driver included" if swing["drv"] else "")
+                 + f" — a textbook <b>{swing['miss']}</b> pattern. That's a face-to-path "
+                 f"issue ({swing['fix']}), so aiming the other way only hides it. "
+                 "Highest-leverage move by far: a lesson with a launch monitor to measure "
+                 "face-to-path and square it up — that fixes EVERY club at once. The "
+                 "per-club “aim” notes are interim patches until you do.")
+        if lm_bag_f2p is not None:
+            _fd = "closed" if lm_bag_f2p < 0 else "open"
+            _matches = (lm_bag_f2p < 0) == (s == "left")
+            _body += (f" <b>Measured (launch monitor): your face averages "
+                      f"{abs(lm_bag_f2p)}° {_fd} to the path</b> — "
+                      + ("confirms it; that's the number to get to ~0°."
+                         if _matches else "worth a second look vs the on-course miss."))
         macro_recs.append({
             "tag": "Swing pattern", "head": f"Your whole bag leaks {s.upper()} — that's "
-            f"one swing fault, not {swing['n']} separate aim problems",
-            "body": f"{swing['n']} clubs across the bag finish {s} of target"
-            + (", driver included" if swing["drv"] else "")
-            + f" — a textbook <b>{swing['miss']}</b> pattern. That's a face-to-path issue "
-            f"({swing['fix']}), so aiming the other way only hides it. Highest-leverage "
-            "move by far: a lesson with a launch monitor to measure face-to-path and "
-            "square it up — that fixes EVERY club at once. The per-club “aim” "
-            "notes are interim patches until you do."})
+            f"one swing fault, not {swing['n']} separate aim problems", "body": _body})
     if ov and ov["ls"] <= -4:
         macro_recs.append({
             "tag": "Approach", "head": f"Club up — you're a median {abs(ov['ls'])} yd short",

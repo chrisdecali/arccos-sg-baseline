@@ -1,1 +1,1 @@
-date,club,chs_mph,ball_mph,smash,launch_deg,spin_rpm,carry_yd
+date,club,carry_yd,total_yd,club_mph,ball_mph,smash,launch_deg,launch_dir_deg,spin_rpm,spin_axis_deg,attack_deg,club_path_deg,face_angle_deg,face_to_path_deg,notes
