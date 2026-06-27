@@ -763,19 +763,8 @@ def compute(store: str) -> dict:
                  "fix": "the face is open relative to your swing path at impact",
                  "drv": drv_right}
 
-    # ---- recent form (last n rounds vs your baseline) ----
+    # ---- recent form: extra flags beyond the per-category trend cards ----
     recent_items = []
-    sgc = [c for c in sg_compare if c["recent"] is not None]
-    sgc.sort(key=lambda c: c["recent"])
-    for c in sgc[:2]:
-        d = c["delta"]
-        trend = ("slipping vs baseline" if d is not None and d <= -1
-                 else "better than baseline" if d is not None and d >= 1
-                 else "in line with baseline")
-        recent_items.append({
-            "head": f"{c['cat']}: {_num(c['recent'],1,True)}/round lately ({trend})",
-            "body": f"baseline {_num(c['macro'],1,True)}"
-                    + (f", {_num(d,1,True)} vs macro" if d is not None else "")})
     if appr_recent and ov and appr_recent["ls"] - ov["ls"] <= -4:
         recent_items.append({
             "head": "Approaches shorter than usual lately",
@@ -1502,31 +1491,50 @@ category losses (approach, putting, off-tee, short game). They overlap, so the r
 combined gain is about <b>{d['recoverable']['effective']}/round</b>, not the
 {co['top10_total']} straight sum. Work top-down: #1 is the highest-leverage thing you can
 do.</p></section>"""
-    recent_html = "".join(
-        f'<li><b>{it["head"]}</b><br><span class="note">{it["body"]}</span></li>'
-        for it in co["recent"]) or '<li class="note">Not enough recent rounds yet.</li>'
-
-    def _sgcell(v):
-        if v is None:
-            return '<td>—</td>'
-        cls = "pos" if v >= 0 else "neg"
-        return f'<td class="{cls}">{_num(v, 1, True)}</td>'
-    sgc_rows = "".join(
-        f'<tr><td>{_esc(c["cat"])}</td>{_sgcell(c["macro"])}{_sgcell(c["recent"])}'
-        f'{_sgcell(c["delta"])}</tr>' for c in co["sg_compare"])
+    # ---- Recent form: per-category trend cards (▲ improving / ▼ slipping) ----
+    def _trend(dlt):
+        if dlt is None:
+            return ("flat", "–")
+        if dlt >= 0.05:
+            return ("up", "▲")
+        if dlt <= -0.05:
+            return ("down", "▼")
+        return ("flat", "–")
+    form_cards = ""
+    for c in co["sg_compare"]:
+        cls, arr = _trend(c["delta"])
+        dtxt = _num(c["delta"], 1, True) if c["delta"] is not None else "—"
+        form_cards += (
+            f'<div class="fcard {cls}"><div class="fcard-cat">{_esc(c["cat"])}</div>'
+            f'<div class="fcard-delta {cls}">{arr}&nbsp;{dtxt}</div>'
+            f'<div class="fcard-sub"><b>{_num(c["recent"], 1, True)}</b> now'
+            f'<span class="fcard-base"> · {_num(c["macro"], 1, True)} base</span></div></div>')
+    _ups = [c["cat"].lower() for c in co["sg_compare"] if (c["delta"] or 0) >= 0.05]
+    _downs = [c["cat"].lower() for c in co["sg_compare"] if (c["delta"] or 0) <= -0.05]
+    if _downs and len(_ups) >= 2:
+        form_hl = (f"Trending up across the board &mdash; {', '.join(_downs)} "
+                   f"{'is' if len(_downs) == 1 else 'are'} the one cold spot. Warm "
+                   f"that up before the next round.")
+    elif _downs:
+        form_hl = f"Watch your {', '.join(_downs)} &mdash; slipping vs your baseline."
+    elif _ups:
+        form_hl = "Everything's trending up vs your baseline. Keep it rolling."
+    else:
+        form_hl = "Holding steady vs your baseline."
+    flags_html = "".join(
+        f'<li><b>{it["head"]}</b> &mdash; <span class="note">{it["body"]}</span></li>'
+        for it in co["recent"])
     club_rec_rows = "".join(
         f'<tr><td>{_esc(c["club"])}</td><td>{c["rec"]}</td>'
         f'<td class="note">{_esc(c["basis"])}</td></tr>' for c in co["by_club"])
     coach_overall = f"""
-<section data-tab="overall"><h2>Recent form {('&mdash; ' + co['recent_label']) if co['recent_label'] else ''} vs your baseline</h2>
-<table class="sgc"><thead><tr><th>Strokes gained</th><th>Macro</th><th>Recent</th><th>&Delta;</th></tr></thead>
-<tbody>{sgc_rows}</tbody></table>
-<ul class="recent">{recent_html}</ul>
-<p class="note"><b>Macro</b> = your all-rounds baseline (the priorities are quantified in
-the Top 10 above). <b>Recent</b> = your last 2 rounds vs that baseline &mdash; what's hot
-or cold right now, so you warm up the right thing without over-reacting to one session.
-Negative SG = strokes lost vs a scratch player; less negative (greener &Delta;) is
-better.</p></section>"""
+<section data-tab="overall"><h2>Recent form {('&mdash; ' + co['recent_label']) if co['recent_label'] else ''}</h2>
+<div class="formgrid">{form_cards or '<p class="note">Not enough rounds yet.</p>'}</div>
+<p class="form-hl">{form_hl}</p>
+{('<ul class="flags">' + flags_html + '</ul>') if flags_html else ''}
+<p class="note"><b>▲ / ▼</b> = your last 2 rounds vs your all-rounds baseline (strokes
+gained per round; less negative is better). It's the warm-up signal &mdash; what's hot or
+cold <i>right now</i> &mdash; while the Top&nbsp;10 above is the all-rounds plan.</p></section>"""
 
     coach_byclub = f"""
 <section data-tab="club"><h2>By club &mdash; what to try</h2>
@@ -1667,6 +1675,20 @@ font-weight:700}}
 .rec-head{{font-weight:600;margin:3px 0 4px;font-size:14px}}
 .rec-body{{color:var(--mut);font-size:12.5px;line-height:1.45}}
 .grid2{{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;align-items:start}}
+.formgrid{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}}
+@media(max-width:640px){{.formgrid{{grid-template-columns:repeat(2,1fr)}}}}
+.fcard{{background:#0f131a;border:1px solid var(--line);border-top:3px solid #3a4150;
+border-radius:10px;padding:12px 13px}}
+.fcard.up{{border-top-color:var(--good)}} .fcard.down{{border-top-color:var(--bad)}}
+.fcard-cat{{font-size:11px;text-transform:uppercase;letter-spacing:.04em;
+color:var(--mut);font-weight:700}}
+.fcard-delta{{font-size:21px;font-weight:800;margin:5px 0 3px;color:var(--mut);
+font-variant-numeric:tabular-nums}}
+.fcard-delta.up{{color:var(--good)}} .fcard-delta.down{{color:var(--bad)}}
+.fcard-sub{{font-size:12.5px;color:var(--mut)}} .fcard-sub b{{color:var(--ink);
+font-size:14px}} .fcard-base{{white-space:nowrap}}
+.form-hl{{font-size:14px;font-weight:600;margin:14px 0 0}}
+ul.flags{{margin:10px 0 0;padding-left:18px}} ul.flags li{{margin:0 0 6px}}
 table.sgc{{max-width:520px}}
 ul.recent{{margin:12px 0 0;padding-left:18px}} ul.recent li{{margin:0 0 9px}}
 table.sgc th:not(:first-child),table.sgc td:not(:first-child){{text-align:right;
@@ -1738,25 +1760,6 @@ Arccos, measured vs scratch — large negatives are normal for a mid-handicap.</
 hole-by-hole, and strokes-gained for that round.</p>
 {nav_html or '<p class="note">No rounds yet.</p>'}</section>
 
-<section data-tab="overall"><h2>Index projection</h2>
-<p class="note">Your official index is <b>{_num(p['index'],1)}</b> (from GHIN). This is a
-rough <i>estimate</i> of where it heads — WHS counts your most recent 20 differentials,
-and with few scores a small-sample adjustment shrinks as you post, so the index can
-drift before settling. It can differ from GHIN by up to a stroke until ~20 scores are
-in; GHIN's number above is the truth.</p>
-<div class="slider-row">
-  <label>If your next rounds average a differential of
-  <b id="dval">18</b>:</label>
-  <input id="dslider" type="range" min="6" max="30" value="18" step="0.5">
-</div>
-<div class="slider-row">
-  <span>After
-  <select id="nposts">
-   <option>3</option><option>5</option><option selected>8</option>
-   <option>12</option><option>20</option></select> more posted scores →
-  projected index <span class="proj" id="projidx">—</span></span>
-</div></section>
-
 <section data-tab="overall"><h2>Strokes gained by round</h2>
 {sg_svg or '<p class="note">No rounds yet.</p>'}
 </section>
@@ -1799,13 +1802,6 @@ finishes. Fix the chunk first.</p></section>
 <p class="note">Where your 3-putts come from (almost always long range → it's a lag /
 approach-proximity problem, not a stroke problem) and your greenside save rate by lie.</p></section>
 
-<section data-tab="round"><h2>Pace of play</h2>
-<table><thead><tr><th>Date</th><th>Course</th><th>Holes</th><th>Round time</th>
-<th>Pace / 18</th></tr></thead><tbody>{pace_rows or '<tr><td colspan=5>—</td></tr>'}</tbody></table>
-<p class="note">Your rounds average <b>{pace_txt} per 18 holes</b> (from Arccos round
-timestamps). For reference: a brisk pace is ~4h00m, ~4h30m is slow, and <b>5h+ is a
-grind</b>. Empirical backing for the pace-of-play conversation at WindRose.</p></section>
-
 <section data-tab="round"><h2>Round map</h2>
 <div class="tabs" id="round-tabs"></div>
 <div id="map"></div>
@@ -1816,6 +1812,32 @@ shot path from GPS. No GPS on a round → it won't appear here.</p></section>
 <table><thead><tr><th>Hole</th><th>Par</th><th>Length</th><th>Avg vs par</th>
 <th>n</th></tr></thead><tbody>{trouble_rows}</tbody></table>
 <p class="note">Needs ~5+ rounds before this is signal rather than noise.</p></section>
+
+<section data-tab="round"><h2>Pace of play</h2>
+<table><thead><tr><th>Date</th><th>Course</th><th>Holes</th><th>Round time</th>
+<th>Pace / 18</th></tr></thead><tbody>{pace_rows or '<tr><td colspan=5>—</td></tr>'}</tbody></table>
+<p class="note">Your rounds average <b>{pace_txt} per 18 holes</b> (from Arccos round
+timestamps). For reference: a brisk pace is ~4h00m, ~4h30m is slow, and <b>5h+ is a
+grind</b>. Empirical backing for the pace-of-play conversation at WindRose.</p></section>
+
+<section data-tab="overall"><h2>Index projection</h2>
+<p class="note">Your official index is <b>{_num(p['index'],1)}</b> (from GHIN). This is a
+rough <i>estimate</i> of where it heads — WHS counts your most recent 20 differentials,
+and with few scores a small-sample adjustment shrinks as you post, so the index can
+drift before settling. It can differ from GHIN by up to a stroke until ~20 scores are
+in; GHIN's number above is the truth.</p>
+<div class="slider-row">
+  <label>If your next rounds average a differential of
+  <b id="dval">18</b>:</label>
+  <input id="dslider" type="range" min="6" max="30" value="18" step="0.5">
+</div>
+<div class="slider-row">
+  <span>After
+  <select id="nposts">
+   <option>3</option><option>5</option><option selected>8</option>
+   <option>12</option><option>20</option></select> more posted scores →
+  projected index <span class="proj" id="projidx">—</span></span>
+</div></section>
 
 <section data-tab="overall"><h2>Posted scores (GHIN)</h2>
 <table><thead><tr><th>Date</th><th>Course</th><th>Holes</th><th>Score</th>

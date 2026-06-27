@@ -68,6 +68,20 @@ font-weight:700}
 .rec-head{font-weight:600;margin:3px 0 4px;font-size:14px}
 .rec-body{color:var(--mut);font-size:12.5px;line-height:1.45}
 .grid2{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;align-items:start}
+.formgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:640px){.formgrid{grid-template-columns:repeat(2,1fr)}}
+.fcard{background:#0f131a;border:1px solid var(--line);border-top:3px solid #3a4150;
+border-radius:10px;padding:12px 13px}
+.fcard.up{border-top-color:var(--good)} .fcard.down{border-top-color:var(--bad)}
+.fcard-cat{font-size:11px;text-transform:uppercase;letter-spacing:.04em;
+color:var(--mut);font-weight:700}
+.fcard-delta{font-size:21px;font-weight:800;margin:5px 0 3px;color:var(--mut);
+font-variant-numeric:tabular-nums}
+.fcard-delta.up{color:var(--good)} .fcard-delta.down{color:var(--bad)}
+.fcard-sub{font-size:12.5px;color:var(--mut)} .fcard-sub b{color:var(--ink);
+font-size:14px} .fcard-base{white-space:nowrap}
+.form-hl{font-size:14px;font-weight:600;margin:14px 0 0}
+ul.flags{margin:10px 0 0;padding-left:18px} ul.flags li{margin:0 0 6px}
 table.sgc{max-width:520px}
 ul.recent{margin:12px 0 0;padding-left:18px} ul.recent li{margin:0 0 9px}
 table.sgc th:not(:first-child),table.sgc td:not(:first-child){text-align:right;
@@ -138,15 +152,13 @@ do.</p></section>
 <p class="note">Targets for PGA Frisco (Oct 21–24, 2026). All strokes-gained is
 Arccos, measured vs scratch — large negatives are normal for a mid-handicap.</p></section>
 
-<section data-tab="overall"><h2>Recent form &mdash; 2026-06-19 – 2026-06-26 vs your baseline</h2>
-<table class="sgc"><thead><tr><th>Strokes gained</th><th>Macro</th><th>Recent</th><th>&Delta;</th></tr></thead>
-<tbody><tr><td>Off the tee</td><td class="neg">-3.1</td><td class="neg">-1.9</td><td class="pos">+1.2</td></tr><tr><td>Approach</td><td class="neg">-9.2</td><td class="neg">-6.2</td><td class="pos">+3.0</td></tr><tr><td>Short game</td><td class="neg">-1.8</td><td class="neg">-0.3</td><td class="pos">+1.5</td></tr><tr><td>Putting</td><td class="neg">-3.4</td><td class="neg">-4.5</td><td class="neg">-1.1</td></tr></tbody></table>
-<ul class="recent"><li><b>Approach: -6.2/round lately (better than baseline)</b><br><span class="note">baseline -9.2, +3.0 vs macro</span></li><li><b>Putting: -4.5/round lately (slipping vs baseline)</b><br><span class="note">baseline -3.4, -1.1 vs macro</span></li></ul>
-<p class="note"><b>Macro</b> = your all-rounds baseline (the priorities are quantified in
-the Top 10 above). <b>Recent</b> = your last 2 rounds vs that baseline &mdash; what's hot
-or cold right now, so you warm up the right thing without over-reacting to one session.
-Negative SG = strokes lost vs a scratch player; less negative (greener &Delta;) is
-better.</p></section>
+<section data-tab="overall"><h2>Recent form &mdash; 2026-06-19 – 2026-06-26</h2>
+<div class="formgrid"><div class="fcard up"><div class="fcard-cat">Off the tee</div><div class="fcard-delta up">▲&nbsp;+1.2</div><div class="fcard-sub"><b>-1.9</b> now<span class="fcard-base"> · -3.1 base</span></div></div><div class="fcard up"><div class="fcard-cat">Approach</div><div class="fcard-delta up">▲&nbsp;+3.0</div><div class="fcard-sub"><b>-6.2</b> now<span class="fcard-base"> · -9.2 base</span></div></div><div class="fcard up"><div class="fcard-cat">Short game</div><div class="fcard-delta up">▲&nbsp;+1.5</div><div class="fcard-sub"><b>-0.3</b> now<span class="fcard-base"> · -1.8 base</span></div></div><div class="fcard down"><div class="fcard-cat">Putting</div><div class="fcard-delta down">▼&nbsp;-1.1</div><div class="fcard-sub"><b>-4.5</b> now<span class="fcard-base"> · -3.4 base</span></div></div></div>
+<p class="form-hl">Trending up across the board &mdash; putting is the one cold spot. Warm that up before the next round.</p>
+
+<p class="note"><b>▲ / ▼</b> = your last 2 rounds vs your all-rounds baseline (strokes
+gained per round; less negative is better). It's the warm-up signal &mdash; what's hot or
+cold <i>right now</i> &mdash; while the Top&nbsp;10 above is the all-rounds plan.</p></section>
 
 <section data-tab="club"><h2>Your bag &amp; distances</h2>
 <table><thead><tr><th>Club</th><th>Loft</th><th>Shaft</th><th>Target</th>
@@ -218,25 +230,6 @@ from.</span></div></section>
 hole-by-hole, and strokes-gained for that round.</p>
 <div class="course-grp"><h3 class="course-h">⛳ WindRose GC <span class="course-n">4 rounds</span></h3><div class="rcards"><div class="rcard-wrap"><a class="rcard" href="rounds/WindRose_GC_2026-06-26_review.html"><div class="rc-date">2026-06-26</div><div class="rc-score">89 <span class="rc-par">(+17)</span></div><div class="rc-meta">Back · 6586 yd · putts 39</div><div class="rc-sg neg">SG -15.4</div><div class="rc-open">Open full review →</div></a><a class="rc-pdf" href="rounds/WindRose_GC_2026-06-26_shotmaps.pdf">⬇ shot-map PDF</a></div><div class="rcard-wrap"><a class="rcard" href="rounds/WindRose_GC_2026-06-19_review.html"><div class="rc-date">2026-06-19</div><div class="rc-score">47 <span class="rc-par">(+11)</span></div><div class="rc-meta">Middle · 6042 yd · putts 20</div><div class="rc-sg neg">SG -10.5</div><div class="rc-open">Open full review →</div></a><a class="rc-pdf" href="rounds/WindRose_GC_2026-06-19_shotmaps.pdf">⬇ shot-map PDF</a></div><div class="rcard-wrap"><a class="rcard" href="rounds/WindRose_GC_2026-06-14_review.html"><div class="rc-date">2026-06-14</div><div class="rc-score">94 <span class="rc-par">(+22)</span></div><div class="rc-meta">Back · 6586 yd · putts 36</div><div class="rc-sg neg">SG -20.1</div><div class="rc-open">Open full review →</div></a><a class="rc-pdf" href="rounds/WindRose_GC_2026-06-14_shotmaps.pdf">⬇ shot-map PDF</a></div><div class="rcard-wrap"><a class="rcard" href="rounds/WindRose_GC_2026-06-06_review.html"><div class="rc-date">2026-06-06</div><div class="rc-score">96 <span class="rc-par">(+24)</span></div><div class="rc-meta">Middle · 6042 yd · putts 38</div><div class="rc-sg neg">SG -23.7</div><div class="rc-open">Open full review →</div></a><a class="rc-pdf" href="rounds/WindRose_GC_2026-06-06_shotmaps.pdf">⬇ shot-map PDF</a></div></div></div></section>
 
-<section data-tab="overall"><h2>Index projection</h2>
-<p class="note">Your official index is <b>13.6</b> (from GHIN). This is a
-rough <i>estimate</i> of where it heads — WHS counts your most recent 20 differentials,
-and with few scores a small-sample adjustment shrinks as you post, so the index can
-drift before settling. It can differ from GHIN by up to a stroke until ~20 scores are
-in; GHIN's number above is the truth.</p>
-<div class="slider-row">
-  <label>If your next rounds average a differential of
-  <b id="dval">18</b>:</label>
-  <input id="dslider" type="range" min="6" max="30" value="18" step="0.5">
-</div>
-<div class="slider-row">
-  <span>After
-  <select id="nposts">
-   <option>3</option><option>5</option><option selected>8</option>
-   <option>12</option><option>20</option></select> more posted scores →
-  projected index <span class="proj" id="projidx">—</span></span>
-</div></section>
-
 <section data-tab="overall"><h2>Strokes gained by round</h2>
 <svg viewBox="0 0 700 290" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;background:#0f131a;border-radius:8px"><text x="350" y="16" font-size="12" font-weight="bold" fill="#e8eaed" text-anchor="middle">Strokes gained by round (vs scratch)</text><line x1="42" y1="254.0" x2="686" y2="254.0" stroke="#222"/><text x="37" y="257.0" font-size="9" fill="#9aa0aa" text-anchor="end">-25</text><line x1="42" y1="219.3" x2="686" y2="219.3" stroke="#222"/><text x="37" y="222.3" font-size="9" fill="#9aa0aa" text-anchor="end">-20</text><line x1="42" y1="184.7" x2="686" y2="184.7" stroke="#222"/><text x="37" y="187.7" font-size="9" fill="#9aa0aa" text-anchor="end">-15</text><line x1="42" y1="150.0" x2="686" y2="150.0" stroke="#222"/><text x="37" y="153.0" font-size="9" fill="#9aa0aa" text-anchor="end">-10</text><line x1="42" y1="115.3" x2="686" y2="115.3" stroke="#222"/><text x="37" y="118.3" font-size="9" fill="#9aa0aa" text-anchor="end">-5</text><line x1="42" y1="80.7" x2="686" y2="80.7" stroke="#555"/><text x="37" y="83.7" font-size="9" fill="#9aa0aa" text-anchor="end">+0</text><line x1="42" y1="46.0" x2="686" y2="46.0" stroke="#222"/><text x="37" y="49.0" font-size="9" fill="#9aa0aa" text-anchor="end">+5</text><text transform="translate(11,150) rotate(-90)" font-size="9" fill="#9aa0aa" text-anchor="middle">strokes gained</text><rect x="99.5" y="80.7" width="46.0" height="8.3" fill="#43a047"/><rect x="99.5" y="89.0" width="46.0" height="101.2" fill="#4f9cf9"/><rect x="99.5" y="190.2" width="46.0" height="42.3" fill="#fb8c00"/><rect x="99.5" y="232.5" width="46.0" height="12.5" fill="#ab47bc"/><text x="122.5" y="76.7" font-size="10" fill="#e8eaed" text-anchor="middle">-23.7</text><text x="122.5" y="268" font-size="9" fill="#9aa0aa" text-anchor="middle">2026-06-06</text><rect x="260.5" y="80.7" width="46.0" height="50.6" fill="#43a047"/><rect x="260.5" y="131.3" width="46.0" height="67.3" fill="#4f9cf9"/><rect x="260.5" y="198.5" width="46.0" height="4.2" fill="#fb8c00"/><rect x="260.5" y="202.7" width="46.0" height="17.3" fill="#ab47bc"/><text x="283.5" y="76.7" font-size="10" fill="#e8eaed" text-anchor="middle">-20.1</text><text x="283.5" y="268" font-size="9" fill="#9aa0aa" text-anchor="middle">2026-06-14</text><rect x="421.5" y="80.7" width="46.0" height="3.5" fill="#43a047"/><rect x="421.5" y="84.1" width="46.0" height="47.1" fill="#4f9cf9"/><rect x="421.5" y="74.4" width="46.0" height="6.2" fill="#fb8c00"/><rect x="421.5" y="131.3" width="46.0" height="28.4" fill="#ab47bc"/><text x="444.5" y="70.4" font-size="10" fill="#e8eaed" text-anchor="middle">-10.5</text><text x="444.5" y="268" font-size="9" fill="#9aa0aa" text-anchor="middle">2026-06-19</text><rect x="582.5" y="80.7" width="46.0" height="23.6" fill="#43a047"/><rect x="582.5" y="104.2" width="46.0" height="38.8" fill="#4f9cf9"/><rect x="582.5" y="143.1" width="46.0" height="10.4" fill="#fb8c00"/><rect x="582.5" y="153.5" width="46.0" height="34.7" fill="#ab47bc"/><text x="605.5" y="76.7" font-size="10" fill="#e8eaed" text-anchor="middle">-15.4</text><text x="605.5" y="268" font-size="9" fill="#9aa0aa" text-anchor="middle">2026-06-26</text><rect x="42" y="26" width="9" height="9" rx="2" fill="#43a047"/><text x="55" y="34" font-size="9.5" fill="#9aa0aa">off tee</text><rect x="137" y="26" width="9" height="9" rx="2" fill="#4f9cf9"/><text x="150" y="34" font-size="9.5" fill="#9aa0aa">approach</text><rect x="232" y="26" width="9" height="9" rx="2" fill="#fb8c00"/><text x="245" y="34" font-size="9.5" fill="#9aa0aa">short</text><rect x="327" y="26" width="9" height="9" rx="2" fill="#ab47bc"/><text x="340" y="34" font-size="9.5" fill="#9aa0aa">putting</text></svg>
 </section>
@@ -279,13 +272,6 @@ finishes. Fix the chunk first.</p></section>
 <p class="note">Where your 3-putts come from (almost always long range → it's a lag /
 approach-proximity problem, not a stroke problem) and your greenside save rate by lie.</p></section>
 
-<section data-tab="round"><h2>Pace of play</h2>
-<table><thead><tr><th>Date</th><th>Course</th><th>Holes</th><th>Round time</th>
-<th>Pace / 18</th></tr></thead><tbody><tr><td>2026-06-26</td><td>WindRose GC</td><td>18</td><td>4h 19m</td><td>4h 19m</td></tr><tr><td>2026-06-19</td><td>WindRose GC</td><td>9</td><td>1h 57m</td><td>3h 54m</td></tr><tr><td>2026-06-14</td><td>WindRose GC</td><td>18</td><td>4h 28m</td><td>4h 28m</td></tr><tr><td>2026-06-06</td><td>WindRose GC</td><td>18</td><td>5h 06m</td><td>5h 06m</td></tr></tbody></table>
-<p class="note">Your rounds average <b>4h 27m per 18 holes</b> (from Arccos round
-timestamps). For reference: a brisk pace is ~4h00m, ~4h30m is slow, and <b>5h+ is a
-grind</b>. Empirical backing for the pace-of-play conversation at WindRose.</p></section>
-
 <section data-tab="round"><h2>Round map</h2>
 <div class="tabs" id="round-tabs"></div>
 <div id="map"></div>
@@ -296,6 +282,32 @@ shot path from GPS. No GPS on a round → it won't appear here.</p></section>
 <table><thead><tr><th>Hole</th><th>Par</th><th>Length</th><th>Avg vs par</th>
 <th>n</th></tr></thead><tbody><tr><td>#6</td><td>par 3</td><td>153 yd</td><td>+2.00</td><td>4</td></tr><tr><td>#13</td><td>par 4</td><td>400 yd</td><td>+2.00</td><td>3</td></tr><tr><td>#11</td><td>par 3</td><td>152 yd</td><td>+1.67</td><td>3</td></tr><tr><td>#14</td><td>par 5</td><td>500 yd</td><td>+1.67</td><td>3</td></tr><tr><td>#1</td><td>par 4</td><td>360 yd</td><td>+1.50</td><td>4</td></tr><tr><td>#12</td><td>par 5</td><td>441 yd</td><td>+1.33</td><td>3</td></tr></tbody></table>
 <p class="note">Needs ~5+ rounds before this is signal rather than noise.</p></section>
+
+<section data-tab="round"><h2>Pace of play</h2>
+<table><thead><tr><th>Date</th><th>Course</th><th>Holes</th><th>Round time</th>
+<th>Pace / 18</th></tr></thead><tbody><tr><td>2026-06-26</td><td>WindRose GC</td><td>18</td><td>4h 19m</td><td>4h 19m</td></tr><tr><td>2026-06-19</td><td>WindRose GC</td><td>9</td><td>1h 57m</td><td>3h 54m</td></tr><tr><td>2026-06-14</td><td>WindRose GC</td><td>18</td><td>4h 28m</td><td>4h 28m</td></tr><tr><td>2026-06-06</td><td>WindRose GC</td><td>18</td><td>5h 06m</td><td>5h 06m</td></tr></tbody></table>
+<p class="note">Your rounds average <b>4h 27m per 18 holes</b> (from Arccos round
+timestamps). For reference: a brisk pace is ~4h00m, ~4h30m is slow, and <b>5h+ is a
+grind</b>. Empirical backing for the pace-of-play conversation at WindRose.</p></section>
+
+<section data-tab="overall"><h2>Index projection</h2>
+<p class="note">Your official index is <b>13.6</b> (from GHIN). This is a
+rough <i>estimate</i> of where it heads — WHS counts your most recent 20 differentials,
+and with few scores a small-sample adjustment shrinks as you post, so the index can
+drift before settling. It can differ from GHIN by up to a stroke until ~20 scores are
+in; GHIN's number above is the truth.</p>
+<div class="slider-row">
+  <label>If your next rounds average a differential of
+  <b id="dval">18</b>:</label>
+  <input id="dslider" type="range" min="6" max="30" value="18" step="0.5">
+</div>
+<div class="slider-row">
+  <span>After
+  <select id="nposts">
+   <option>3</option><option>5</option><option selected>8</option>
+   <option>12</option><option>20</option></select> more posted scores →
+  projected index <span class="proj" id="projidx">—</span></span>
+</div></section>
 
 <section data-tab="overall"><h2>Posted scores (GHIN)</h2>
 <table><thead><tr><th>Date</th><th>Course</th><th>Holes</th><th>Score</th>
