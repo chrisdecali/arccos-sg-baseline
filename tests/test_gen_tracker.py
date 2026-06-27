@@ -144,6 +144,12 @@ def test_coaching_macro_recent_byclub():
     # per-club coaching covers driver (woods) and at least one iron
     clubs = [c["club"] for c in co["by_club"]]
     assert "Driver" in clubs and any("Iron" in c for c in clubs)
+    # systemic swing-pattern card: the player hooks across the bag, so a "Swing pattern"
+    # card must surface (root-cause coaching, not just per-club aim band-aids)
+    tags = [m["tag"] for m in co["macro"]]
+    assert "Swing pattern" in tags
+    swing = next(m for m in co["macro"] if m["tag"] == "Swing pattern")
+    assert "LEFT" in swing["head"]          # his miss is left (hook/pull)
 
 
 def test_iqr_bounds_flags_outliers():

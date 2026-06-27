@@ -722,6 +722,27 @@ def compute(store: str) -> dict:
     drv = next((x for x in driving if x["club"] == "Driver"), None)
     tp_total = sum(p["tp"] for p in putting_dist)
     chip_ud = updown[0]
+
+    # Systemic directional pattern: a consistent one-side miss ACROSS clubs is a
+    # face/path swing tendency, not N separate aim errors. Count clubs leaning each way
+    # (approach medians, vs green center) plus the driver's fairway-miss side.
+    _bc = patterns["approach"]["by_club"]
+    left_bag = [c["club"] for c in _bc if c["lr"] <= -4]
+    right_bag = [c["club"] for c in _bc if c["lr"] >= 4]
+    drv_left = bool(drv and drv["left_pct"] - drv["right_pct"] >= 10)
+    drv_right = bool(drv and drv["right_pct"] - drv["left_pct"] >= 10)
+    nL = len(left_bag) + (1 if drv_left else 0)
+    nR = len(right_bag) + (1 if drv_right else 0)
+    swing = None
+    if nL >= 3 and nL >= nR * 2:
+        swing = {"side": "left", "n": nL, "miss": "hook/pull",
+                 "fix": "the face is closing relative to your swing path at impact",
+                 "drv": drv_left}
+    elif nR >= 3 and nR >= nL * 2:
+        swing = {"side": "right", "n": nR, "miss": "push/slice",
+                 "fix": "the face is open relative to your swing path at impact",
+                 "drv": drv_right}
+
     macro_recs = []
     if levers:
         macro_recs.append({
@@ -729,6 +750,18 @@ def compute(store: str) -> dict:
             f"({_num(levers[0]['sg'],1,True)} SG/round)",
             "body": "Short game + approach are ~75–80% of your strokes over par — that's "
             "where practice time converts to scores, not the driver."})
+    if swing:
+        s = swing["side"]
+        macro_recs.append({
+            "tag": "Swing pattern", "head": f"Your whole bag leaks {s.upper()} — that's "
+            f"one swing fault, not {swing['n']} separate aim problems",
+            "body": f"{swing['n']} clubs across the bag finish {s} of target"
+            + (", driver included" if swing["drv"] else "")
+            + f" — a textbook <b>{swing['miss']}</b> pattern. That's a face-to-path issue "
+            f"({swing['fix']}), so aiming the other way only hides it. Highest-leverage "
+            "move by far: a lesson with a launch monitor to measure face-to-path and "
+            "square it up — that fixes EVERY club at once. The per-club “aim” "
+            "notes are interim patches until you do."})
     if ov and ov["ls"] <= -4:
         macro_recs.append({
             "tag": "Approach", "head": f"Club up — you're a median {abs(ov['ls'])} yd short",
@@ -1430,11 +1463,9 @@ def render_html(d: dict) -> str:
 <h3 class="sub">Your recurring fixes <span class="note">(all {m['n_rounds']} rounds, ranked by how many strokes they cost)</span></h3>
 <div class="recs">{macro_cards}</div>
 <h3 class="sub">Right now &mdash; recent rounds {('('+co['recent_label']+')') if co['recent_label'] else ''} vs your baseline</h3>
-<div class="grid2">
-<ul class="recent">{recent_html}</ul>
 <table class="sgc"><thead><tr><th>Strokes gained</th><th>Macro</th><th>Recent</th><th>&Delta;</th></tr></thead>
 <tbody>{sgc_rows}</tbody></table>
-</div>
+<ul class="recent">{recent_html}</ul>
 <p class="note"><b>Macro</b> = recurring tendencies across every round (the structural
 fixes that don't move week to week) &mdash; that's what to take to a lesson.
 <b>Recent</b> = your last 2 rounds vs your own baseline &mdash; what's hot or cold right
@@ -1451,7 +1482,9 @@ strokes lost vs a scratch player; less negative (greener &Delta;) is better.</p>
 6-iron instead of 7-iron). You're landing short, so you need more club.</li>
 <li><b>Club down</b> = next shorter club; you're flying it past the target.</li>
 <li><b>Aim ~Xy right / left</b> = your typical finish is that many yards to one side, so
-start your aim the other way to bring it back to the middle.</li>
+start your aim the other way to bring it back to the middle. <i>This is a patch</i> —
+if most clubs lean the same way it's a swing fault (see the Game-plan tab); fixing the
+face/path squares them all up at once.</li>
 <li><b>Distance dialed / on line</b> = no change &mdash; keep doing it.</li>
 </ul>
 <span class="note">Structural tendencies from your median (outlier-cleaned) shots; 4
@@ -1508,9 +1541,10 @@ font-weight:700}}
 .rec-head{{font-weight:600;margin:3px 0 4px;font-size:14px}}
 .rec-body{{color:var(--mut);font-size:12.5px;line-height:1.45}}
 .grid2{{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;align-items:start}}
-ul.recent{{margin:0;padding-left:18px}} ul.recent li{{margin:0 0 9px}}
+table.sgc{{max-width:520px}}
+ul.recent{{margin:12px 0 0;padding-left:18px}} ul.recent li{{margin:0 0 9px}}
 table.sgc th:not(:first-child),table.sgc td:not(:first-child){{text-align:right;
-font-variant-numeric:tabular-nums;width:72px}}
+font-variant-numeric:tabular-nums;width:84px}}
 table.sgc td.pos{{color:var(--good)}} table.sgc td.neg{{color:var(--bad)}}
 td.pos{{color:var(--good)}} td.neg{{color:var(--bad)}}
 .hold,.lc{{font-size:10px;padding:1px 5px;border-radius:6px;background:#3a2c12;color:#f3c969}}
