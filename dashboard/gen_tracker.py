@@ -1509,6 +1509,8 @@ font-weight:700}}
 .rec-body{{color:var(--mut);font-size:12.5px;line-height:1.45}}
 .grid2{{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;align-items:start}}
 ul.recent{{margin:0;padding-left:18px}} ul.recent li{{margin:0 0 9px}}
+table.sgc th:not(:first-child),table.sgc td:not(:first-child){{text-align:right;
+font-variant-numeric:tabular-nums;width:72px}}
 table.sgc td.pos{{color:var(--good)}} table.sgc td.neg{{color:var(--bad)}}
 td.pos{{color:var(--good)}} td.neg{{color:var(--bad)}}
 .hold,.lc{{font-size:10px;padding:1px 5px;border-radius:6px;background:#3a2c12;color:#f3c969}}
