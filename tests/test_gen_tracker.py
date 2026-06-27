@@ -129,6 +129,23 @@ def test_driving_accuracy():
         assert dd["chances"] >= 3
 
 
+def test_coaching_macro_recent_byclub():
+    d = _compute()
+    co = d["coaching"]
+    assert co["macro"], "macro recommendations should be populated"
+    for m in co["macro"]:
+        assert m["tag"] and m["head"] and m["body"]
+    # recency split: all 4 SG categories compared macro vs recent
+    cats = [c["cat"] for c in co["sg_compare"]]
+    assert {"Off the tee", "Approach", "Short game", "Putting"} <= set(cats)
+    for c in co["sg_compare"]:
+        if c["macro"] is not None and c["recent"] is not None:
+            assert c["delta"] == round(c["recent"] - c["macro"], 1)
+    # per-club coaching covers driver (woods) and at least one iron
+    clubs = [c["club"] for c in co["by_club"]]
+    assert "Driver" in clubs and any("Iron" in c for c in clubs)
+
+
 def test_iqr_bounds_flags_outliers():
     lo, hi = g._iqr_bounds([10, 11, 12, 13, 14, 200])   # 200 is an outlier
     assert not (lo <= 200 <= hi)              # 200 is outside the fence

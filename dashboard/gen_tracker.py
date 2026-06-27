@@ -550,10 +550,12 @@ def compute(store: str) -> dict:
                 "ls_sd": round(statistics.pstdev(a), 1) if len(a) > 1 else 0,
                 "lr_sd": round(statistics.pstdev(b), 1) if len(b) > 1 else 0}
 
-    def _pattern(category, min_n=4):
+    def _pattern(category, min_n=4, rounds_set=None):
         pts, by = [], {}
         for s in shots:
             if (s.get("category_approx") or "") != category:
+                continue
+            if rounds_set is not None and s.get("round_id") not in rounds_set:
                 continue
             tgt = _green_for(s.get("round_id"), s.get("hole_id"))
             st = (_f(s.get("start_lat")), _f(s.get("start_lng")))
@@ -675,6 +677,136 @@ def compute(store: str) -> dict:
          "att": (cby.get("sand", {}) or {}).get("noOfSandSaveChances")},
     ]
 
+    # ================= COACHING ENGINE: macro vs recent + per club =============
+    rsorted = sorted(rounds, key=lambda r: r.get("date") or "")
+    n_recent = min(2, len(rsorted))
+    recent_ids = {r.get("round_id") for r in rsorted[-n_recent:]}
+    recent_rows = [r for r in rsorted[-n_recent:]]
+    recent_label = (f'{recent_rows[0].get("date")}'
+                    + (f' – {recent_rows[-1].get("date")}' if n_recent > 1 else '')
+                    ) if recent_rows else ""
+
+    def _avg(rows, key):
+        vals = [_f(r.get(key)) for r in rows if _f(r.get(key)) is not None]
+        return round(statistics.fmean(vals), 1) if vals else None
+
+    SGCATS = [("Off the tee", "sg_off_tee_arccos"), ("Approach", "sg_approach_arccos"),
+              ("Short game", "sg_short_arccos"), ("Putting", "sg_putting_arccos")]
+    sg_compare = []
+    for nm, key in SGCATS:
+        mac, rec = _avg(rsorted, key), _avg(recent_rows, key)
+        sg_compare.append({"cat": nm, "macro": mac, "recent": rec,
+                           "delta": round(rec - mac, 1) if (rec is not None and mac is not None) else None})
+
+    appr_recent = _pattern("approach", min_n=10 ** 9, rounds_set=recent_ids)["overall"]
+
+    def _fw_stats(rids):
+        hit = tot = le = ri = 0
+        for h in holes:
+            if (_i(h.get("par")) or 0) < 4:
+                continue
+            if rids is not None and h.get("round_id") not in rids:
+                continue
+            tot += 1
+            if _truthy(h.get("fairway_hit")):
+                hit += 1
+            elif _truthy(h.get("fw_miss_left")):
+                le += 1
+            elif _truthy(h.get("fw_miss_right")):
+                ri += 1
+        return {"fw": round(100 * hit / tot) if tot else None, "tot": tot}
+    fw_macro, fw_recent = _fw_stats(None), _fw_stats(recent_ids)
+
+    # ---- macro recommendations (persistent, ranked by leverage) ----
+    ov = patterns["approach"]["overall"]
+    drv = next((x for x in driving if x["club"] == "Driver"), None)
+    tp_total = sum(p["tp"] for p in putting_dist)
+    chip_ud = updown[0]
+    macro_recs = []
+    if levers:
+        macro_recs.append({
+            "tag": "Priority", "head": f"Your #1 leak is {levers[0]['name'].lower()} "
+            f"({_num(levers[0]['sg'],1,True)} SG/round)",
+            "body": "Short game + approach are ~75–80% of your strokes over par — that's "
+            "where practice time converts to scores, not the driver."})
+    if ov and ov["ls"] <= -4:
+        macro_recs.append({
+            "tag": "Approach", "head": f"Club up — you're a median {abs(ov['ls'])} yd short",
+            "body": "Take one more club, especially the long irons (5i / hybrid come up "
+            "~20–40 yd short). On-course you carry less than the range number."})
+    if chip_ud.get("att"):
+        macro_recs.append({
+            "tag": "Short game", "head": f"Greenside contact ({chip_ud['made']}/{chip_ud['att']} up-and-down)",
+            "body": "Chips finish short of the hole — a contact/technique fix (a lesson + a "
+            "low-spinning bump-and-run), not equipment. Goal: solid strike inside 15 ft."})
+    if tp_total:
+        macro_recs.append({
+            "tag": "Putting", "head": f"Lag from distance — all {tp_total} of your 3-putts are 30+ ft",
+            "body": "Not a stroke problem: it's long first putts from poor approach/chip "
+            "proximity. Drill lag (long putts to a 3-ft circle); 3-putts shrink as approaches improve."})
+    if drv and drv["left_pct"] - drv["right_pct"] >= 10:
+        macro_recs.append({
+            "tag": "Driving", "head": f"Play the hook off the tee ({drv['fw_pct']}% fairways)",
+            "body": f"You miss left {drv['left_pct']}% vs right {drv['right_pct']}%. Until the "
+            "face is fixed, aim down the right side and let it work back — and keep your "
+            "length, distance is your strength."})
+
+    # ---- recent form (last n rounds vs your baseline) ----
+    recent_items = []
+    sgc = [c for c in sg_compare if c["recent"] is not None]
+    sgc.sort(key=lambda c: c["recent"])
+    for c in sgc[:2]:
+        d = c["delta"]
+        trend = ("slipping vs baseline" if d is not None and d <= -1
+                 else "better than baseline" if d is not None and d >= 1
+                 else "in line with baseline")
+        recent_items.append({
+            "head": f"{c['cat']}: {_num(c['recent'],1,True)}/round lately ({trend})",
+            "body": f"baseline {_num(c['macro'],1,True)}"
+                    + (f", {_num(d,1,True)} vs macro" if d is not None else "")})
+    if appr_recent and ov and appr_recent["ls"] - ov["ls"] <= -4:
+        recent_items.append({
+            "head": "Approaches shorter than usual lately",
+            "body": f"median {abs(appr_recent['ls'])} yd short recently vs {abs(ov['ls'])} macro — "
+            "double-check your club selection in current conditions."})
+    if fw_recent["fw"] is not None and fw_macro["fw"] is not None and fw_recent["fw"] - fw_macro["fw"] <= -10:
+        recent_items.append({
+            "head": f"Driving accuracy dipped ({fw_recent['fw']}% fairways lately vs {fw_macro['fw']}%)",
+            "body": "recent tee-ball control off — favor a club you can find the short grass with."})
+
+    # ---- per-club coaching (macro/structural) ----
+    pat_bc = {c["club"]: c for c in patterns["approach"]["by_club"]}
+    drv_bc = {x["club"]: x for x in driving}
+    club_recs = []
+    for name, _t in target_bag:
+        dd, pc = drv_bc.get(name), pat_bc.get(name)
+        if dd and dd["chances"] >= 3:
+            le, ri, fw = dd["left_pct"], dd["right_pct"], dd["fw_pct"]
+            d_txt = (f"hooks left ({le}% L vs {ri}% R) — aim down the right side, play the draw"
+                     if le - ri >= 12 else
+                     f"leaks right ({ri}% R) — aim left / check the face" if ri - le >= 12 else
+                     f"two-way miss ({le}% L / {ri}% R) — pick one side and commit")
+            club_recs.append({"club": name, "rec": f"{fw}% fairways; {d_txt}.",
+                              "basis": f"{dd['chances']} tee shots"})
+        elif pc:
+            ls, lr = pc["ls"], pc["lr"]
+            dist = (f"take 1 more club (~{abs(ls)}y short)" if ls <= -8 else
+                    "favor more club (a touch short)" if ls <= -4 else
+                    f"can take 1 less (~{ls}y long)" if ls >= 8 else "distance dialed")
+            direc = (f"aim ~{abs(lr)}y right (pull-left)" if lr <= -8 else
+                     "starts a touch left" if lr <= -4 else
+                     f"aim ~{lr}y left (push-right)" if lr >= 8 else "on line")
+            club_recs.append({"club": name, "rec": f"{dist}; {direc}.",
+                              "basis": f"{pc['used']} approaches"})
+    if tp_total:
+        club_recs.append({"club": "Putter",
+                          "rec": "Lag drill — long putts to a 3-ft circle; nearly all "
+                          "3-putts come from 30+ ft.", "basis": "putting"})
+
+    coaching = {"macro": macro_recs, "recent_label": recent_label,
+                "recent": recent_items, "by_club": club_recs, "sg_compare": sg_compare}
+    # ===========================================================================
+
     # ---- per-round hole detail (for the full round-review pages) ----
     holes_by_round: dict[str, list[dict]] = {}
     for h in holes:
@@ -719,6 +851,7 @@ def compute(store: str) -> dict:
         "dispersion": disp_clubs,
         "patterns": patterns, "putting_dist": putting_dist, "updown": updown,
         "driving": driving, "pace": pace, "pace_avg18": pace_avg18,
+        "coaching": coaching,
         "aim": aim,
         "bands": band_rows,
         "trouble": trouble[:6],
@@ -1270,6 +1403,47 @@ def render_html(d: dict) -> str:
     plan_html = "".join(f"<li>{x}</li>" for x in plan)
     courses = ", ".join(_esc(c) for c in m["courses"]) or "—"
 
+    # ---- coaching: macro game plan + recent form + per-club ----
+    co = d["coaching"]
+    macro_cards = "".join(
+        f'<div class="rec"><span class="rec-tag">{_esc(m2["tag"])}</span>'
+        f'<div class="rec-head">{m2["head"]}</div>'
+        f'<div class="rec-body">{m2["body"]}</div></div>' for m2 in co["macro"]
+    ) or '<p class="note">Not enough data for recommendations yet.</p>'
+    recent_html = "".join(
+        f'<li><b>{it["head"]}</b><br><span class="note">{it["body"]}</span></li>'
+        for it in co["recent"]) or '<li class="note">Not enough recent rounds yet.</li>'
+
+    def _sgcell(v):
+        if v is None:
+            return '<td>—</td>'
+        cls = "pos" if v >= 0 else "neg"
+        return f'<td class="{cls}">{_num(v, 1, True)}</td>'
+    sgc_rows = "".join(
+        f'<tr><td>{_esc(c["cat"])}</td>{_sgcell(c["macro"])}{_sgcell(c["recent"])}'
+        f'{_sgcell(c["delta"])}</tr>' for c in co["sg_compare"])
+    club_rec_rows = "".join(
+        f'<tr><td>{_esc(c["club"])}</td><td>{c["rec"]}</td>'
+        f'<td class="note">{_esc(c["basis"])}</td></tr>' for c in co["by_club"])
+    coach_section = f"""
+<section><h2>Coaching</h2>
+<h3 class="sub">Macro game plan &mdash; your recurring fixes <span class="note">(all {m['n_rounds']} rounds)</span></h3>
+<div class="recs">{macro_cards}</div>
+<h3 class="sub">Right now &mdash; recent rounds {('('+co['recent_label']+')') if co['recent_label'] else ''} vs your baseline</h3>
+<div class="grid2">
+<ul class="recent">{recent_html}</ul>
+<table class="sgc"><thead><tr><th>Strokes gained</th><th>Macro</th><th>Recent</th><th>&Delta;</th></tr></thead>
+<tbody>{sgc_rows}</tbody></table>
+</div>
+<h3 class="sub">By club &mdash; what to try <span class="note">(structural; 4 rounds in, treat as directional)</span></h3>
+<table><thead><tr><th>Club</th><th>Try this</th><th>basis</th></tr></thead>
+<tbody>{club_rec_rows}</tbody></table>
+<p class="note"><b>Macro</b> = recurring tendencies across every round (the structural
+fixes that don't move week to week). <b>Recent</b> = your last 2 rounds vs your own
+baseline &mdash; what's hot or cold right now, so you don't over-react to one bad
+session or chase a hot streak. Negative SG = strokes lost to a scratch baseline; less
+negative is better.</p></section>"""
+
     return f"""<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1297,6 +1471,20 @@ th,td{{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}}
 th{{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}}
 td b{{color:var(--accent)}}
 .note{{color:var(--mut);font-size:12.5px;margin:10px 0 0}}
+h3.sub{{font-size:13.5px;color:var(--ink);margin:18px 0 8px;font-weight:600}}
+h3.sub .note{{display:inline;font-weight:400}}
+.recs{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
+@media(max-width:640px){{.recs,.grid2{{grid-template-columns:1fr}}}}
+.rec{{background:#0f131a;border:1px solid var(--line);border-left:3px solid var(--accent);
+border-radius:8px;padding:11px 12px}}
+.rec-tag{{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);
+font-weight:700}}
+.rec-head{{font-weight:600;margin:3px 0 4px;font-size:14px}}
+.rec-body{{color:var(--mut);font-size:12.5px;line-height:1.45}}
+.grid2{{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;align-items:start}}
+ul.recent{{margin:0;padding-left:18px}} ul.recent li{{margin:0 0 9px}}
+table.sgc td.pos{{color:var(--good)}} table.sgc td.neg{{color:var(--bad)}}
+td.pos{{color:var(--good)}} td.neg{{color:var(--bad)}}
 .hold,.lc{{font-size:10px;padding:1px 5px;border-radius:6px;background:#3a2c12;color:#f3c969}}
 .lc{{background:#3a1f1f;color:#f3a0a0}}
 .rng{{font-size:10px;color:var(--mut)}}
@@ -1341,11 +1529,10 @@ generated {_esc(m['generated_at'])}</div>
 </header>
 <main>
 
-<section><h2>Game plan</h2><ul>{plan_html}</ul>
+<section><h2>Key numbers</h2><div class="kpis">{kpi_html}</div>
 <p class="note">Targets for PGA Frisco (Oct 21–24, 2026). All strokes-gained is
 Arccos, measured vs scratch — large negatives are normal for a mid-handicap.</p></section>
-
-<section><h2>Key numbers</h2><div class="kpis">{kpi_html}</div></section>
+{coach_section}
 
 <section><h2>Rounds — full reviews</h2>
 <p class="note">Click any round to open its full review: satellite shot map,

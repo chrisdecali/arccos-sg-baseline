@@ -25,6 +25,20 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
 th{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
 td b{color:var(--accent)}
 .note{color:var(--mut);font-size:12.5px;margin:10px 0 0}
+h3.sub{font-size:13.5px;color:var(--ink);margin:18px 0 8px;font-weight:600}
+h3.sub .note{display:inline;font-weight:400}
+.recs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:640px){.recs,.grid2{grid-template-columns:1fr}}
+.rec{background:#0f131a;border:1px solid var(--line);border-left:3px solid var(--accent);
+border-radius:8px;padding:11px 12px}
+.rec-tag{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);
+font-weight:700}
+.rec-head{font-weight:600;margin:3px 0 4px;font-size:14px}
+.rec-body{color:var(--mut);font-size:12.5px;line-height:1.45}
+.grid2{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;align-items:start}
+ul.recent{margin:0;padding-left:18px} ul.recent li{margin:0 0 9px}
+table.sgc td.pos{color:var(--good)} table.sgc td.neg{color:var(--bad)}
+td.pos{color:var(--good)} td.neg{color:var(--bad)}
 .hold,.lc{font-size:10px;padding:1px 5px;border-radius:6px;background:#3a2c12;color:#f3c969}
 .lc{background:#3a1f1f;color:#f3a0a0}
 .rng{font-size:10px;color:var(--mut)}
@@ -69,11 +83,27 @@ generated 2026-06-15T12:00:13Z</div>
 </header>
 <main>
 
-<section><h2>Game plan</h2><ul><li>Biggest leak is <b>approach</b> (-10.9 SG/round vs scratch). Short game (greenside contact) and approach are ~75–80% of strokes over par — spend practice there, not on equipment.</li><li>Greenside <b>contact</b> first: chip-save rate is 0% and sand-save 0%. Goal is solid contact finishing inside ~15 ft, not holing it.</li><li>Driving distance is the strength — keep it. Confirm any aim change on a launch monitor before trusting it on the course.</li></ul>
+<section><h2>Key numbers</h2><div class="kpis"><div class="kpi"><div class="kpi-v">14.1</div><div class="kpi-l">WHS Index</div><div class="kpi-s">official, vs USGA</div></div><div class="kpi"><div class="kpi-v">28.6%</div><div class="kpi-l">GIR</div><div class="kpi-s">greens in regulation</div></div><div class="kpi"><div class="kpi-v">42.9%</div><div class="kpi-l">Fairways</div><div class="kpi-s">off the tee</div></div><div class="kpi"><div class="kpi-v">33.2</div><div class="kpi-l">Putts / round</div><div class="kpi-s">lower is better</div></div><div class="kpi"><div class="kpi-v">17.5%</div><div class="kpi-l">3-putt %</div><div class="kpi-s">lower is better</div></div><div class="kpi"><div class="kpi-v">0.0%</div><div class="kpi-l">Chip save %</div><div class="kpi-s">up & down after a chip</div></div><div class="kpi"><div class="kpi-v">0.0%</div><div class="kpi-l">Sand save %</div><div class="kpi-s">up & down from sand</div></div><div class="kpi"><div class="kpi-v">11.4%</div><div class="kpi-l">Chip error %</div><div class="kpi-s">chunked / bladed</div></div></div>
 <p class="note">Targets for PGA Frisco (Oct 21–24, 2026). All strokes-gained is
 Arccos, measured vs scratch — large negatives are normal for a mid-handicap.</p></section>
 
-<section><h2>Key numbers</h2><div class="kpis"><div class="kpi"><div class="kpi-v">14.1</div><div class="kpi-l">WHS Index</div><div class="kpi-s">official, vs USGA</div></div><div class="kpi"><div class="kpi-v">28.6%</div><div class="kpi-l">GIR</div><div class="kpi-s">greens in regulation</div></div><div class="kpi"><div class="kpi-v">42.9%</div><div class="kpi-l">Fairways</div><div class="kpi-s">off the tee</div></div><div class="kpi"><div class="kpi-v">33.2</div><div class="kpi-l">Putts / round</div><div class="kpi-s">lower is better</div></div><div class="kpi"><div class="kpi-v">17.5%</div><div class="kpi-l">3-putt %</div><div class="kpi-s">lower is better</div></div><div class="kpi"><div class="kpi-v">0.0%</div><div class="kpi-l">Chip save %</div><div class="kpi-s">up & down after a chip</div></div><div class="kpi"><div class="kpi-v">0.0%</div><div class="kpi-l">Sand save %</div><div class="kpi-s">up & down from sand</div></div><div class="kpi"><div class="kpi-v">11.4%</div><div class="kpi-l">Chip error %</div><div class="kpi-s">chunked / bladed</div></div></div></section>
+<section><h2>Coaching</h2>
+<h3 class="sub">Macro game plan &mdash; your recurring fixes <span class="note">(all 4 rounds)</span></h3>
+<div class="recs"><div class="rec"><span class="rec-tag">Priority</span><div class="rec-head">Your #1 leak is approach (-10.9 SG/round)</div><div class="rec-body">Short game + approach are ~75–80% of your strokes over par — that's where practice time converts to scores, not the driver.</div></div><div class="rec"><span class="rec-tag">Approach</span><div class="rec-head">Club up — you're a median 4.9 yd short</div><div class="rec-body">Take one more club, especially the long irons (5i / hybrid come up ~20–40 yd short). On-course you carry less than the range number.</div></div><div class="rec"><span class="rec-tag">Short game</span><div class="rec-head">Greenside contact (0/28 up-and-down)</div><div class="rec-body">Chips finish short of the hole — a contact/technique fix (a lesson + a low-spinning bump-and-run), not equipment. Goal: solid strike inside 15 ft.</div></div><div class="rec"><span class="rec-tag">Putting</span><div class="rec-head">Lag from distance — all 11 of your 3-putts are 30+ ft</div><div class="rec-body">Not a stroke problem: it's long first putts from poor approach/chip proximity. Drill lag (long putts to a 3-ft circle); 3-putts shrink as approaches improve.</div></div><div class="rec"><span class="rec-tag">Driving</span><div class="rec-head">Play the hook off the tee (41% fairways)</div><div class="rec-body">You miss left 37% vs right 22%. Until the face is fixed, aim down the right side and let it work back — and keep your length, distance is your strength.</div></div></div>
+<h3 class="sub">Right now &mdash; recent rounds (2026-06-19 – 2026-06-26) vs your baseline</h3>
+<div class="grid2">
+<ul class="recent"><li><b>Approach: -6.2/round lately (better than baseline)</b><br><span class="note">baseline -9.2, +3.0 vs macro</span></li><li><b>Putting: -4.5/round lately (slipping vs baseline)</b><br><span class="note">baseline -3.4, -1.1 vs macro</span></li></ul>
+<table class="sgc"><thead><tr><th>Strokes gained</th><th>Macro</th><th>Recent</th><th>&Delta;</th></tr></thead>
+<tbody><tr><td>Off the tee</td><td class="neg">-3.1</td><td class="neg">-1.9</td><td class="pos">+1.2</td></tr><tr><td>Approach</td><td class="neg">-9.2</td><td class="neg">-6.2</td><td class="pos">+3.0</td></tr><tr><td>Short game</td><td class="neg">-1.8</td><td class="neg">-0.3</td><td class="pos">+1.5</td></tr><tr><td>Putting</td><td class="neg">-3.4</td><td class="neg">-4.5</td><td class="neg">-1.1</td></tr></tbody></table>
+</div>
+<h3 class="sub">By club &mdash; what to try <span class="note">(structural; 4 rounds in, treat as directional)</span></h3>
+<table><thead><tr><th>Club</th><th>Try this</th><th>basis</th></tr></thead>
+<tbody><tr><td>Driver</td><td>41% fairways; hooks left (37% L vs 22% R) — aim down the right side, play the draw.</td><td class="note">46 tee shots</td></tr><tr><td>3 Wood</td><td>67% fairways; hooks left (33% L vs 0% R) — aim down the right side, play the draw.</td><td class="note">3 tee shots</td></tr><tr><td>Hybrid</td><td>take 1 more club (~41.3y short); on line.</td><td class="note">4 approaches</td></tr><tr><td>5 Iron</td><td>take 1 more club (~22.5y short); aim ~11.4y right (pull-left).</td><td class="note">12 approaches</td></tr><tr><td>6 Iron</td><td>take 1 more club (~25.6y short); aim ~23.1y right (pull-left).</td><td class="note">4 approaches</td></tr><tr><td>7 Iron</td><td>distance dialed; aim ~23.9y right (pull-left).</td><td class="note">9 approaches</td></tr><tr><td>8 Iron</td><td>distance dialed; on line.</td><td class="note">4 approaches</td></tr><tr><td>9 Iron</td><td>distance dialed; aim ~13.9y right (pull-left).</td><td class="note">3 approaches</td></tr><tr><td>Pitching Wedge</td><td>distance dialed; starts a touch left.</td><td class="note">13 approaches</td></tr><tr><td>50 Wedge</td><td>distance dialed; on line.</td><td class="note">7 approaches</td></tr><tr><td>56 Wedge</td><td>favor more club (a touch short); on line.</td><td class="note">17 approaches</td></tr><tr><td>60 Wedge</td><td>take 1 more club (~8.6y short); on line.</td><td class="note">15 approaches</td></tr><tr><td>Putter</td><td>Lag drill — long putts to a 3-ft circle; nearly all 3-putts come from 30+ ft.</td><td class="note">putting</td></tr></tbody></table>
+<p class="note"><b>Macro</b> = recurring tendencies across every round (the structural
+fixes that don't move week to week). <b>Recent</b> = your last 2 rounds vs your own
+baseline &mdash; what's hot or cold right now, so you don't over-react to one bad
+session or chase a hot streak. Negative SG = strokes lost to a scratch baseline; less
+negative is better.</p></section>
 
 <section><h2>Rounds — full reviews</h2>
 <p class="note">Click any round to open its full review: satellite shot map,
