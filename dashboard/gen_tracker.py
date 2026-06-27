@@ -269,6 +269,16 @@ def _iqr_filter(vals):
     return [v for v in vals if lo <= v <= hi]
 
 
+def _iqr_bounds(vals):
+    """1.5*IQR fences for `vals` — for dropping clear outliers from 2D miss data."""
+    vals = [v for v in vals if v is not None]
+    if len(vals) < 4:
+        return (-1e9, 1e9)
+    q = statistics.quantiles(vals, n=4, method="inclusive")
+    iqr = q[2] - q[0]
+    return (q[0] - 1.5 * iqr, q[2] + 1.5 * iqr)
+
+
 # --------------------------------------------------------------------- compute
 def compute(store: str) -> dict:
     rounds = _read_csv(os.path.join(store, "rounds_summary.csv"))
@@ -525,10 +535,18 @@ def compute(store: str) -> dict:
     bag_ord = {n: i for i, (n, _t) in enumerate(target_bag)}
 
     def _agg(ms):
-        a = [x[0] for x in ms]
-        b = [x[1] for x in ms]
-        return {"n": len(ms),
-                "ls": round(statistics.fmean(a), 1), "lr": round(statistics.fmean(b), 1),
+        # Drop clear outliers (chunks/blades/shanks/GPS glitches) via 1.5*IQR on each
+        # axis, then report the MEDIAN (middle of the distribution, robust) — same
+        # spirit as the distance/dispersion cleaning elsewhere.
+        if not ms:
+            return None
+        alo, ahi = _iqr_bounds([x[0] for x in ms])
+        blo, bhi = _iqr_bounds([x[1] for x in ms])
+        kept = [(x, y) for x, y in ms if alo <= x <= ahi and blo <= y <= bhi] or ms
+        a = [p[0] for p in kept]
+        b = [p[1] for p in kept]
+        return {"n": len(ms), "used": len(kept), "dropped": len(ms) - len(kept),
+                "ls": round(statistics.median(a), 1), "lr": round(statistics.median(b), 1),
                 "ls_sd": round(statistics.pstdev(a), 1) if len(a) > 1 else 0,
                 "lr_sd": round(statistics.pstdev(b), 1) if len(b) > 1 else 0}
 
@@ -962,7 +980,7 @@ def _svg_pattern(pts, overall, title, by_club=None, pid="pat") -> str:
         mx, my = X(lr), Y(ls)
         return (f'<g class="{klass}"{style}><circle cx="{mx:.1f}" cy="{my:.1f}" r="7" '
                 f'fill="none" stroke="#fff" stroke-width="2"/>'
-                f'<text x="{mx+10:.1f}" y="{my+3:.1f}" font-size="9" fill="#fff">avg</text></g>')
+                f'<text x="{mx+10:.1f}" y="{my+3:.1f}" font-size="9" fill="#fff">median</text></g>')
 
     # overall avg (shown by default) + a hidden avg per club (shown when filtered)
     if overall:
@@ -1175,7 +1193,8 @@ def render_html(d: dict) -> str:
     ch_opts = "".join(f'<option value="{_cid(c["club"])}">{_esc(c["club"])}</option>'
                       for c in sp["by_club"])
     ov = ap["overall"]
-    ap_summary = (f'Across {ov["n"]} approaches you finish on average '
+    ap_summary = (f'Across {ov["used"]} approaches (after dropping {ov["dropped"]} '
+                  f'outliers) your <b>typical</b> finish (median) is '
                   f'<b>{abs(ov["ls"]):.0f} yd {"short" if ov["ls"] < 0 else "long"}</b> and '
                   f'<b>{abs(ov["lr"]):.0f} yd {"left" if ov["lr"] < 0 else "right"}</b> '
                   f'of green center.') if ov else "Not enough geo-tagged approaches yet."
@@ -1338,7 +1357,9 @@ finishes. Fix the chunk first.</p></section>
 <section><h2>Shot patterns — where your ball finishes</h2>
 <p class="note">{ap_summary} Target = <b>green center</b> (centroid of each hole's pins —
 sharpens as you log rounds), since you aim at the middle, not the flag. Up = long,
-down = short; left/right as you'd expect. The white ring is your <b>average miss</b>.</p>
+down = short; left/right as you'd expect. Clear outliers (chunks/blades/shanks) are
+dropped via IQR and the white ring is your <b>median (typical) miss</b> — not the
+mean, so a few bad swings don't skew it.</p>
 <div style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center">
 <div><div style="text-align:center;margin-bottom:6px"><span class="note">Approaches —
 filter by club: </span><select class="clubsel" onchange="filterPat('ap',this.value)">
@@ -1350,9 +1371,10 @@ filter by club: </span><select class="clubsel" onchange="filterPat('ch',this.val
 <h3 style="font-size:14px;color:var(--mut);margin:14px 0 6px">Approach miss by club</h3>
 <table><thead><tr><th>Club</th><th>n</th><th>Short / long</th><th>Left / right</th>
 <th>±SD (l-s/l-r)</th><th>Tendency</th></tr></thead><tbody>{ap_rows or '<tr><td colspan=6>—</td></tr>'}</tbody></table>
-<p class="note">Distance-control reality: the avg short/long here is what your club
-<i>actually</i> does on course — e.g. long irons coming up well short means take more
-club. 4 rounds in, treat low-n clubs as directional.</p></section>
+<p class="note">Distance-control reality: the <b>median</b> short/long here (clear
+mishits excluded) is what your club <i>typically</i> does on course — e.g. long irons
+coming up well short means take more club. 4 rounds in, treat low-n clubs as
+directional.</p></section>
 
 <section><h2>Putting &amp; up-and-down</h2>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="twocol">

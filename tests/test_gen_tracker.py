@@ -113,9 +113,17 @@ def test_shot_patterns_present():
     d = _compute()
     ap = d["patterns"]["approach"]
     assert ap["overall"] and ap["overall"]["n"] > 0
-    # every club row has both miss axes
+    # every club row has both miss axes + outlier-exclusion bookkeeping
     for c in ap["by_club"]:
         assert "ls" in c and "lr" in c and c["n"] >= 4
+        assert c["used"] <= c["n"]            # some shots may be dropped as outliers
+
+
+def test_iqr_bounds_flags_outliers():
+    lo, hi = g._iqr_bounds([10, 11, 12, 13, 14, 200])   # 200 is an outlier
+    assert not (lo <= 200 <= hi)              # 200 is outside the fence
+    assert lo <= 12 <= hi                     # the body is inside
+    assert g._iqr_bounds([1, 2]) == (-1e9, 1e9)   # too few -> no filtering
 
 
 def test_recency_weight_decays():
