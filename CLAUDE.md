@@ -187,7 +187,8 @@ this repo. Only the optional PDF uses the golf-reports render layer.
 
 ## Player context (calibrate recs to this)
 
-* Official GHIN index **14.1** (use the official number; realistic true level 14–17).
+* Official GHIN index **13.6** (as of 2026-06-27, down from 14.1; always read the live
+  number from `ghin_profile.json`, don't hardcode — realistic true level ~13–16).
   Plays Augusta Pines blue (6,446 / 71.4/125); practices at WindRose; Frisco
   Oct 21–24, 2026.
 * **Strength:** driving distance. Driver **total ~270**, **carry ~265** (plays wet, so
