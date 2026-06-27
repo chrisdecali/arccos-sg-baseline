@@ -96,6 +96,11 @@ def _round5(x):
     return None if x is None else int(round(x / 5.0) * 5)
 
 
+def _cid(name):
+    """Alphanumeric id for a club, safe as an HTML class/value suffix."""
+    return "".join(c for c in str(name or "") if c.isalnum()) or "x"
+
+
 # ----------------------------------------------------------------------- WHS
 # Number of posted scores -> (how many lowest differentials count, adjustment).
 # This is the USGA WHS allotment for fewer than 20 scores. The index is the mean
@@ -411,7 +416,6 @@ def compute(store: str) -> dict:
         pin_of[(h.get("round_id"), h.get("hole_id"))] = (
             _f(h.get("pin_lat")), _f(h.get("pin_lng")))
     lat_by_club: dict[str, list[float]] = {}    # all shots — for dispersion spread
-    lat_aim: dict[str, list[float]] = {}        # non-tee only — for aim bias
     for s in shots:
         if _truthy(s.get("is_putt")):
             continue
@@ -425,10 +429,6 @@ def compute(store: str) -> dict:
             pin if pin and all(pin) else (None, None))
         if off is not None and abs(off) < 80:  # drop wild geo glitches
             lat_by_club.setdefault(club, []).append(off)
-            # Off the tee you aim at the fairway/dogleg, not the pin — so the offset
-            # to the pin line isn't "aim bias". Only non-tee shots inform aim.
-            if not _truthy(s.get("is_tee")):
-                lat_aim.setdefault(club, []).append(off)
 
     # ---- dispersion explorer (recency-weighted best-third, MC; wet-aware carry) ----
     bag_order = {name: i for i, (name, _t) in enumerate(target_bag)}
@@ -460,24 +460,9 @@ def compute(store: str) -> dict:
         })
     disp_clubs.sort(key=lambda d: bag_order.get(d["club"], 99))   # natural club order
 
-    # ---- aim-by-club (signed lateral bias to the pin line) ----
+    # aim-by-club is derived from APPROACH shots only (vs green center) — see the
+    # `patterns` block below; building it here as a placeholder for ordering.
     aim = []
-    for name, _t in target_bag:
-        offs = _iqr_filter(lat_aim.get(name, []))
-        if len(offs) < 3:
-            continue
-        bias = statistics.fmean(offs)
-        nb = len(offs)
-        if nb < 6:
-            rec = "need more data"          # don't recommend an aim change off <6
-        elif abs(bias) >= 5:
-            rec = "aim %s" % ("left" if bias > 0 else "right")
-        else:
-            rec = "on line"
-        aim.append({
-            "club": name, "bias": round(bias, 1), "n": nb,
-            "side": "right" if bias > 0 else "left", "rec": rec,
-        })
 
     # ---- sga bands (approach / putting / short detail + goals) ----
     band_rows = {}
@@ -577,6 +562,39 @@ def compute(store: str) -> dict:
 
     patterns = {"approach": _pattern("approach"), "short": _pattern("short_game", 3)}
 
+    # ---- aim-by-club: from APPROACH shots only (aimed at green center) ----
+    # Red-team fix: blending tee/layup shots (aimed down the fairway) faked right
+    # misses on clubs the player only hooks. Approach-only is the clean signal.
+    for c in patterns["approach"]["by_club"]:
+        bias, nb = c["lr"], c["n"]
+        if nb < 6:
+            rec = "need more data"
+        elif abs(bias) >= 5:
+            rec = "aim %s" % ("left" if bias > 0 else "right")
+        else:
+            rec = "on line"
+        aim.append({"club": c["club"], "bias": bias, "n": nb,
+                    "side": "right" if bias > 0 else "left", "rec": rec})
+
+    # ---- pace of play (round duration) ----
+    def _dur_min(s):
+        try:
+            parts = [int(x) for x in str(s).split(":")]
+            return parts[0] * 60 + parts[1] + (parts[2] / 60 if len(parts) > 2 else 0)
+        except (ValueError, TypeError, IndexError):
+            return None
+    pace = []
+    for r in rounds:
+        mins = _dur_min(r.get("pace_of_play"))
+        hl = _i(r.get("holes")) or 18
+        if mins:
+            per18 = mins / hl * 18
+            pace.append({"date": r.get("date"), "course": r.get("course"),
+                         "holes": hl, "minutes": round(mins),
+                         "per18_min": round(per18)})
+    pace.sort(key=lambda x: x["date"] or "")
+    pace_avg18 = round(statistics.fmean([p["per18_min"] for p in pace])) if pace else None
+
     # ---- putting: one-putt % + 3-putts by first-putt distance band ----
     PB = [("0-3 ft", 0, 1), ("3-6 ft", 1, 2), ("6-10 ft", 2, 10 / 3),
           ("10-20 ft", 10 / 3, 20 / 3), ("20-30 ft", 20 / 3, 10), ("30+ ft", 10, 1e9)]
@@ -653,6 +671,7 @@ def compute(store: str) -> dict:
         "bag_specs": [bag_specs[c] for c, _t in target_bag if c in bag_specs],
         "dispersion": disp_clubs,
         "patterns": patterns, "putting_dist": putting_dist, "updown": updown,
+        "pace": pace, "pace_avg18": pace_avg18,
         "aim": aim,
         "bands": band_rows,
         "trouble": trouble[:6],
@@ -891,9 +910,11 @@ def _svg_dispersion(disp_clubs) -> str:
     return "".join(p)
 
 
-def _svg_pattern(pts, overall, title) -> str:
+def _svg_pattern(pts, overall, title, by_club=None, pid="pat") -> str:
     """Green-relative shot scatter: target (green center) at origin, each dot a shot's
-    finish — up=long, down=short, left/right = left/right. Pure stdlib SVG."""
+    finish — up=long, down=short, left/right = left/right. Dots are class-tagged by
+    club ({pid}-dot-{clubid}) and each club's average-miss marker is rendered hidden,
+    so a dropdown can filter to one club. Pure stdlib SVG."""
     if not pts:
         return ""
     catcol = {"Driver": "#e53935", "Wood": "#fb8c00", "Hybrid": "#fdd835",
@@ -929,18 +950,26 @@ def _svg_pattern(pts, overall, title) -> str:
                            ("right", cx + R + 4, cy - 4, "start")]:
         p.append(f'<text x="{x:.0f}" y="{y:.0f}" font-size="9" fill="#9aa0aa" '
                  f'text-anchor="{anc}">{txt}</text>')
-    # shots
+    # shots (class-tagged by club for the dropdown filter)
     for pt in pts:
-        p.append(f'<circle cx="{X(pt["lr"]):.1f}" cy="{Y(pt["ls"]):.1f}" r="3" '
+        p.append(f'<circle class="{pid}-dot {pid}-dot-{_cid(pt["club"])}" '
+                 f'cx="{X(pt["lr"]):.1f}" cy="{Y(pt["ls"]):.1f}" r="3" '
                  f'fill="{catcol.get(pt["cat"], "#888")}" opacity="0.8"/>')
-    # green-center target + average-miss marker
+    # green-center target
     p.append(f'<circle cx="{cx}" cy="{cy}" r="4" fill="#fff"/>')
+
+    def _avg_marker(lr, ls, klass, style=""):
+        mx, my = X(lr), Y(ls)
+        return (f'<g class="{klass}"{style}><circle cx="{mx:.1f}" cy="{my:.1f}" r="7" '
+                f'fill="none" stroke="#fff" stroke-width="2"/>'
+                f'<text x="{mx+10:.1f}" y="{my+3:.1f}" font-size="9" fill="#fff">avg</text></g>')
+
+    # overall avg (shown by default) + a hidden avg per club (shown when filtered)
     if overall:
-        mx, my = X(overall["lr"]), Y(overall["ls"])
-        p.append(f'<circle cx="{mx:.1f}" cy="{my:.1f}" r="7" fill="none" '
-                 f'stroke="#fff" stroke-width="2"/>')
-        p.append(f'<text x="{mx+10:.1f}" y="{my+3:.1f}" font-size="9" '
-                 f'fill="#fff">avg miss</text>')
+        p.append(_avg_marker(overall["lr"], overall["ls"], f'{pid}-avg {pid}-avg-all'))
+    for c in (by_club or []):
+        klass = f'{pid}-avg {pid}-avg-{_cid(c["club"])}'
+        p.append(_avg_marker(c["lr"], c["ls"], klass, ' style="display:none"'))
     p.append("</svg>")
     return "".join(p)
 
@@ -1039,9 +1068,10 @@ def render_html(d: dict) -> str:
             '<table><thead><tr><th>Club</th><th>Bias to pin line</th>'
             '<th>n</th><th>Suggestion</th></tr></thead><tbody>'
             f'{aim_rows}</tbody></table>'
-            '<p class="note">Bias measured to the pin line — on doglegs you aim at '
-            'the bend, not the flag, so treat those as noise. Confirm push-vs-aim on '
-            'a launch monitor; never aim into a hazard.</p>')
+            '<p class="note">Measured on <b>approach shots only</b> (aimed at green '
+            'center) — tee/layup shots are excluded so a straight shot down a dogleg '
+            'no longer fakes a miss. Confirm push-vs-aim on a launch monitor; never '
+            'aim into a hazard.</p>')
     else:
         aim_block = ('<p class="note">Not enough geo-tagged shots yet to measure aim '
                      'bias (need ≥3 clean shots per club). Fills in as rounds post.</p>')
@@ -1129,7 +1159,10 @@ def render_html(d: dict) -> str:
         return " · ".join(a) or "on target"
 
     ap = d["patterns"]["approach"]
-    ap_svg = _svg_pattern(ap["points"], ap["overall"], "Approach finish vs green center")
+    ap_svg = _svg_pattern(ap["points"], ap["overall"], "Approach finish vs green center",
+                          ap["by_club"], "ap")
+    ap_opts = "".join(f'<option value="{_cid(c["club"])}">{_esc(c["club"])}</option>'
+                      for c in ap["by_club"])
     ap_rows = "".join(
         f'<tr><td>{_esc(c["club"])}</td><td>{c["n"]}</td>'
         f'<td>{abs(c["ls"]):.0f} yd {"short" if c["ls"] < 0 else "long"}</td>'
@@ -1137,7 +1170,10 @@ def render_html(d: dict) -> str:
         f'<td>±{c["ls_sd"]:.0f}/{c["lr_sd"]:.0f}</td><td>{_tend(c["ls"],c["lr"])}</td></tr>'
         for c in ap["by_club"])
     sp = d["patterns"]["short"]
-    chip_svg = _svg_pattern(sp["points"], sp["overall"], "Chip finish vs green center")
+    chip_svg = _svg_pattern(sp["points"], sp["overall"], "Chip finish vs green center",
+                            sp["by_club"], "ch")
+    ch_opts = "".join(f'<option value="{_cid(c["club"])}">{_esc(c["club"])}</option>'
+                      for c in sp["by_club"])
     ov = ap["overall"]
     ap_summary = (f'Across {ov["n"]} approaches you finish on average '
                   f'<b>{abs(ov["ls"]):.0f} yd {"short" if ov["ls"] < 0 else "long"}</b> and '
@@ -1152,6 +1188,16 @@ def render_html(d: dict) -> str:
         f'<tr><td>{_esc(u["lie"])}</td><td>{u["made"]}/{u["att"]}'
         f'{" ("+str(round(100*u["made"]/u["att"]))+"%)" if u["att"] else ""}</td></tr>'
         for u in d["updown"] if u["att"] is not None)
+
+    # ---- pace of play ----
+    def _hm(mins):
+        return f'{mins // 60}h {mins % 60:02d}m'
+    pace_rows = "".join(
+        f'<tr><td>{_esc(p["date"])}</td><td>{_esc(p["course"])}</td><td>{p["holes"]}</td>'
+        f'<td>{_hm(p["minutes"])}</td><td>{_hm(p["per18_min"])}</td></tr>'
+        for p in reversed(d["pace"]))
+    pace_avg = d["pace_avg18"]
+    pace_txt = _hm(pace_avg) if pace_avg else "—"
 
     plan_html = "".join(f"<li>{x}</li>" for x in plan)
     courses = ", ".join(_esc(c) for c in m["courses"]) or "—"
@@ -1294,8 +1340,12 @@ finishes. Fix the chunk first.</p></section>
 sharpens as you log rounds), since you aim at the middle, not the flag. Up = long,
 down = short; left/right as you'd expect. The white ring is your <b>average miss</b>.</p>
 <div style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center">
-<div>{ap_svg}<div class="note" style="text-align:center">Approaches</div></div>
-<div>{chip_svg}<div class="note" style="text-align:center">Chips</div></div>
+<div><div style="text-align:center;margin-bottom:6px"><span class="note">Approaches —
+filter by club: </span><select class="clubsel" onchange="filterPat('ap',this.value)">
+<option value="all">All clubs</option>{ap_opts}</select></div>{ap_svg}</div>
+<div><div style="text-align:center;margin-bottom:6px"><span class="note">Chips —
+filter by club: </span><select class="clubsel" onchange="filterPat('ch',this.value)">
+<option value="all">All clubs</option>{ch_opts}</select></div>{chip_svg}</div>
 </div>
 <h3 style="font-size:14px;color:var(--mut);margin:14px 0 6px">Approach miss by club</h3>
 <table><thead><tr><th>Club</th><th>n</th><th>Short / long</th><th>Left / right</th>
@@ -1315,6 +1365,13 @@ club. 4 rounds in, treat low-n clubs as directional.</p></section>
 </div>
 <p class="note">Where your 3-putts come from (almost always long range → it's a lag /
 approach-proximity problem, not a stroke problem) and your greenside save rate by lie.</p></section>
+
+<section><h2>Pace of play</h2>
+<table><thead><tr><th>Date</th><th>Course</th><th>Holes</th><th>Round time</th>
+<th>Pace / 18</th></tr></thead><tbody>{pace_rows or '<tr><td colspan=5>—</td></tr>'}</tbody></table>
+<p class="note">Your rounds average <b>{pace_txt} per 18 holes</b> (from Arccos round
+timestamps). For reference: a brisk pace is ~4h00m, ~4h30m is slow, and <b>5h+ is a
+grind</b>. Empirical backing for the pace-of-play conversation at WindRose.</p></section>
 
 <section><h2>Measured distances &amp; dispersion</h2>
 {disp_svg}
@@ -1404,6 +1461,14 @@ document.querySelectorAll('#disp-tabs button').forEach(function(b){{
   document.querySelectorAll('#disp-body tr').forEach(function(tr){{
    tr.style.display=(g==='all'||tr.dataset.group===g)?'':'none';}});
  }};}});
+
+// ---- shot-pattern per-club filter (pid = 'ap' approach / 'ch' chips) ----
+function filterPat(pid, v){{
+ document.querySelectorAll('.'+pid+'-dot').forEach(function(e){{
+  e.style.display=(v==='all'||e.classList.contains(pid+'-dot-'+v))?'':'none';}});
+ document.querySelectorAll('.'+pid+'-avg').forEach(function(e){{e.style.display='none';}});
+ var a=document.querySelector('.'+pid+'-avg-'+v); if(a) a.style.display='';
+}}
 
 // ---- round map (Esri satellite) ----
 var ROUNDS={map_json};
