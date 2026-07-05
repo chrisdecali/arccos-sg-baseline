@@ -47,7 +47,11 @@ import urllib.request
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from weather import fetch_round_weather
+try:
+    from weather import fetch_round_weather
+except ImportError:  # weather.py is an optional local-only enrichment module
+    def fetch_round_weather(*_args, **_kwargs) -> dict:
+        return {}
 
 # ---------------------------------------------------------------------------
 # Paths / config
