@@ -454,8 +454,25 @@ def discover(token: str, ghin: str) -> None:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--discover", action="store_true", help="Dump raw JSON structure, no parsing.")
+    # Optional path overrides (defaults unchanged when flags absent). --golfer-id fetches
+    # a different golfer under the same session (creds file supplies the auth token only).
+    p.add_argument("--creds", type=str, default=None,
+                   help="Path to GHIN creds JSON (default: ~/.ghin_creds.json).")
+    p.add_argument("--out", type=str, default=None,
+                   help="Output directory (default: ./arccos_out, or this script's dir).")
+    p.add_argument("--golfer-id", type=str, default=None, dest="golfer_id",
+                   help="Override the GHIN golfer id to fetch (default: creds file's ghin_id).")
     args = p.parse_args()
+
+    global CREDS_PATH, OUT_DIR, CACHE
+    if args.creds:
+        CREDS_PATH = os.path.expanduser(args.creds)
+    if args.out:
+        OUT_DIR = os.path.abspath(args.out)
+        CACHE = os.path.join(OUT_DIR, "_cache_ghin")
     token, ghin = load_creds()
+    if args.golfer_id:
+        ghin = str(args.golfer_id)
     if args.discover:
         discover(token, ghin)
         return

@@ -1358,11 +1358,24 @@ def main():
                    help="One-time email/password login -> stores accessKey (no DevTools).")
     p.add_argument("--include-gps", action="store_true",
                    help="include lat/lng columns in shots.csv/holes.csv (privacy-sensitive)")
+    # Optional path overrides (defaults unchanged when flags absent). The creds file
+    # is JSON: {"access_key": ..., "user_id": ...} (or bearer_token+user_id). When --out
+    # is set it replaces the cache + discovery locations too (derived from OUT_DIR).
+    p.add_argument("--creds", type=str, default=None,
+                   help="Path to Arccos creds JSON (default: ~/.arccos_creds.json).")
+    p.add_argument("--out", type=str, default=None,
+                   help="Output directory (default: ./arccos_out, or this script's dir).")
     args = p.parse_args()
 
-    global INCLUDE_GPS
+    global INCLUDE_GPS, CREDS_PATH, OUT_DIR, CACHE, DISCOVERY_DIR
     if args.include_gps:
         INCLUDE_GPS = True
+    if args.creds:
+        CREDS_PATH = os.path.expanduser(args.creds)
+    if args.out:
+        OUT_DIR = os.path.abspath(args.out)
+        CACHE = os.path.join(OUT_DIR, "_cache_raw")
+        DISCOVERY_DIR = os.path.join(OUT_DIR, "_discovery")
 
     if args.login:
         interactive_login()
