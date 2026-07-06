@@ -37,6 +37,10 @@ import statistics
 import sys
 
 PLAYER_NAME = os.environ.get("GOLF_PLAYER_NAME", "Chris Cole")
+# Optional per-player context — set for the owner's own build, left empty for others so
+# nobody else's dashboard inherits this player's event/home course.
+GOLF_EVENT = os.environ.get("GOLF_EVENT", "").strip()
+GOLF_HOME_COURSE = os.environ.get("GOLF_HOME_COURSE", "").strip()
 import zlib
 from datetime import date
 
@@ -306,7 +310,10 @@ def compute(store: str) -> dict:
                       if b.get("club") and _i(b.get("target_carry"))]
         bag_specs = {b["club"]: b for b in bag_csv if b.get("club")}
     else:
-        target_bag, bag_specs = list(TARGET_BAG), {}   # built-in fallback
+        # No bag.csv → NO target bag. Never fall back to the built-in default: it is
+        # one specific player's 18Birdies set, and leaking it into another player's
+        # dashboard drives their gapping/club suggestions off someone else's targets.
+        target_bag, bag_specs = [], {}
     # launch_monitor.csv = MEASURED carries; prefer over modeled when present.
     lm_acc: dict[str, list] = {}
     for r in _read_csv(os.path.join(store, "launch_monitor.csv")):
@@ -1750,7 +1757,7 @@ generated {_esc(m['generated_at'])}</div>
 {top10_section}
 
 <section data-tab="overall"><h2>Key numbers</h2><div class="kpis">{kpi_html}</div>
-<p class="note">Targets for PGA Frisco (Oct 21–24, 2026). All strokes-gained is
+<p class="note">{('Targets for ' + html.escape(GOLF_EVENT) + '. ') if GOLF_EVENT else ''}All strokes-gained is
 Arccos, measured vs scratch — large negatives are normal for a mid-handicap.</p></section>
 {coach_overall}
 {club_bag}
@@ -1820,7 +1827,7 @@ shot path from GPS. No GPS on a round → it won't appear here.</p></section>
 <th>Pace / 18</th></tr></thead><tbody>{pace_rows or '<tr><td colspan=5>—</td></tr>'}</tbody></table>
 <p class="note">Your rounds average <b>{pace_txt} per 18 holes</b> (from Arccos round
 timestamps). For reference: a brisk pace is ~4h00m, ~4h30m is slow, and <b>5h+ is a
-grind</b>. Empirical backing for the pace-of-play conversation at WindRose.</p></section>
+grind</b>. Empirical backing for the pace-of-play conversation{(' at ' + html.escape(GOLF_HOME_COURSE)) if GOLF_HOME_COURSE else ''}.</p></section>
 
 <section data-tab="overall"><h2>Index projection</h2>
 <p class="note">Your official index is <b>{_num(p['index'],1)}</b> (from GHIN). This is a
@@ -1869,7 +1876,7 @@ var n=a.length; if(n<3) return null; var t=WHS[Math.min(n,20)]||[8,0];
 var s=0; for(var i=0;i<t[0];i++) s+=a[i]; return Math.round((s/t[0]-t[1])*10)/10;}}
 // Estimate only. WHS uses your most recent 20 differentials; we can't perfectly
 // mirror GHIN's small-sample adjustment / 9-hole pairing, so this is a rough
-// trajectory, not the official number (which is shown above as 14.1).
+// trajectory, not the official number (which is shown above).
 function proj(){{
  var dv=parseFloat(document.getElementById('dslider').value);
  var np=parseInt(document.getElementById('nposts').value);
