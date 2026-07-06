@@ -497,7 +497,9 @@ def compute(store: str) -> dict:
             "n": n,
             "confidence": "high" if n >= 12 else "medium" if n >= 6 else "low",
         })
-    disp_clubs.sort(key=lambda d: bag_order.get(d["club"], 99))   # natural club order
+    # Order by the player's bag if they have one; otherwise (no bag.csv) fall back to
+    # measured distance, longest first — never leave clubs in hash order.
+    disp_clubs.sort(key=lambda d: (bag_order.get(d["club"], 999), -(d.get("total") or 0)))
 
     # aim-by-club is derived from APPROACH shots only (vs green center) — see the
     # `patterns` block below; building it here as a placeholder for ordering.
