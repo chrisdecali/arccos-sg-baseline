@@ -498,8 +498,8 @@ def compute(store: str) -> dict:
             "confidence": "high" if n >= 12 else "medium" if n >= 6 else "low",
         })
     # Order by the player's bag if they have one; otherwise (no bag.csv) fall back to
-    # measured distance, longest first — never leave clubs in hash order.
-    disp_clubs.sort(key=lambda d: (bag_order.get(d["club"], 999), -(d.get("total") or 0)))
+    # the canonical club order — never leave clubs in hash order.
+    disp_clubs.sort(key=lambda d: bag_order.get(d["club"], 1000 + _club_rank(d["club"])))
 
     # aim-by-club is derived from APPROACH shots only (vs green center) — see the
     # `patterns` block below; building it here as a placeholder for ordering.
@@ -607,7 +607,7 @@ def compute(store: str) -> dict:
                 a = _agg(ms)
                 a["club"] = c
                 by_club.append(a)
-        by_club.sort(key=lambda x: bag_ord.get(x["club"], 99))
+        by_club.sort(key=lambda x: bag_ord.get(x["club"], 1000 + _club_rank(x["club"])))
         return {"points": pts, "by_club": by_club,
                 "overall": _agg([(p["ls"], p["lr"]) for p in pts]) if pts else None}
 
@@ -654,7 +654,7 @@ def compute(store: str) -> dict:
                             "fw_pct": round(100 * a[0] / a[3]),
                             "left_pct": round(100 * a[1] / a[3]),
                             "right_pct": round(100 * a[2] / a[3])})
-    driving.sort(key=lambda x: bag_ord.get(x["club"], 99))
+    driving.sort(key=lambda x: bag_ord.get(x["club"], 1000 + _club_rank(x["club"])))
 
     # ---- pace of play (round duration) ----
     def _dur_min(s):
@@ -965,6 +965,38 @@ def _club_cat(name: str) -> str:
     if "putter" in n:
         return "Putter"
     return "Iron"
+
+
+def _club_rank(name: str) -> int:
+    """Canonical bag order for any club: Driver < woods < hybrids < irons < wedges
+    (by loft) < putter. The fallback sort key for club tables when there's no bag.csv,
+    so every table orders the same sensible way instead of hash order."""
+    n = (name or "").strip().lower()
+    if "driver" in n:
+        return 0
+    if "putter" in n:
+        return 900
+    digits = "".join(c if c.isdigit() else " " for c in n).split()
+    k = int(digits[0]) if digits else 0
+    if "wood" in n:
+        return 100 + k          # 3W (103) before 5W (105)
+    if "hybrid" in n:
+        return 200 + k
+    if "iron" in n:
+        return 300 + k          # 3i .. 9i
+    if "wedge" in n:
+        if "pitch" in n or n == "pw":
+            return 400
+        if "gap" in n or "approach" in n or n in ("gw", "aw"):
+            return 448
+        if "sand" in n or n == "sw":
+            return 454
+        if "lob" in n or n == "lw":
+            return 460
+        if 40 <= k <= 64:
+            return 400 + k      # "54 Wedge" -> 454
+        return 449
+    return 500 + k
 
 
 def _map_payload(shots, holes):
