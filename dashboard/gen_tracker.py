@@ -35,6 +35,8 @@ import os
 import random
 import statistics
 import sys
+
+PLAYER_NAME = os.environ.get("GOLF_PLAYER_NAME", "Chris Cole")
 import zlib
 from datetime import date
 
@@ -1608,7 +1610,7 @@ is what your club <i>typically</i> does &mdash; long irons short = take more clu
     return f"""<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Strokes-Gained Tracker — Chris Cole</title>
+<title>Strokes-Gained Tracker — {html.escape(PLAYER_NAME)}</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root{{--bg:#0f1115;--card:#1a1d24;--ink:#e8eaed;--mut:#9aa0aa;--line:#2a2e37;
@@ -1733,7 +1735,7 @@ footer{{max-width:1000px;margin:0 auto;padding:0 20px 50px;color:var(--mut);font
 <body>
 <header>
 <h1>⛳ Strokes-Gained Tracker</h1>
-<div class="sub">Chris Cole · {courses} · {m['n_rounds']} rounds · {m['n_holes']} holes ·
+<div class="sub">{html.escape(PLAYER_NAME)} · {courses} · {m['n_rounds']} rounds · {m['n_holes']} holes ·
 {m['n_shots']} shots · index <b>{_num(p['index'],1)}</b> ·
 generated {_esc(m['generated_at'])}</div>
 </header>
