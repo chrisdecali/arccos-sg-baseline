@@ -531,7 +531,11 @@ def build_clubid_map(meta: dict[int, dict], rounds: list[dict]) -> dict[int, str
     by_id: dict[int, Counter] = {}
     for rd in rounds:
         for h in (rd.get("holes") or []):
+            if not h:
+                continue
             for s in (h.get("shots") or []):
+                if not s:
+                    continue
                 cid, ct = s.get("clubId"), s.get("clubType")
                 if cid is None or ct is None:
                     continue
@@ -636,7 +640,7 @@ HCP_COLS = ["round_id", "user_hcp", "drive_hcp", "approach_hcp", "chip_hcp",
 
 def build_round(summary, detail, tee, hcp, clubid_map, rdash, pulled_at,
                 course_lat=None, course_lng=None):
-    holes = [h for h in (detail.get("holes") or []) if h.get("shouldIgnore") != "T"]
+    holes = [h for h in (detail.get("holes") or []) if h and h.get("shouldIgnore") != "T"]
     date = (summary.get("startTime") or "")[:10]
     course = summary.get("courseName") or detail.get("courseName") or "?"
     rid = summary.get("roundId")
@@ -649,7 +653,7 @@ def build_round(summary, detail, tee, hcp, clubid_map, rdash, pulled_at,
                 for hs in (overall.get("holeScores") or []) if hs.get("par")}
     geo = []
     for h in holes:
-        shots = [s for s in (h.get("shots") or []) if s.get("shouldIgnore") != "T"]
+        shots = [s for s in (h.get("shots") or []) if s and s.get("shouldIgnore") != "T"]
         pin = (h.get("pinLat"), h.get("pinLong"))
         yd = haversine_yd(shots[0].get("startLat"), shots[0].get("startLong"), *pin) \
             if shots and None not in pin else None
@@ -671,7 +675,7 @@ def build_round(summary, detail, tee, hcp, clubid_map, rdash, pulled_at,
         par = real_par.get(hid) or inferred[hi]
         par_source = "arccos" if real_par.get(hid) else "inferred"
         yd = geo[hi][0]
-        shots = [s for s in (h.get("shots") or []) if s.get("shouldIgnore") != "T"]
+        shots = [s for s in (h.get("shots") or []) if s and s.get("shouldIgnore") != "T"]
         n = len(shots)
         putts = h.get("putts") or 0
         gir = _tf(h.get("isGir"))
