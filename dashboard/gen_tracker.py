@@ -97,6 +97,43 @@ def _truthy(x) -> bool:
     return str(x).strip() in ("1", "1.0", "true", "True", "yes")
 
 
+def _is_right_handed(x) -> bool:
+    if isinstance(x, bool):
+        return x
+    if isinstance(x, str):
+        return x.strip().lower() not in ("f", "false")
+    return True
+
+
+def _opposite_side(side: str) -> str:
+    return "right" if side == "left" else "left"
+
+
+def _side_abbr(side: str) -> str:
+    return "L" if side == "left" else "R"
+
+
+def _swing_fault(side: str, right_handed: bool) -> dict:
+    hook_side = "left" if right_handed else "right"
+    if side == hook_side:
+        return {
+            "fault": "hook",
+            "miss": "hook/pull",
+            "fix": "the face is closing relative to your swing path at impact",
+            "face": "closing",
+            "face_past": "closed",
+            "shape": "draw",
+        }
+    return {
+        "fault": "slice",
+        "miss": "push/slice",
+        "fix": "the face is open relative to your swing path at impact",
+        "face": "open",
+        "face_past": "open",
+        "shape": "fade",
+    }
+
+
 def _slug(course: str, date: str) -> str:
     """Stable filename slug for a round, e.g. 'WindRose_GC_2026-06-06'."""
     base = "".join(c if c.isalnum() else "_" for c in (course or "round"))
@@ -303,7 +340,16 @@ def compute(store: str) -> dict:
     bands = _read_csv(os.path.join(store, "sga_bands.csv"))
     career = _read_json(os.path.join(store, "career_stats.json"), {})
     disp = _read_json(os.path.join(store, "dispersion.json"), {})
-    profile = _read_json(os.path.join(store, "player_profile.json"), {})
+    profile = _read_json(os.path.join(store, "player_profile.json"), {}) or {}
+    fallback_profile = {}
+    if not profile or "isRightStance" not in profile:
+        fallback_profile = _read_json(os.path.join(store, "profile.json"), {}) or {}
+        if not profile:
+            profile = fallback_profile
+    stance = profile.get("isRightStance")
+    if stance is None:
+        stance = fallback_profile.get("isRightStance")
+    right_handed = _is_right_handed(stance)
 
     # ---- single-source-of-truth config files ----
     # club_map.json fixes Arccos mis-tags at ingest — rename each shot/club's club.
@@ -772,15 +818,14 @@ def compute(store: str) -> dict:
     drv_right = bool(drv and drv["right_pct"] - drv["left_pct"] >= 10)
     nL = len(left_bag) + (1 if drv_left else 0)
     nR = len(right_bag) + (1 if drv_right else 0)
+    hook_side = "left" if right_handed else "right"
     swing = None
     if nL >= 3 and nL >= nR * 2:
-        swing = {"side": "left", "n": nL, "miss": "hook/pull",
-                 "fix": "the face is closing relative to your swing path at impact",
-                 "drv": drv_left}
+        swing = {"side": "left", "n": nL, "drv": drv_left,
+                 **_swing_fault("left", right_handed)}
     elif nR >= 3 and nR >= nL * 2:
-        swing = {"side": "right", "n": nR, "miss": "push/slice",
-                 "fix": "the face is open relative to your swing path at impact",
-                 "drv": drv_right}
+        swing = {"side": "right", "n": nR, "drv": drv_right,
+                 **_swing_fault("right", right_handed)}
 
     # ---- recent form: extra flags beyond the per-category trend cards ----
     recent_items = []
@@ -802,10 +847,25 @@ def compute(store: str) -> dict:
         dd, pc = drv_bc.get(name), pat_bc.get(name)
         if dd and dd["chances"] >= 3:
             le, ri, fw = dd["left_pct"], dd["right_pct"], dd["fw_pct"]
-            d_txt = (f"hooks left ({le}% L vs {ri}% R) — aim down the right side, play the draw"
-                     if le - ri >= 12 else
-                     f"leaks right ({ri}% R) — aim left / check the face" if ri - le >= 12 else
-                     f"two-way miss ({le}% L / {ri}% R) — pick one side and commit")
+            if le - ri >= 12:
+                miss_side, miss_pct, other_pct = "left", le, ri
+            elif ri - le >= 12:
+                miss_side, miss_pct, other_pct = "right", ri, le
+            else:
+                miss_side = None
+            if miss_side:
+                aim_side = _opposite_side(miss_side)
+                miss_abbr = _side_abbr(miss_side)
+                other_abbr = _side_abbr(aim_side)
+                if miss_side == hook_side:
+                    d_txt = (f"hooks {miss_side} ({miss_pct}% {miss_abbr} vs "
+                             f"{other_pct}% {other_abbr}) — aim down the {aim_side} "
+                             "side, play the draw")
+                else:
+                    d_txt = (f"leaks {miss_side} ({miss_pct}% {miss_abbr}) — "
+                             f"aim {aim_side} / check the face")
+            else:
+                d_txt = f"two-way miss ({le}% L / {ri}% R) — pick one side and commit"
             club_recs.append({"club": name, "rec": f"{fw}% fairways; {d_txt}.",
                               "basis": f"{dd['chances']} tee shots"})
         elif pc:
@@ -842,18 +902,26 @@ def compute(store: str) -> dict:
             cand.append({"sg": round(sg, 1), "cat": cat, "action": action, "detail": detail})
 
     if swing:
-        _hookdet = (f"Your whole bag leaks {swing['side']} ({swing['n']} clubs"
-                    + (", driver included" if swing["drv"] else "")
-                    + ") — a face-to-path issue, the root cause behind both lost fairways "
-                    "and missed greens. Squaring the face fixes every club at once; the "
-                    "per-club “aim” notes are just patches until you do. Nothing else "
-                    "here moves more strokes.")
+        if swing["fault"] == "hook":
+            _hookdet = (f"Your whole bag leaks {swing['side']} ({swing['n']} clubs"
+                        + (", driver included" if swing["drv"] else "")
+                        + ") — a face-to-path issue, the root cause behind both lost fairways "
+                        "and missed greens. Squaring the face fixes every club at once; the "
+                        "per-club “aim” notes are just patches until you do. Nothing else "
+                        "here moves more strokes.")
+        else:
+            _hookdet = (f"Your whole bag leaks {swing['side']} ({swing['n']} clubs"
+                        + (", driver included" if swing["drv"] else "")
+                        + ") — a face-to-path slice/push, with the face open relative "
+                        "to path. Squaring the face fixes every club at once; the "
+                        "per-club “aim” notes are just patches until you do. Nothing else "
+                        "here moves more strokes.")
         if lm_bag_f2p is not None:
-            _fd = "closed" if lm_bag_f2p < 0 else "open"
+            _fd = swing["face_past"]
             _hookdet += (f" Measured: face averages {abs(lm_bag_f2p)}° {_fd} to the "
                          "path — get it toward 0°.")
         _act(0.18 * A + 0.45 * T, "Swing",
-             "Fix the face-to-path hook (lesson + launch monitor)", _hookdet)
+             f"Fix the face-to-path {swing['fault']} (lesson + launch monitor)", _hookdet)
     _act(0.28 * A, "Approach", "Club up — stop leaving approaches short",
          f"GIR is only {_pct(gir, 0)} and you finish a median {abs(_ov['ls'])} yd short. "
          "One more club turns 'just short' into birdie looks — your biggest pure-stats gain.")
@@ -871,8 +939,12 @@ def compute(store: str) -> dict:
     _act(0.14 * A, "Approach", "Re-gap the long irons / hybrid",
          "5i and hybrid come up ~20–40 yd short on course — get real carries off a launch "
          "monitor and trust the number, or replace them with clubs you can hit the green with.")
-    _act(0.32 * T, "Off the tee", "Tee strategy — play for the hook",
-         f"Driver finds {drv['fw_pct'] if drv else 0}% fairways. Aim down the right side, "
+    tee_miss_side = ("left" if drv_left else "right" if drv_right else
+                     swing["side"] if swing else hook_side)
+    tee_play = "hook" if tee_miss_side == hook_side else "fade"
+    tee_aim_side = _opposite_side(tee_miss_side)
+    _act(0.32 * T, "Off the tee", f"Tee strategy — play for the {tee_play}",
+         f"Driver finds {drv['fw_pct'] if drv else 0}% fairways. Aim down the {tee_aim_side} side, "
          "and take 3-wood on tight holes — managing the miss while you fix the swing.")
     _act(0.23 * P, "Putting", "Own the 4–8 footers",
          "The makeable range that swings scores. 10 minutes a session on a gate drill; "
@@ -903,6 +975,7 @@ def compute(store: str) -> dict:
             "to_par": _i(h.get("score_to_par")), "putts": _i(h.get("putts")),
             "fairway": _truthy(h.get("fairway_hit")), "gir": _truthy(h.get("gir")),
             "drive": _f(h.get("drive_yd")),
+            "drive_club": tee_club.get((h.get("round_id"), h.get("hole_id"))),
             "proximity": _f(h.get("approach_proximity_yd")),
             "penalties": _i(h.get("penalties")),
             "sg": _f(h.get("sg_hole_broadie")),
@@ -922,6 +995,7 @@ def compute(store: str) -> dict:
             "home": (profile.get("homeCourse") or {}).get("name"),
             "n_posted": len(diffs),
         },
+        "right_handed": right_handed,
         "kpis": {
             "index": idx,
             "gir_pct": kr.get("gir_pct"), "fairway_pct": kr.get("fairway_pct"),
@@ -1521,9 +1595,19 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
         f'<td>{dd["left_pct"]}% L &nbsp; {dd["right_pct"]}% R</td></tr>'
         for dd in d["driving"])
     drv = next((x for x in d["driving"] if x["club"] == "Driver"), None)
-    drive_note = (f'Your driver finds <b>{drv["fw_pct"]}%</b> of fairways and misses '
-                  f'<b>left {drv["left_pct"]}%</b> vs right {drv["right_pct"]}% — the hook '
-                  f'shows off the tee too.') if drv else ""
+    if drv:
+        right_handed = d.get("right_handed", True)
+        hook_side = "left" if right_handed else "right"
+        miss_side = "left" if drv["left_pct"] >= drv["right_pct"] else "right"
+        other_side = _opposite_side(miss_side)
+        miss_pct = drv["left_pct"] if miss_side == "left" else drv["right_pct"]
+        other_pct = drv["right_pct"] if miss_side == "left" else drv["left_pct"]
+        fault = "hook" if miss_side == hook_side else "slice/push"
+        drive_note = (f'Your driver finds <b>{drv["fw_pct"]}%</b> of fairways and misses '
+                      f'<b>{miss_side} {miss_pct}%</b> vs {other_side} {other_pct}% — '
+                      f'the {fault} shows off the tee too.')
+    else:
+        drive_note = ""
 
     # ---- pace of play ----
     def _hm(mins):
@@ -2093,7 +2177,9 @@ def render_round_page(d: dict, r: dict, font_prefix: str = "../assets/fonts") ->
         f'<tr><td>#{h["hole"]}</td><td>{h["par"]}</td><td>{_num(h["len"],0)}</td>'
         f'<td>{h["shots"]}</td><td>{_tp(h["to_par"])}</td>'
         f'<td>{h["putts"]}</td><td>{"✓" if h["fairway"] else ""}</td>'
-        f'<td>{"✓" if h["gir"] else ""}</td><td>{_num(h["drive"],0)}</td>'
+        f'<td>{"✓" if h["gir"] else ""}</td>'
+        f'<td class="teeclub">{_esc(h.get("drive_club") or "")}</td>'
+        f'<td>{_num(h["drive"],0)}</td>'
         f'<td>{_num(h["proximity"],0)}</td><td>{_num(h["sg"],2,True)}</td></tr>'
         for h in holes)
 
@@ -2194,7 +2280,7 @@ the club + carry labeled. Hover a shot for the detail; the panel lists every sho
 club, lie, and distance-to-pin. "All" shows the whole round.</p></section>
 <section><h2>Hole by hole</h2>
 <table><thead><tr><th>Hole</th><th>Par</th><th>Yd</th><th>Shots</th><th>±Par</th>
-<th>Putts</th><th>FW</th><th>GIR</th><th>Drive</th><th>Prox</th><th>SG</th></tr></thead>
+<th>Putts</th><th>FW</th><th>GIR</th><th>Tee</th><th>Drive</th><th>Prox</th><th>SG</th></tr></thead>
 <tbody>{hrows}</tbody></table></section>
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
