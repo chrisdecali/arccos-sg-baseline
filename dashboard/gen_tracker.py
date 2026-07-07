@@ -934,7 +934,8 @@ def compute(store: str) -> dict:
         "sg_career": cat_sg,
         "rounds": round_rows,
         "bag": bag,
-        "bag_specs": [bag_specs[c] for c, _t in target_bag if c in bag_specs],
+        # all bag.csv specs (incl. no-carry clubs like the putter, absent from target_bag)
+        "bag_specs": list(bag_specs.values()),
         "dispersion": disp_clubs,
         "patterns": patterns, "putting_dist": putting_dist, "updown": updown,
         "driving": driving, "pace": pace, "pace_avg18": pace_avg18,
@@ -1345,6 +1346,17 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
             f'<tr><td>{_esc(b["club"])}</td><td>{loft}</td>'
             f'<td class="shaft">{shaft}</td><td>{b["target"]}</td>'
             f'<td><b>{b["suggested"]}</b>{ms}{flag}</td></tr>')
+    # No-carry clubs from bag.csv (e.g. the putter) — show the inventory row with a
+    # dash for target/carry so the whole bag is represented, brand included.
+    _bagged = {b["club"] for b in d["bag"]}
+    for club, s in specs_by.items():
+        if club in _bagged:
+            continue
+        loft = f'{_esc(s.get("loft"))}°' if s.get("loft") else "—"
+        shaft = _esc(s.get("shaft")) or "—"
+        bag_rows += (
+            f'<tr><td>{_esc(club)}</td><td>{loft}</td>'
+            f'<td class="shaft">{shaft}</td><td>—</td><td>—</td></tr>')
 
     # ---- dispersion table ----
     disp_rows = ""
