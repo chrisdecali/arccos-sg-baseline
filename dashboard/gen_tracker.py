@@ -1635,7 +1635,7 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
         f'{_esc(t["cat"])}</span></div>'
         f'<div class="note">{t["detail"]}</div></div></li>' for t in co["top10"])
     top10_section = f"""
-<section data-tab="overall"><h2>Top 10 &mdash; what to do, by strokes gained</h2>
+<section data-tab="coach"><h2>Top 10 &mdash; what to do, by strokes gained</h2>
 <ol class="top10">{top10_rows}</ol>
 <p class="note">Each <b style="color:var(--good)">+x.x</b> is the estimated strokes/round
 you'd gain by closing that gap toward a mid-handicap baseline &mdash; scaled from your own
@@ -1680,7 +1680,7 @@ do.</p></section>"""
         f'<tr><td>{_esc(c["club"])}</td><td>{c["rec"]}</td>'
         f'<td class="note">{_esc(c["basis"])}</td></tr>' for c in co["by_club"])
     coach_overall = f"""
-<section data-tab="overall"><h2>Recent form {('&mdash; ' + co['recent_label']) if co['recent_label'] else ''}</h2>
+<section data-tab="coach"><h2>Recent form {('&mdash; ' + co['recent_label']) if co['recent_label'] else ''}</h2>
 <div class="formgrid">{form_cards or '<p class="note">Not enough rounds yet.</p>'}</div>
 <p class="form-hl">{form_hl}</p>
 {('<ul class="flags">' + flags_html + '</ul>') if flags_html else ''}
@@ -1689,7 +1689,7 @@ gained per round; less negative is better). It's the warm-up signal &mdash; what
 cold <i>right now</i> &mdash; while the Top&nbsp;10 above is the all-rounds plan.</p></section>"""
 
     coach_byclub = f"""
-<section data-tab="club"><h2>By club &mdash; what to try</h2>
+<section data-tab="coach"><h2>By club &mdash; what to try</h2>
 <table><thead><tr><th>Club</th><th>Try this</th><th>basis</th></tr></thead>
 <tbody>{club_rec_rows}</tbody></table>
 <div class="key"><b>Reading this:</b>
@@ -1930,14 +1930,15 @@ generated {_esc(m['generated_at'])}</div>
 <main>
 
 <nav class="tabbar" role="tablist">
- <button class="tab on" data-pane="overall">Overall &mdash; game &amp; handicap</button>
+ <button class="tab on" data-pane="coach">Coach</button>
+ <button class="tab" data-pane="stats">The Numbers</button>
  <button class="tab" data-pane="club">By club</button>
  <button class="tab" data-pane="round">By round</button>
 </nav>
 
 {top10_section}
 
-<section data-tab="overall"><h2>Key numbers</h2><div class="kpis">{kpi_html}</div>
+<section data-tab="stats"><h2>Key numbers</h2><div class="kpis">{kpi_html}</div>
 <p class="note">{('Targets for ' + html.escape(GOLF_EVENT) + '. ') if GOLF_EVENT else ''}All strokes-gained is
 Arccos, measured vs scratch — large negatives are normal for a mid-handicap.</p></section>
 {coach_overall}
@@ -1950,11 +1951,11 @@ Arccos, measured vs scratch — large negatives are normal for a mid-handicap.</
 hole-by-hole, and strokes-gained for that round.</p>
 {nav_html or '<p class="note">No rounds yet.</p>'}</section>
 
-<section data-tab="overall"><h2>Strokes gained by round</h2>
+<section data-tab="stats"><h2>Strokes gained by round</h2>
 {sg_svg or '<p class="note">No rounds yet.</p>'}
 </section>
 
-<section data-tab="overall"><h2>Cost of misses</h2>
+<section data-tab="stats"><h2>Cost of misses</h2>
 <table><thead><tr><th>Category</th><th>SG / round</th><th>Lever</th></tr></thead>
 <tbody>{lever_rows}</tbody></table>
 <p class="note">Recoverable if you stopped bleeding strokes in the negative
@@ -1962,7 +1963,7 @@ categories: <b>{d['recoverable']['raw']}</b> raw. SG levers overlap ~35–40%, s
 realistic combined gain is about <b>{d['recoverable']['effective']}</b> strokes/round
 (0.62 efficiency factor — don't add them straight up).</p></section>
 
-<section data-tab="overall"><h2>Approach & putting</h2>
+<section data-tab="stats"><h2>Approach & putting</h2>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="twocol">
  <div><h3 style="font-size:14px;color:var(--mut)">Approach SG by pin distance</h3>
  <table><thead><tr><th>Band</th><th>SG</th><th>n</th></tr></thead>
@@ -1972,7 +1973,7 @@ realistic combined gain is about <b>{d['recoverable']['effective']}</b> strokes/
  <tbody>{putt_rows or '<tr><td colspan=3>—</td></tr>'}</tbody></table></div>
 </div></section>
 
-<section data-tab="overall"><h2>Scrambling — the priority</h2>
+<section data-tab="stats"><h2>Scrambling — the priority</h2>
 <table><thead><tr><th>Chip distance</th><th>Avg proximity</th><th>Target</th></tr></thead>
 <tbody>{chip_rows or '<tr><td colspan=3>—</td></tr>'}</tbody></table>
 <p class="note">Chip save {_pct(k['chip_save_pct'])} · sand save
@@ -1980,7 +1981,7 @@ realistic combined gain is about <b>{d['recoverable']['effective']}</b> strokes/
 <b>contact</b>, not the putt that follows — proximity is measured from where the chip
 finishes. Fix the chunk first.</p></section>
 
-<section data-tab="overall"><h2>Putting &amp; up-and-down</h2>
+<section data-tab="stats"><h2>Putting &amp; up-and-down</h2>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="twocol">
  <div><h3 style="font-size:14px;color:var(--mut)">One-putt % by first-putt distance</h3>
  <table><thead><tr><th>Distance</th><th>One-putt</th><th>3-putts</th></tr></thead>
@@ -2010,7 +2011,7 @@ shot path from GPS. No GPS on a round → it won't appear here.</p></section>
 timestamps). For reference: a brisk pace is ~4h00m, ~4h30m is slow, and <b>5h+ is a
 grind</b>. Empirical backing for the pace-of-play conversation{(' at ' + html.escape(GOLF_HOME_COURSE)) if GOLF_HOME_COURSE else ''}.</p></section>
 
-<section data-tab="overall"><h2>Index projection</h2>
+<section data-tab="stats"><h2>Index projection</h2>
 <p class="note">Your official index is <b>{_num(p['index'],1)}</b> (from GHIN). This is a
 rough <i>estimate</i> of where it heads — WHS counts your most recent 20 differentials,
 and with few scores a small-sample adjustment shrinks as you post, so the index can
@@ -2029,7 +2030,7 @@ in; GHIN's number above is the truth.</p>
   projected index <span class="proj" id="projidx">—</span></span>
 </div></section>
 
-<section data-tab="overall"><h2>Posted scores (GHIN)</h2>
+<section data-tab="stats"><h2>Posted scores (GHIN)</h2>
 <table><thead><tr><th>Date</th><th>Course</th><th>Holes</th><th>Score</th>
 <th>Differential</th><th>Counts</th></tr></thead><tbody>{posted_rows}</tbody></table>
 <p class="note">Only 18-hole differentials feed the WHS index. A 9-hole round posts a
@@ -2122,7 +2123,7 @@ if(ROUNDS.length){{
  document.getElementById('map').innerHTML='<p class="note" style="padding:20px">No GPS rounds to map yet.</p>';
 }}
 
-// ---- top-level tabs (Overall / By club / By round) ----
+// ---- top-level tabs (Coach / The Numbers / By club / By round) ----
 function showPane(pane){{
  document.querySelectorAll('section[data-tab]').forEach(function(s){{
   s.style.display=(s.dataset.tab===pane)?'block':'none';}});
@@ -2137,11 +2138,11 @@ document.querySelectorAll('.tabbar .tab').forEach(function(b){{
  b.onclick=function(){{showPane(b.dataset.pane);
   window.scrollTo({{top:0,behavior:'smooth'}});}};}});
 var _p=(location.hash||'').replace('#','');
-showPane(['overall','club','round'].indexOf(_p)>=0?_p:'overall');
+showPane(['coach','stats','club','round'].indexOf(_p)>=0?_p:'coach');
 // keep tabs in sync with the hash (back/forward buttons, hash links)
 window.addEventListener('hashchange',function(){{
  var p=(location.hash||'').replace('#','');
- if(['overall','club','round'].indexOf(p)>=0) showPane(p);
+ if(['coach','stats','club','round'].indexOf(p)>=0) showPane(p);
 }});
 </script>
 </body></html>"""
