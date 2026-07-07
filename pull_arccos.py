@@ -118,6 +118,7 @@ GOAL_HCP = 0
 # inferred/generic — clubs.csv make/model/distance disambiguates if it matters.
 CLUBTYPE = {
     1: "Driver", 2: "3 Wood", 3: "5 Wood", 4: "Hybrid", 36: "Hybrid", 37: "Hybrid",
+    35: "Driving Iron",  # utility/driving iron (e.g. TaylorMade UDI) — confirmed from clubs_v6
     5: "4 Iron",  # inferred (one below confirmed 6=5 Iron)
     6: "5 Iron", 7: "6 Iron", 8: "7 Iron", 9: "8 Iron",
     10: "9 Iron", 11: "Pitching Wedge",
