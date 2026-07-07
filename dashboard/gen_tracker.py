@@ -33,6 +33,7 @@ import json
 import math
 import os
 import random
+import shutil
 import statistics
 import sys
 
@@ -65,6 +66,13 @@ def _read_json(path: str, default=None):
             return json.load(f)
     except (ValueError, OSError):
         return default
+
+
+def _copy_font_assets(outdir: str) -> None:
+    """Copy self-hosted dashboard fonts next to the rendered HTML."""
+    src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "fonts")
+    dst = os.path.join(outdir, "assets", "fonts")
+    shutil.copytree(src, dst, dirs_exist_ok=True)
 
 
 def _f(x):
@@ -1089,8 +1097,10 @@ def _svg_sg_by_round(rounds) -> str:
     """Inline SVG stacked-bar of SG categories per round, with title + y-axis."""
     if not rounds:
         return ""
-    cats = [("sg_off_tee", "#43a047", "off tee"), ("sg_approach", "#4f9cf9", "approach"),
-            ("sg_short", "#fb8c00", "short"), ("sg_putting", "#ab47bc", "putting")]
+    cats = [("sg_off_tee", "var(--green-deep)", "off tee"),
+            ("sg_approach", "var(--green)", "approach"),
+            ("sg_short", "var(--brass)", "short"),
+            ("sg_putting", "var(--ink-soft)", "putting")]
     W, H, padL, padR, padT, padB = 700, 290, 42, 14, 46, 36
     n = len(rounds)
     pos = [sum((r.get(k) or 0) for k, _c, _l in cats if (r.get(k) or 0) > 0) for r in rounds]
@@ -1104,18 +1114,18 @@ def _svg_sg_by_round(rounds) -> str:
         return padT + (ymax - v) / span * plotH
 
     p = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '
-         f'style="width:100%;height:auto;background:#0f131a;border-radius:8px">']
+         f'style="width:100%;height:auto;background:var(--paper);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)">']
     p.append(f'<text x="{W/2:.0f}" y="16" font-size="12" font-weight="bold" '
-             f'fill="#e8eaed" text-anchor="middle">Strokes gained by round (vs scratch)</text>')
+             f'fill="var(--ink)" text-anchor="middle">Strokes gained by round (vs scratch)</text>')
     # y gridlines + tick labels (SG values)
     for yv in _nice_ticks(ymin, ymax, 5):
         y = yf(yv)
         p.append(f'<line x1="{padL}" y1="{y:.1f}" x2="{W-padR}" y2="{y:.1f}" '
-                 f'stroke="{"#555" if yv == 0 else "#222"}"/>')
-        p.append(f'<text x="{padL-5}" y="{y+3:.1f}" font-size="9" fill="#9aa0aa" '
+                 f'stroke="{"var(--ink)" if yv == 0 else "var(--rule)"}"/>')
+        p.append(f'<text x="{padL-5}" y="{y+3:.1f}" font-size="9" fill="var(--ink-soft)" '
                  f'text-anchor="end">{yv:+d}</text>')
     p.append(f'<text transform="translate(11,{(padT+H-padB)/2:.0f}) rotate(-90)" '
-             f'font-size="9" fill="#9aa0aa" text-anchor="middle">strokes gained</text>')
+             f'font-size="9" fill="var(--ink-soft)" text-anchor="middle">strokes gained</text>')
     step = (W - padL - padR) / n
     bw = min(46, step * 0.5)
     for i, r in enumerate(rounds):
@@ -1133,13 +1143,13 @@ def _svg_sg_by_round(rounds) -> str:
                 p.append(f'<rect x="{cx-bw/2:.1f}" y="{y1:.1f}" width="{bw:.1f}" '
                          f'height="{h:.1f}" fill="{color}"/>')
         p.append(f'<text x="{cx:.1f}" y="{yf(pos[i])-4:.1f}" font-size="10" '
-                 f'fill="#e8eaed" text-anchor="middle">{_num(r.get("sg_total"),1,True)}</text>')
-        p.append(f'<text x="{cx:.1f}" y="{H-padB+14}" font-size="9" fill="#9aa0aa" '
+                 f'fill="var(--ink)" text-anchor="middle">{_num(r.get("sg_total"),1,True)}</text>')
+        p.append(f'<text x="{cx:.1f}" y="{H-padB+14}" font-size="9" fill="var(--ink-soft)" '
                  f'text-anchor="middle">{_esc(r["date"])}</text>')
     lx = padL
     for _k, color, lbl in cats:
         p.append(f'<rect x="{lx}" y="26" width="9" height="9" rx="2" fill="{color}"/>')
-        p.append(f'<text x="{lx+13}" y="34" font-size="9.5" fill="#9aa0aa">{lbl}</text>')
+        p.append(f'<text x="{lx+13}" y="34" font-size="9.5" fill="var(--ink-soft)">{lbl}</text>')
         lx += 95
     p.append("</svg>")
     return "".join(p)
@@ -1151,7 +1161,7 @@ def _svg_dispersion(disp_clubs) -> str:
            for d in disp_clubs if d["carry"] and d["lateral_sd"]]
     if not pts:
         return ""
-    cmap = {"high": "#43a047", "medium": "#f9a825", "low": "#e53935"}
+    cmap = {"high": "var(--green-deep)", "medium": "var(--brass)", "low": "var(--ink-soft)"}
     W, H, padL, padR, padT, padB = 700, 330, 50, 16, 40, 44
     xs = [c for c, _l, _n, _cf in pts]
     ys = [l for _c, l, _n, _cf in pts]
@@ -1167,35 +1177,35 @@ def _svg_dispersion(disp_clubs) -> str:
         return padT + (ymax - v) / (ymax or 1) * ph
 
     p = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '
-         f'style="width:100%;height:auto;background:#0f131a;border-radius:8px">']
+         f'style="width:100%;height:auto;background:var(--paper);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)">']
     p.append(f'<text x="{W/2:.0f}" y="16" font-size="12" font-weight="bold" '
-             f'fill="#e8eaed" text-anchor="middle">Carry distance vs lateral spread '
+             f'fill="var(--ink)" text-anchor="middle">Carry distance vs lateral spread '
              f'(lower = tighter)</text>')
     # x gridlines + tick labels (carry yards)
     for xv in _nice_ticks(xmin, xmax, 50):
         x = xf(xv)
-        p.append(f'<line x1="{x:.1f}" y1="{padT}" x2="{x:.1f}" y2="{H-padB}" stroke="#222"/>')
-        p.append(f'<text x="{x:.1f}" y="{H-padB+15}" font-size="9" fill="#9aa0aa" '
+        p.append(f'<line x1="{x:.1f}" y1="{padT}" x2="{x:.1f}" y2="{H-padB}" stroke="var(--rule)"/>')
+        p.append(f'<text x="{x:.1f}" y="{H-padB+15}" font-size="9" fill="var(--ink-soft)" '
                  f'text-anchor="middle">{xv}</text>')
     # y gridlines + tick labels (spread yards)
     for yv in _nice_ticks(0, ymax, 10):
         y = yf(yv)
-        p.append(f'<line x1="{padL}" y1="{y:.1f}" x2="{W-padR}" y2="{y:.1f}" stroke="#222"/>')
-        p.append(f'<text x="{padL-6}" y="{y+3:.1f}" font-size="9" fill="#9aa0aa" '
+        p.append(f'<line x1="{padL}" y1="{y:.1f}" x2="{W-padR}" y2="{y:.1f}" stroke="var(--rule)"/>')
+        p.append(f'<text x="{padL-6}" y="{y+3:.1f}" font-size="9" fill="var(--ink-soft)" '
                  f'text-anchor="end">{yv}</text>')
-    p.append(f'<text x="{(padL+W-padR)/2:.0f}" y="{H-6}" font-size="9.5" fill="#9aa0aa" '
+    p.append(f'<text x="{(padL+W-padR)/2:.0f}" y="{H-6}" font-size="9.5" fill="var(--ink-soft)" '
              f'text-anchor="middle">carry (yds)</text>')
     p.append(f'<text transform="translate(12,{(padT+H-padB)/2:.0f}) rotate(-90)" '
-             f'font-size="9.5" fill="#9aa0aa" text-anchor="middle">lateral spread ±SD (yds)</text>')
+             f'font-size="9.5" fill="var(--ink-soft)" text-anchor="middle">lateral spread ±SD (yds)</text>')
     for carry, lat, club, conf in pts:
         x, y = xf(carry), yf(lat)
-        p.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5" fill="{cmap.get(conf,"#888")}"/>')
+        p.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5" fill="{cmap.get(conf,"var(--ink-soft)")}"/>')
         p.append(f'<text x="{x+7:.1f}" y="{y+3:.1f}" font-size="9" '
-                 f'fill="#cfd3da">{_esc(club)}</text>')
+                 f'fill="var(--ink)">{_esc(club)}</text>')
     lx = W - padR - 200
     for k, color in cmap.items():
         p.append(f'<circle cx="{lx}" cy="30" r="4" fill="{color}"/>')
-        p.append(f'<text x="{lx+8}" y="33" font-size="9" fill="#9aa0aa">{k}</text>')
+        p.append(f'<text x="{lx+8}" y="33" font-size="9" fill="var(--ink-soft)">{k}</text>')
         lx += 65
     p.append("</svg>")
     return "".join(p)
@@ -1208,8 +1218,9 @@ def _svg_pattern(pts, overall, title, by_club=None, pid="pat") -> str:
     so a dropdown can filter to one club. Pure stdlib SVG."""
     if not pts:
         return ""
-    catcol = {"Driver": "#e53935", "Wood": "#fb8c00", "Hybrid": "#fdd835",
-              "Iron": "#43a047", "Wedge": "#29b6f6", "Putter": "#ab47bc"}
+    catcol = {"Driver": "var(--green-deep)", "Wood": "var(--brass)",
+              "Hybrid": "var(--brass-soft)", "Iron": "var(--green)",
+              "Wedge": "var(--ink-soft)", "Putter": "var(--ink)"}
     W = Hh = 440
     cx, cy = W / 2, Hh / 2 + 8
     rmax = max([abs(p["lr"]) for p in pts] + [abs(p["ls"]) for p in pts] + [15])
@@ -1223,37 +1234,37 @@ def _svg_pattern(pts, overall, title, by_club=None, pid="pat") -> str:
         return cy - ls / rmax * R
 
     p = [f'<svg viewBox="0 0 {W} {Hh}" xmlns="http://www.w3.org/2000/svg" '
-         f'style="width:100%;max-width:440px;height:auto;background:#0f131a;border-radius:8px">']
+         f'style="width:100%;max-width:440px;height:auto;background:var(--paper);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)">']
     p.append(f'<text x="{cx:.0f}" y="16" font-size="12" font-weight="bold" '
-             f'fill="#e8eaed" text-anchor="middle">{_esc(title)}</text>')
+             f'fill="var(--ink)" text-anchor="middle">{_esc(title)}</text>')
     # range rings
     for r in range(10, int(rmax) + 1, 10):
         rr = r / rmax * R
-        p.append(f'<circle cx="{cx}" cy="{cy}" r="{rr:.1f}" fill="none" stroke="#2a2e37"/>')
-        p.append(f'<text x="{cx:.0f}" y="{cy-rr-2:.1f}" font-size="8" fill="#5a6068" '
+        p.append(f'<circle cx="{cx}" cy="{cy}" r="{rr:.1f}" fill="none" stroke="var(--rule)"/>')
+        p.append(f'<text x="{cx:.0f}" y="{cy-rr-2:.1f}" font-size="8" fill="var(--ink-soft)" '
                  f'text-anchor="middle">{r}yd</text>')
     # crosshair + direction labels
-    p.append(f'<line x1="{cx}" y1="{cy-R}" x2="{cx}" y2="{cy+R}" stroke="#444"/>')
-    p.append(f'<line x1="{cx-R}" y1="{cy}" x2="{cx+R}" y2="{cy}" stroke="#444"/>')
+    p.append(f'<line x1="{cx}" y1="{cy-R}" x2="{cx}" y2="{cy+R}" stroke="var(--ink-soft)"/>')
+    p.append(f'<line x1="{cx-R}" y1="{cy}" x2="{cx+R}" y2="{cy}" stroke="var(--ink-soft)"/>')
     for txt, x, y, anc in [("long", cx, cy - R - 4, "middle"),
                            ("short", cx, cy + R + 12, "middle"),
                            ("left", cx - R - 4, cy - 4, "end"),
                            ("right", cx + R + 4, cy - 4, "start")]:
-        p.append(f'<text x="{x:.0f}" y="{y:.0f}" font-size="9" fill="#9aa0aa" '
+        p.append(f'<text x="{x:.0f}" y="{y:.0f}" font-size="9" fill="var(--ink-soft)" '
                  f'text-anchor="{anc}">{txt}</text>')
     # shots (class-tagged by club for the dropdown filter)
     for pt in pts:
         p.append(f'<circle class="{pid}-dot {pid}-dot-{_cid(pt["club"])}" '
                  f'cx="{X(pt["lr"]):.1f}" cy="{Y(pt["ls"]):.1f}" r="3" '
-                 f'fill="{catcol.get(pt["cat"], "#888")}" opacity="0.8"/>')
+                 f'fill="{catcol.get(pt["cat"], "var(--ink-soft)")}" opacity="0.82"/>')
     # green-center target
-    p.append(f'<circle cx="{cx}" cy="{cy}" r="4" fill="#fff"/>')
+    p.append(f'<circle cx="{cx}" cy="{cy}" r="4" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5"/>')
 
     def _avg_marker(lr, ls, klass, style=""):
         mx, my = X(lr), Y(ls)
         return (f'<g class="{klass}"{style}><circle cx="{mx:.1f}" cy="{my:.1f}" r="7" '
-                f'fill="none" stroke="#fff" stroke-width="2"/>'
-                f'<text x="{mx+10:.1f}" y="{my+3:.1f}" font-size="9" fill="#fff">median</text></g>')
+                f'fill="none" stroke="var(--ink)" stroke-width="2"/>'
+                f'<text x="{mx+10:.1f}" y="{my+3:.1f}" font-size="9" fill="var(--ink)">median</text></g>')
 
     # overall avg (shown by default) + a hidden avg per club (shown when filtered)
     if overall:
@@ -1281,7 +1292,8 @@ def _esc(s):
     return html.escape(str(s)) if s is not None else ""
 
 
-def render_html(d: dict) -> str:
+def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
+    font_prefix = font_prefix.rstrip("/")
     p, k, m = d["player"], d["kpis"], d["meta"]
 
     # ---- game plan (derived from the data, calibrated to player context) ----
@@ -1486,10 +1498,10 @@ def render_html(d: dict) -> str:
         w = 130
         lw, fwd = le / 100 * w, fw / 100 * w
         return (f'<svg width="{w}" height="13" style="vertical-align:middle">'
-                f'<rect x="0" width="{lw:.0f}" height="13" fill="#e53935"/>'
-                f'<rect x="{lw:.0f}" width="{fwd:.0f}" height="13" fill="#43a047"/>'
+                f'<rect x="0" width="{lw:.0f}" height="13" fill="var(--ink-soft)"/>'
+                f'<rect x="{lw:.0f}" width="{fwd:.0f}" height="13" fill="var(--green-deep)"/>'
                 f'<rect x="{lw+fwd:.0f}" width="{ri/100*w:.0f}" height="13" '
-                f'fill="#fb8c00"/></svg>')
+                f'fill="var(--brass)"/></svg>')
     drive_rows = "".join(
         f'<tr><td>{_esc(dd["club"])}</td><td>{dd["chances"]}</td>'
         f'<td><b>{dd["fw_pct"]}%</b></td>'
@@ -1516,13 +1528,14 @@ def render_html(d: dict) -> str:
 
     # ---- coaching: macro game plan + recent form + per-club ----
     co = d["coaching"]
-    _catcol = {"Swing": "#a78bfa", "Approach": "#4f9cf9", "Putting": "#43a047",
-               "Short game": "#fb8c00", "Off the tee": "#e879a6", "Course mgmt": "#26c6da"}
+    _catcol = {"Swing": "var(--ink-soft)", "Approach": "var(--green)",
+               "Putting": "var(--green-deep)", "Short game": "var(--brass)",
+               "Off the tee": "var(--ink)", "Course mgmt": "var(--brass)"}
     top10_rows = "".join(
         f'<li><span class="t10-rank">{t["rank"]}</span>'
         f'<span class="sgpill">+{t["sg"]}</span>'
         f'<div class="t10-body"><div class="t10-head">{_esc(t["action"])}'
-        f'<span class="t10-cat" style="color:{_catcol.get(t["cat"], "#9aa0aa")}">'
+        f'<span class="t10-cat" style="color:{_catcol.get(t["cat"], "var(--ink-soft)")}">'
         f'{_esc(t["cat"])}</span></div>'
         f'<div class="note">{t["detail"]}</div></div></li>' for t in co["top10"])
     top10_section = f"""
@@ -1654,37 +1667,65 @@ is what your club <i>typically</i> does &mdash; long irons short = take more clu
 <title>Strokes-Gained Tracker — {html.escape(PLAYER_NAME)}</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-:root{{--bg:#0f1115;--card:#1a1d24;--ink:#e8eaed;--mut:#9aa0aa;--line:#2a2e37;
---good:#43a047;--bad:#e53935;--accent:#4f9cf9}}
+@font-face{{font-family:'Besley';src:url('{font_prefix}/Besley-var.woff2') format('woff2');font-weight:600 700;font-style:normal;font-display:swap}}
+@font-face{{font-family:'Besley';src:url('{font_prefix}/Besley-italic.woff2') format('woff2');font-weight:600;font-style:italic;font-display:swap}}
+@font-face{{font-family:'Atkinson Hyperlegible';src:url('{font_prefix}/AtkinsonHyperlegible-400.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}}
+@font-face{{font-family:'Atkinson Hyperlegible';src:url('{font_prefix}/AtkinsonHyperlegible-400i.woff2') format('woff2');font-weight:400;font-style:italic;font-display:swap}}
+@font-face{{font-family:'Atkinson Hyperlegible';src:url('{font_prefix}/AtkinsonHyperlegible-700.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}}
+:root{{--paper:oklch(0.965 0.012 95);--paper-deep:oklch(0.935 0.018 95);--ink:oklch(0.28 0.045 155);
+--ink-soft:oklch(0.46 0.03 155);--green:oklch(0.42 0.09 155);--green-deep:oklch(0.33 0.08 155);
+--brass:oklch(0.58 0.10 85);--brass-soft:oklch(0.88 0.04 90);--rule:oklch(0.84 0.022 100);
+--serif:'Besley',Georgia,serif;--sans:'Atkinson Hyperlegible',system-ui,sans-serif;
+--sp-xs:4px;--sp-sm:8px;--sp-md:16px;--sp-lg:24px;--sp-xl:48px;--sp-2xl:96px;
+--mut:var(--ink-soft);--line:var(--rule);--good:var(--green-deep);--bad:oklch(0.45 0.13 30);--accent:var(--green)}}
 *{{box-sizing:border-box}}
-body{{margin:0;background:var(--bg);color:var(--ink);
-font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}}
-header{{padding:24px 20px 8px;max-width:1000px;margin:0 auto}}
-h1{{margin:0;font-size:24px}} h2{{font-size:18px;margin:0 0 12px}}
-.sub{{color:var(--mut);font-size:13px}}
-main{{max-width:1000px;margin:0 auto;padding:8px 20px 60px}}
-section{{background:var(--card);border:1px solid var(--line);border-radius:12px;
-padding:18px 18px 20px;margin:16px 0}}
-.kpis{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}}
+html{{-webkit-text-size-adjust:100%;background:var(--paper)}}
+body{{margin:0;background:var(--paper);color:var(--ink);
+font:400 15px/1.55 var(--sans);font-variant-numeric:tabular-nums}}
+header{{padding:28px 20px 0;max-width:1000px;margin:0 auto}}
+header::after{{content:"";display:block;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);
+height:3px;margin-top:var(--sp-md)}}
+h1{{font:600 1.95rem/1.15 var(--serif);letter-spacing:0;margin:0 0 var(--sp-xs);color:var(--ink)}}
+h2{{font:700 .8rem/1 var(--sans);letter-spacing:.11em;text-transform:uppercase;
+color:var(--brass);margin:0 0 var(--sp-sm)}}
+h2::after{{content:"";display:block;height:1px;background:var(--rule);margin-top:var(--sp-sm)}}
+.sub{{color:var(--ink-soft);font-size:.86rem}}
+main{{max-width:1000px;margin:0 auto;padding:8px 20px 72px}}
+section{{background:transparent;border:0;border-top:1px solid var(--rule);border-radius:0;
+padding:18px 0 0;margin:34px 0 0}}
+.kpis{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}}
 @media(max-width:640px){{.kpis{{grid-template-columns:repeat(2,1fr)}}}}
-.kpi{{background:#0f131a;border:1px solid var(--line);border-radius:10px;padding:12px}}
-.kpi-v{{font-size:22px;font-weight:700}} .kpi-l{{font-size:13px;margin-top:2px}}
-.kpi-s{{font-size:11px;color:var(--mut)}}
-table{{width:100%;border-collapse:collapse;font-size:14px}}
-th,td{{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}}
-th{{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}}
-td b{{color:var(--accent)}}
-.note{{color:var(--mut);font-size:12.5px;margin:10px 0 0}}
-h3.sub{{font-size:13.5px;color:var(--ink);margin:18px 0 8px;font-weight:600}}
+.kpi{{background:var(--paper);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+border-radius:0;padding:12px 2px 13px}}
+.kpi-v{{font:600 1.55rem/1.05 var(--serif);color:var(--green-deep);font-variant-numeric:tabular-nums}}
+.kpi-l{{font:700 .72rem/1.1 var(--sans);letter-spacing:.08em;text-transform:uppercase;
+color:var(--ink);margin-top:6px}}
+.kpi-s{{font-size:.76rem;color:var(--ink-soft);margin-top:3px}}
+table{{width:100%;border-collapse:collapse;font-size:.9rem;margin:var(--sp-md) 0;
+font-variant-numeric:tabular-nums}}
+thead th{{font:700 .72rem/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;
+color:var(--ink-soft);border-top:3px double var(--ink);border-bottom:1px solid var(--ink);
+padding:10px 10px 8px;text-align:right}}
+td{{text-align:right;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}}
+th:first-child,td:first-child{{text-align:left;padding-left:2px}}
+th:last-child,td:last-child{{padding-right:2px}}
+tbody tr:hover{{background:var(--paper-deep)}}
+td b{{color:var(--green-deep)}}
+.note{{color:var(--ink-soft);font-size:.82rem;margin:10px 0 0}}
+h3.sub{{font:700 .74rem/1 var(--sans);letter-spacing:.11em;text-transform:uppercase;
+color:var(--brass);margin:24px 0 8px}}
 h3.sub .note{{display:inline;font-weight:400}}
+a{{color:var(--green);text-decoration-color:color-mix(in oklch,var(--green) 40%,transparent)}}
+a:hover{{color:var(--green-deep)}}
+code{{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.95em;color:var(--green-deep)}}
 ol.top10{{list-style:none;margin:0;padding:0}}
 ol.top10 li{{display:flex;gap:12px;align-items:flex-start;padding:11px 2px;
-border-bottom:1px solid var(--line)}}
+border-bottom:1px solid var(--rule)}}
 ol.top10 li:last-child{{border-bottom:none}}
-.t10-rank{{flex:0 0 18px;color:var(--mut);font-weight:700;font-size:15px;
+.t10-rank{{flex:0 0 18px;color:var(--ink-soft);font-weight:700;font-size:15px;
 text-align:right;padding-top:3px}}
-.sgpill{{flex:0 0 auto;min-width:54px;text-align:center;background:rgba(67,160,71,.14);
-color:var(--good);border:1px solid rgba(67,160,71,.4);border-radius:8px;padding:4px 8px;
+.sgpill{{flex:0 0 auto;min-width:54px;text-align:center;background:var(--brass-soft);
+color:var(--green-deep);border:0;border-radius:2px;padding:4px 8px;
 font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}}
 .t10-body{{flex:1 1 auto;min-width:0}}
 .t10-head{{font-weight:600;font-size:14.5px;line-height:1.35}}
@@ -1692,43 +1733,43 @@ font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}}
 margin-left:8px;white-space:nowrap}}
 .t10-body .note{{margin:3px 0 0}}
 .tabbar{{position:sticky;top:0;z-index:50;display:flex;gap:6px;flex-wrap:wrap;
-background:var(--bg);padding:12px 0 10px;margin:0 0 4px;border-bottom:1px solid var(--line)}}
-.tabbar .tab{{flex:1 1 auto;min-width:120px;background:#0f131a;color:var(--mut);
-border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;
-font-weight:600;cursor:pointer;transition:.12s}}
-.tabbar .tab:hover{{color:var(--ink);border-color:#3a4150}}
-.tabbar .tab.on{{background:var(--accent);color:#06101f;border-color:var(--accent)}}
+background:var(--paper);padding:12px 0 10px;margin:0 0 4px;border-bottom:1px solid var(--rule)}}
+.tabbar .tab{{flex:1 1 auto;min-width:120px;background:transparent;color:var(--ink-soft);
+border:0;border-bottom:2px solid transparent;border-radius:0;padding:10px 14px;font-size:14px;
+font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}}
+.tabbar .tab:hover{{color:var(--green-deep)}}
+.tabbar .tab.on{{background:transparent;color:var(--ink);border-bottom-color:var(--brass)}}
 section[data-tab]{{display:none}}
-.key{{background:#0f131a;border:1px solid var(--line);border-radius:8px;
-padding:10px 14px;margin-top:12px;font-size:12.5px;color:var(--mut)}}
+.key{{background:var(--paper-deep);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+border-radius:0;padding:10px 2px;margin-top:12px;font-size:.82rem;color:var(--ink-soft)}}
 .key ul{{margin:6px 0 4px;padding-left:18px}} .key li{{margin:3px 0}}
 .key b{{color:var(--ink)}}
 .recs{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
 @media(max-width:640px){{.recs,.grid2{{grid-template-columns:1fr}}
-main{{padding:8px 12px 60px}} section{{padding:14px 12px 16px}}
+main{{padding:8px 12px 60px}} section{{padding-top:14px}}
 th,td{{padding:6px 5px;font-size:12.5px}}
 .tabbar .tab{{font-size:12.5px;padding:9px 6px;min-width:0;flex:1 1 0}}
 .t10-head{{font-size:13.5px}} .sgpill{{min-width:46px;font-size:14px}}
 table{{display:block;overflow-x:auto;white-space:nowrap}}
 table.sgc{{white-space:normal}}}}
-.rec{{background:#0f131a;border:1px solid var(--line);border-left:3px solid var(--accent);
-border-radius:8px;padding:11px 12px}}
-.rec-tag{{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);
+.rec{{background:transparent;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+border-radius:0;padding:11px 2px}}
+.rec-tag{{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--brass);
 font-weight:700}}
 .rec-head{{font-weight:600;margin:3px 0 4px;font-size:14px}}
-.rec-body{{color:var(--mut);font-size:12.5px;line-height:1.45}}
+.rec-body{{color:var(--ink-soft);font-size:12.5px;line-height:1.45}}
 .grid2{{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;align-items:start}}
 .formgrid{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}}
 @media(max-width:640px){{.formgrid{{grid-template-columns:repeat(2,1fr)}}}}
-.fcard{{background:#0f131a;border:1px solid var(--line);border-top:3px solid #3a4150;
-border-radius:10px;padding:12px 13px}}
-.fcard.up{{border-top-color:var(--good)}} .fcard.down{{border-top-color:var(--bad)}}
+.fcard{{background:transparent;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+border-radius:0;padding:12px 2px}}
+.fcard.up{{border-top-color:var(--green-deep)}} .fcard.down{{border-top-color:var(--bad)}}
 .fcard-cat{{font-size:11px;text-transform:uppercase;letter-spacing:.04em;
-color:var(--mut);font-weight:700}}
-.fcard-delta{{font-size:21px;font-weight:800;margin:5px 0 3px;color:var(--mut);
+color:var(--brass);font-weight:700}}
+.fcard-delta{{font:600 1.45rem/1.05 var(--serif);margin:5px 0 3px;color:var(--ink-soft);
 font-variant-numeric:tabular-nums}}
-.fcard-delta.up{{color:var(--good)}} .fcard-delta.down{{color:var(--bad)}}
-.fcard-sub{{font-size:12.5px;color:var(--mut)}} .fcard-sub b{{color:var(--ink);
+.fcard-delta.up{{color:var(--green-deep)}} .fcard-delta.down{{color:var(--bad)}}
+.fcard-sub{{font-size:12.5px;color:var(--ink-soft)}} .fcard-sub b{{color:var(--ink);
 font-size:14px}} .fcard-base{{white-space:nowrap}}
 .form-hl{{font-size:14px;font-weight:600;margin:14px 0 0}}
 ul.flags{{margin:10px 0 0;padding-left:18px}} ul.flags li{{margin:0 0 6px}}
@@ -1736,42 +1777,52 @@ table.sgc{{max-width:520px}}
 ul.recent{{margin:12px 0 0;padding-left:18px}} ul.recent li{{margin:0 0 9px}}
 table.sgc th:not(:first-child),table.sgc td:not(:first-child){{text-align:right;
 font-variant-numeric:tabular-nums;width:84px}}
-table.sgc td.pos{{color:var(--good)}} table.sgc td.neg{{color:var(--bad)}}
-td.pos{{color:var(--good)}} td.neg{{color:var(--bad)}}
-.hold,.lc{{font-size:10px;padding:1px 5px;border-radius:6px;background:#3a2c12;color:#f3c969}}
-.lc{{background:#3a1f1f;color:#f3a0a0}}
-.rng{{font-size:10px;color:var(--mut)}}
-.shaft{{font-size:11px;color:var(--mut)}}
-.conf{{font-size:11px;padding:1px 7px;border-radius:10px}}
-.conf-high{{background:#1b3a22;color:#7fd18c}} .conf-medium{{background:#3a3212;color:#e8d27a}}
-.conf-low{{background:#3a1f1f;color:#f3a0a0}}
+table.sgc td.pos{{color:var(--green-deep)}} table.sgc td.neg{{color:var(--bad)}}
+td.pos{{color:var(--green-deep)}} td.neg{{color:var(--bad)}}
+.hold,.lc{{font-size:10px;padding:1px 5px;border-radius:2px;background:var(--brass-soft);color:var(--ink)}}
+.lc{{background:color-mix(in oklch,var(--bad) 13%,var(--paper));color:var(--bad)}}
+.rng{{font-size:10px;color:var(--ink-soft)}}
+.shaft{{font-size:11px;color:var(--ink-soft)}}
+.conf{{font-size:11px;padding:1px 7px;border-radius:2px}}
+.conf-high{{background:color-mix(in oklch,var(--green) 13%,var(--paper));color:var(--green-deep)}}
+.conf-medium{{background:var(--brass-soft);color:var(--ink)}}
+.conf-low{{background:color-mix(in oklch,var(--bad) 13%,var(--paper));color:var(--bad)}}
 ul{{margin:0;padding-left:18px}} li{{margin:6px 0}}
-img.chart{{width:100%;height:auto;border-radius:8px;background:#fff;padding:6px}}
-.tabs button{{background:#0f131a;color:var(--ink);border:1px solid var(--line);
-border-radius:8px;padding:6px 12px;margin-right:6px;cursor:pointer}}
-.tabs button.on{{background:var(--accent);color:#06121f;border-color:var(--accent)}}
-#map{{height:440px;border-radius:10px;margin-top:10px}}
+img.chart{{width:100%;height:auto;border-radius:0;background:var(--paper);padding:6px}}
+.tabs button{{background:transparent;color:var(--ink-soft);border:0;border-bottom:2px solid transparent;
+border-radius:0;padding:6px 10px;margin-right:6px;cursor:pointer;font-weight:700;
+letter-spacing:.04em;text-transform:uppercase}}
+.tabs button:hover{{color:var(--green-deep)}}
+.tabs button.on{{background:transparent;color:var(--ink);border-bottom-color:var(--brass)}}
+#map{{height:440px;border:1px solid var(--rule);border-radius:2px;margin-top:10px;background:var(--paper-deep)}}
 .slider-row{{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0}}
 input[type=range]{{flex:1;min-width:180px}}
-.proj{{font-size:22px;font-weight:700;color:var(--accent)}}
-.pos{{color:var(--good)}} .neg{{color:var(--bad)}}
-.modeled{{border-bottom:1px dotted var(--mut);cursor:help}}
+.proj{{font:600 1.55rem/1 var(--serif);color:var(--green-deep);font-variant-numeric:tabular-nums}}
+select{{background:oklch(0.985 0.008 95);border:1px solid var(--rule);border-radius:2px;
+color:var(--ink);font:400 .95rem/1.2 var(--sans);padding:6px 8px}}
+.pos{{color:var(--green-deep)}} .neg{{color:var(--bad)}}
+.modeled{{border-bottom:1px dotted var(--ink-soft);cursor:help}}
 .course-grp{{margin:14px 0}}
-.course-h{{font-size:15px;margin:0 0 8px}} .course-n{{color:var(--mut);font-size:12px;font-weight:400}}
-.rcards{{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}}
-.rcard-wrap{{display:flex;flex-direction:column;gap:4px}}
-.rcard{{display:block;text-decoration:none;color:var(--ink);background:#0f131a;
-border:1px solid var(--line);border-radius:10px;padding:12px 14px;transition:.12s}}
-.rcard:hover{{border-color:var(--accent);transform:translateY(-2px)}}
-.rc-pdf{{font-size:11.5px;color:var(--mut);text-decoration:none;padding-left:4px}}
-.rc-pdf:hover{{color:var(--accent)}}
-.rc-date{{font-size:12px;color:var(--mut)}}
-.rc-score{{font-size:26px;font-weight:700;margin:2px 0}}
-.rc-par{{font-size:14px;color:var(--mut);font-weight:400}}
-.rc-meta{{font-size:11.5px;color:var(--mut)}}
+.course-h{{font:600 1.05rem/1.2 var(--serif);margin:0 0 8px}}
+.course-n{{color:var(--ink-soft);font:400 .78rem/1 var(--sans)}}
+.rcards{{display:block;border-top:3px double var(--ink)}}
+.rcard-wrap{{display:block;border-bottom:1px solid var(--rule)}}
+.rcard{{display:grid;grid-template-columns:minmax(7rem,.8fr) minmax(5rem,.45fr) minmax(13rem,1.2fr) minmax(4rem,.35fr) auto;
+gap:var(--sp-md);align-items:baseline;text-decoration:none;color:var(--ink);background:transparent;
+border:0;border-radius:0;padding:14px 2px}}
+.rcard:hover{{background:var(--paper-deep)}}
+.rc-pdf{{font-size:11.5px;color:var(--ink-soft);text-decoration:none;padding:4px 2px 10px;display:inline-block}}
+.rc-pdf:hover{{color:var(--green-deep)}}
+.rc-date{{font-size:12px;color:var(--ink-soft)}}
+.rc-score{{font:600 1.55rem/1 var(--serif);margin:0;color:var(--green-deep);font-variant-numeric:tabular-nums}}
+.rc-par{{font:.88rem/1 var(--sans);color:var(--ink-soft);font-weight:400}}
+.rc-meta{{font-size:11.5px;color:var(--ink-soft)}}
 .rc-sg{{font-size:13px;font-weight:600;margin-top:6px}}
-.rc-open{{font-size:12px;color:var(--accent);margin-top:6px}}
-footer{{max-width:1000px;margin:0 auto;padding:0 20px 50px;color:var(--mut);font-size:12px}}
+.rc-open{{font-size:12px;color:var(--green);margin-top:6px}}
+footer{{max-width:1000px;margin:0 auto;padding:20px 20px 50px;color:var(--ink-soft);
+font-size:12px;border-top:1px solid var(--rule)}}
+@media(max-width:760px){{.rcard{{grid-template-columns:1fr auto;gap:6px 12px}}
+.rc-meta,.rc-sg,.rc-open{{grid-column:1/-1}}}}
 </style></head>
 <body>
 <header>
@@ -1943,6 +1994,8 @@ function filterPat(pid, v){{
 
 // ---- round map (Esri satellite) ----
 var ROUNDS={map_json};
+var MAP_GREEN='oklch(0.42 0.09 155)';
+var MAP_BRASS='oklch(0.58 0.10 85)';
 var map=L.map('map',{{scrollWheelZoom:false}});
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{{z}}/{{y}}/{{x}}',
  {{maxZoom:19,attribution:'Esri'}}).addTo(map);
@@ -1950,10 +2003,10 @@ var layer=L.layerGroup().addTo(map);
 function drawRound(r){{
  layer.clearLayers(); var all=[];
  (r.holes||[]).forEach(function(h){{
-  if(h.pts.length<2) return;
-  var pl=L.polyline(h.pts,{{color:'#ffd54f',weight:2,opacity:.9}}).addTo(layer);
+ if(h.pts.length<2) return;
+  var pl=L.polyline(h.pts,{{color:MAP_BRASS,weight:2,opacity:.9}}).addTo(layer);
   h.pts.forEach(p=>all.push(p));
-  L.circleMarker(h.pts[0],{{radius:3,color:'#4f9cf9',fillOpacity:1}})
+  L.circleMarker(h.pts[0],{{radius:3,color:MAP_GREEN,fillColor:MAP_GREEN,fillOpacity:1}})
     .bindTooltip('Hole '+h.hole).addTo(layer);
  }});
  if(all.length) map.fitBounds(all,{{padding:[20,20]}});
@@ -1998,8 +2051,9 @@ window.addEventListener('hashchange',function(){{
 </body></html>"""
 
 
-def render_round_page(d: dict, r: dict) -> str:
+def render_round_page(d: dict, r: dict, font_prefix: str = "../assets/fonts") -> str:
     """Full review for one round: satellite shot map + hole-by-hole + SG."""
+    font_prefix = font_prefix.rstrip("/")
     holes = d["holes_by_round"].get(r["round_id"], [])
     shotmap_json = json.dumps(d["shotmap"].get(r["round_id"], []))
     tp = r["to_par"]
@@ -2042,40 +2096,70 @@ def render_round_page(d: dict, r: dict) -> str:
 <title>{_esc(r['course'])} · {_esc(r['date'])} — round review</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-:root{{--bg:#0f1115;--card:#1a1d24;--ink:#e8eaed;--mut:#9aa0aa;--line:#2a2e37;
---good:#43a047;--bad:#e53935;--accent:#4f9cf9}}
+@font-face{{font-family:'Besley';src:url('{font_prefix}/Besley-var.woff2') format('woff2');font-weight:600 700;font-style:normal;font-display:swap}}
+@font-face{{font-family:'Besley';src:url('{font_prefix}/Besley-italic.woff2') format('woff2');font-weight:600;font-style:italic;font-display:swap}}
+@font-face{{font-family:'Atkinson Hyperlegible';src:url('{font_prefix}/AtkinsonHyperlegible-400.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}}
+@font-face{{font-family:'Atkinson Hyperlegible';src:url('{font_prefix}/AtkinsonHyperlegible-400i.woff2') format('woff2');font-weight:400;font-style:italic;font-display:swap}}
+@font-face{{font-family:'Atkinson Hyperlegible';src:url('{font_prefix}/AtkinsonHyperlegible-700.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}}
+:root{{--paper:oklch(0.965 0.012 95);--paper-deep:oklch(0.935 0.018 95);--ink:oklch(0.28 0.045 155);
+--ink-soft:oklch(0.46 0.03 155);--green:oklch(0.42 0.09 155);--green-deep:oklch(0.33 0.08 155);
+--brass:oklch(0.58 0.10 85);--brass-soft:oklch(0.88 0.04 90);--rule:oklch(0.84 0.022 100);
+--serif:'Besley',Georgia,serif;--sans:'Atkinson Hyperlegible',system-ui,sans-serif;
+--sp-xs:4px;--sp-sm:8px;--sp-md:16px;--sp-lg:24px;--sp-xl:48px;--sp-2xl:96px;
+--mut:var(--ink-soft);--line:var(--rule);--good:var(--green-deep);--bad:oklch(0.45 0.13 30);--accent:var(--green)}}
 *{{box-sizing:border-box}}
-body{{margin:0;background:var(--bg);color:var(--ink);
-font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}}
+html{{-webkit-text-size-adjust:100%;background:var(--paper)}}
+body{{margin:0;background:var(--paper);color:var(--ink);
+font:400 15px/1.55 var(--sans);font-variant-numeric:tabular-nums}}
 header,main{{max-width:1000px;margin:0 auto;padding:0 20px}}
-header{{padding-top:22px}} h1{{margin:6px 0 2px;font-size:22px}}
-.sub{{color:var(--mut);font-size:13px}} a{{color:var(--accent)}}
-.back{{font-size:13px;text-decoration:none}}
-section{{background:var(--card);border:1px solid var(--line);border-radius:12px;
-padding:16px 18px;margin:16px 0}} h2{{font-size:17px;margin:0 0 12px}}
+header{{padding-top:28px}}
+header::after{{content:"";display:block;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);
+height:3px;margin-top:var(--sp-md)}}
+h1{{font:600 1.85rem/1.15 var(--serif);letter-spacing:0;margin:8px 0 4px;color:var(--ink)}}
+h2{{font:700 .8rem/1 var(--sans);letter-spacing:.11em;text-transform:uppercase;
+color:var(--brass);margin:0 0 var(--sp-sm)}}
+h2::after{{content:"";display:block;height:1px;background:var(--rule);margin-top:var(--sp-sm)}}
+.sub{{color:var(--ink-soft);font-size:.86rem}} a{{color:var(--green);text-decoration-color:color-mix(in oklch,var(--green) 40%,transparent)}}
+a:hover{{color:var(--green-deep)}}
+.back{{font-size:13px;text-decoration:none;font-weight:700}}
+section{{background:transparent;border:0;border-top:1px solid var(--rule);border-radius:0;
+padding:18px 0 0;margin:34px 0 0}}
 .kpis{{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}}
-.kpi{{background:#0f131a;border:1px solid var(--line);border-radius:10px;padding:11px}}
-.kpi-v{{font-size:20px;font-weight:700}} .kpi-l{{font-size:12px;color:var(--mut)}}
-.rc-par{{font-size:13px;color:var(--mut);font-weight:400}}
-table{{width:100%;border-collapse:collapse;font-size:13.5px}}
-th,td{{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}}
-th{{color:var(--mut);font-size:11px;text-transform:uppercase}}
-#map{{height:480px;border-radius:10px}}
-.note{{color:var(--mut);font-size:12px}}
+.kpi{{background:var(--paper);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+border-radius:0;padding:12px 2px 13px}}
+.kpi-v{{font:600 1.45rem/1.05 var(--serif);color:var(--green-deep);font-variant-numeric:tabular-nums}}
+.kpi-l{{font:700 .72rem/1.1 var(--sans);letter-spacing:.08em;text-transform:uppercase;
+color:var(--ink);margin-top:6px}}
+.rc-par{{font:.88rem/1 var(--sans);color:var(--ink-soft);font-weight:400}}
+table{{width:100%;border-collapse:collapse;font-size:.88rem;margin:var(--sp-md) 0;
+font-variant-numeric:tabular-nums}}
+thead th{{font:700 .72rem/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;
+color:var(--ink-soft);border-top:3px double var(--ink);border-bottom:1px solid var(--ink);
+padding:10px 10px 8px;text-align:right}}
+td{{text-align:right;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}}
+th:first-child,td:first-child{{text-align:left;padding-left:2px}}
+th:last-child,td:last-child{{padding-right:2px}}
+tbody tr:hover{{background:var(--paper-deep)}}
+#map{{height:480px;border:1px solid var(--rule);border-radius:2px;background:var(--paper-deep)}}
+.note{{color:var(--ink-soft);font-size:.8rem}}
 .holenav{{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}}
-.holenav button{{background:#0f131a;color:var(--ink);border:1px solid var(--line);
-border-radius:7px;min-width:30px;padding:4px 8px;cursor:pointer;font-size:12.5px}}
-.holenav button.on{{background:var(--accent);color:#06121f;border-color:var(--accent)}}
-.legend{{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;font-size:11.5px;color:var(--mut)}}
+.holenav button{{background:transparent;color:var(--ink-soft);border:0;border-bottom:2px solid transparent;
+border-radius:0;min-width:30px;padding:4px 8px;cursor:pointer;font-size:12.5px;font-weight:700}}
+.holenav button:hover{{color:var(--green-deep)}}
+.holenav button.on{{background:transparent;color:var(--ink);border-bottom-color:var(--brass)}}
+.legend{{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;font-size:11.5px;color:var(--ink-soft)}}
 .lchip{{display:inline-flex;align-items:center;gap:4px}}
 .lchip i{{width:11px;height:11px;border-radius:2px;display:inline-block}}
 .explorer{{display:grid;grid-template-columns:2fr 1fr;gap:12px}}
 @media(max-width:720px){{.explorer{{grid-template-columns:1fr}}}}
-.shotlist{{background:#0f131a;border:1px solid var(--line);border-radius:10px;
-padding:10px;font-size:12.5px;max-height:480px;overflow:auto}}
-.sl-h{{font-weight:600;margin-bottom:6px}}
-.shotlbl{{color:#fff;font-size:10px;font-weight:600;
-text-shadow:0 0 3px #000,0 0 3px #000;white-space:nowrap;pointer-events:none}}
+.shotlist{{background:var(--paper-deep);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+border-radius:0;padding:10px 2px;font-size:12.5px;max-height:480px;overflow:auto}}
+.sl-h{{font-weight:700;margin-bottom:6px;color:var(--ink)}}
+.shotlbl{{color:var(--ink);background:var(--paper);border:1px solid var(--rule);
+border-radius:2px;padding:1px 4px;font-size:10px;font-weight:700;
+white-space:nowrap;pointer-events:none}}
+code{{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.95em;color:var(--green-deep)}}
+.pos{{color:var(--green-deep)}} .neg{{color:var(--bad)}}
 </style></head><body>
 <header>
 <a class="back" href="../index.html">← back to dashboard</a>
@@ -2104,9 +2188,11 @@ club, lie, and distance-to-pin. "All" shows the whole round.</p></section>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 var SM={shotmap_json};
-var COL={{Driver:'#e53935',Wood:'#fb8c00',Hybrid:'#fdd835',Iron:'#43a047',
-Wedge:'#29b6f6',Putter:'#ab47bc'}};
-function colOf(c){{return COL[c]||'#bbbbbb';}}
+var ROOT_STYLE=getComputedStyle(document.documentElement);
+function tok(n){{return ROOT_STYLE.getPropertyValue(n).trim();}}
+var COL={{Driver:tok('--green-deep'),Wood:tok('--brass'),Hybrid:tok('--brass-soft'),
+Iron:tok('--green'),Wedge:tok('--ink-soft'),Putter:tok('--ink')}};
+function colOf(c){{return COL[c]||tok('--ink-soft');}}
 function abbr(c){{return (c||'').replace('Pitching Wedge','PW').replace(' Wedge','°W')
  .replace(' Iron','i').replace(' Wood','W').replace('Driver','Dr').replace('Hybrid','Hy')
  .replace('Putter','Putt');}}
@@ -2128,7 +2214,7 @@ function drawShot(sh,label){{
   L.circleMarker(sh.e,{{radius:3,color:c,fillColor:c,fillOpacity:1,weight:1}}).addTo(layer);
  }}
  L.circleMarker(sh.s,{{radius:sh.tee?5:3,color:c,
-  fillColor:sh.tee?'#ffffff':c,fillOpacity:1,weight:1}}).addTo(layer).bindTooltip(tip);
+  fillColor:sh.tee?tok('--paper'):c,fillOpacity:1,weight:1}}).addTo(layer).bindTooltip(tip);
  if(label && pts.length===2){{
   var mid=[(sh.s[0]+sh.e[0])/2,(sh.s[1]+sh.e[1])/2];
   L.marker(mid,{{icon:L.divIcon({{className:'shotlbl',
@@ -2141,7 +2227,7 @@ function show(idx){{
  var hs = idx<0 ? SM : [SM[idx]];
  hs.forEach(function(h){{(h.shots||[]).forEach(function(sh){{
   drawShot(sh, idx>=0).forEach(function(p){{all.push(p);}});
-  if(idx>=0) rows+='<tr><td style="border-left:3px solid '+colOf(sh.cat)+
+  if(idx>=0) rows+='<tr><td style="color:'+colOf(sh.cat)+
    ';padding-left:6px">'+esc(sh.n)+'</td><td>'+esc(sh.club)+'</td><td>'+esc(sh.dist)+'y</td><td>'+
    esc(sh.lie||'')+'</td><td>'+(sh.putt?'—':esc(sh.dtp_e)+'y')+'</td></tr>';
  }});}});
@@ -2176,6 +2262,7 @@ def main():
     data = compute(store)
     outdir = os.path.dirname(os.path.abspath(out))
     os.makedirs(outdir, exist_ok=True)
+    _copy_font_assets(outdir)
     rounds_dir = os.path.join(outdir, "rounds")
     os.makedirs(rounds_dir, exist_ok=True)
     # detect an existing shot-map PDF per round (generated separately) so we only
@@ -2185,12 +2272,12 @@ def main():
         r["pdf"] = pdf if os.path.exists(os.path.join(rounds_dir, pdf)) else None
     # The dashboard HTML is the product — write it FIRST so nothing else can block it.
     with open(out, "w", encoding="utf-8") as f:
-        f.write(render_html(data))
+        f.write(render_html(data, "assets/fonts"))
     # per-round full-review pages -> <outdir>/rounds/<slug>_review.html
     for r in data["rounds"]:
         with open(os.path.join(rounds_dir, f'{r["slug"]}_review.html'), "w",
                   encoding="utf-8") as f:
-            f.write(render_round_page(data, r))
+            f.write(render_round_page(data, r, "../assets/fonts"))
     # Persist the cleaned per-club distances as a data artifact so the outlier
     # filter / best-third numbers live IN THE DATA. Secondary — never let a failure
     # here (locked/missing store) block the dashboard above.
