@@ -2696,10 +2696,25 @@ def main():
     with open(out, "w", encoding="utf-8") as f:
         f.write(render_html(data, "assets/fonts"))
     # per-round full-review pages -> <outdir>/rounds/<slug>_review.html
+    stories = []
     for r in data["rounds"]:
         with open(os.path.join(rounds_dir, f'{r["slug"]}_review.html'), "w",
                   encoding="utf-8") as f:
             f.write(render_round_page(data, r, "../assets/fonts"))
+        _story = _round_story(r, data["holes_by_round"].get(r["round_id"], []))
+        if _story:
+            stories.append({"round_id": r.get("round_id"), "date": r.get("date"),
+                            "course": r.get("course"), "score": r.get("score"),
+                            "to_par": r.get("to_par"), "slug": r.get("slug"),
+                            "story": _story})
+    # Emit the stories as a data artifact so consumers (the golfpals clubhouse) can show
+    # each buddy's latest round narrative without re-parsing HTML. Secondary — never block.
+    try:
+        stories.sort(key=lambda s: (s.get("date") or ""))
+        with open(os.path.join(outdir, "round_stories.json"), "w", encoding="utf-8") as f:
+            json.dump(stories, f)
+    except Exception:
+        pass
     # Persist the cleaned per-club distances as a data artifact so the outlier
     # filter / best-third numbers live IN THE DATA. Secondary — never let a failure
     # here (locked/missing store) block the dashboard above.
