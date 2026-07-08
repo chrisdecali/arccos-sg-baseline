@@ -42,6 +42,16 @@ PLAYER_NAME = os.environ.get("GOLF_PLAYER_NAME", "Chris Cole")
 # nobody else's dashboard inherits this player's event/home course.
 GOLF_EVENT = os.environ.get("GOLF_EVENT", "").strip()
 GOLF_HOME_COURSE = os.environ.get("GOLF_HOME_COURSE", "").strip()
+# Optional portal back-link ("<href>|<label>") — golfpals sets it so a served dashboard
+# can return to the group clubhouse; unset for the standalone github.io baseline.
+GOLF_HOME_LINK = os.environ.get("GOLF_HOME_LINK", "").strip()
+_hl = GOLF_HOME_LINK.split("|", 1)
+GOLF_HOME_HREF = _hl[0].strip() if GOLF_HOME_LINK else ""
+GOLF_HOME_LABEL = (_hl[1].strip() if len(_hl) > 1 else "Home") or "Home"
+_HOME_ANCHOR = (
+    f'<a href="{html.escape(GOLF_HOME_HREF)}" style="color:var(--green,#3a7);'
+    f'text-decoration:none;font-weight:700;font-size:13px">← {html.escape(GOLF_HOME_LABEL)}</a>'
+) if GOLF_HOME_HREF else ""
 import zlib
 from datetime import date
 
@@ -1922,6 +1932,7 @@ font-size:12px;border-top:1px solid var(--rule)}}
 </style></head>
 <body>
 <header>
+{f'<div style="margin-bottom:10px">{_HOME_ANCHOR}</div>' if _HOME_ANCHOR else ''}
 <h1>⛳ Strokes-Gained Tracker</h1>
 <div class="sub">{html.escape(PLAYER_NAME)} · {courses} · {m['n_rounds']} rounds · {m['n_holes']} holes ·
 {m['n_shots']} shots · index <b>{_num(p['index'],1)}</b> ·
@@ -2263,6 +2274,7 @@ code{{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size
 <header>
 <a class="back" href="../index.html">← back to dashboard</a>
 {f'<a class="back" href="{r["pdf"]}" style="margin-left:16px">⬇ shot-map PDF</a>' if r.get("pdf") else ""}
+{f'<span style="margin-left:16px">{_HOME_ANCHOR}</span>' if _HOME_ANCHOR else ''}
 <h1>{_esc(r['course'])} — {_esc(r['date'])}</h1>
 <div class="sub">{_esc(r['tee'])} tee · {_num(r['yards'],0)} yd · par {r['par']}{weather}</div>
 </header>
