@@ -367,6 +367,22 @@ def compute(store: str) -> dict:
     for row in shots + clubs:
         if row.get("club") in club_map:
             row["club"] = club_map[row["club"]]
+    arccos_clubs = {}
+    for c in clubs:
+        name = c.get("club")
+        if not name:
+            continue
+        arccos_clubs[name] = {
+            "arccos": _f(c.get("smart_distance_yd")),
+            "tee": _f(c.get("tee_yd")),
+            "fairway": _f(c.get("fairway_yd")),
+            "rough": _f(c.get("rough_yd")),
+            "sand": _f(c.get("sand_yd")),
+            "longest": _f(c.get("longest_yd")),
+            "range_lo": _f(c.get("range_low_yd")),
+            "range_hi": _f(c.get("range_high_yd")),
+            "usage": _f(c.get("usage_count")),
+        }
     # bag.csv = source of truth for clubs + target carries (kept descending).
     bag_csv = _read_csv(os.path.join(store, "bag.csv"))
     if bag_csv:
@@ -477,6 +493,31 @@ def compute(store: str) -> dict:
         club_wet[name] = frac_wet
         club_factor[name] = _roll_factor(cat, frac_wet)
 
+    best_third_flags = {}
+    prev_shown_best = None
+    for name, mc in sorted(club_mc.items(), key=lambda kv: _club_rank(kv[0])):
+        total = _round5(mc[0]) if mc else None
+        usage = (arccos_clubs.get(name) or {}).get("usage")
+        sample_n = usage if usage is not None else (mc[3] if mc else 0)
+        low_sample = (sample_n or 0) < 8
+        # Only a VISIBLE inversion matters — compare against the last SHOWN club, not a
+        # suppressed noisy neighbor (else a well-sampled club is hidden for merely tying a
+        # hidden one).
+        non_monotonic = (
+            total is not None and prev_shown_best is not None and total >= prev_shown_best
+        )
+        suppressed = low_sample or non_monotonic
+        reason = "low sample" if low_sample else "non-monotonic" if non_monotonic else ""
+        best_third_flags[name] = {
+            "suppressed": suppressed,
+            "reason": reason,
+            "low_sample": low_sample,
+            "non_monotonic": non_monotonic,
+            "sample_n": int(sample_n or 0),
+        }
+        if not suppressed and total is not None:
+            prev_shown_best = total
+
     bag = []
     prev_carry = None  # enforce strictly descending
     for name, target in target_bag:
@@ -484,19 +525,34 @@ def compute(store: str) -> dict:
         cat = cm.get("club_category") or _club_cat(name)
         mc = club_mc.get(name)
         n = mc[3] if mc else 0
-        total_est = mc[0] if mc else _f(cm.get("smart_distance_yd"))
+        arccos = (arccos_clubs.get(name) or {}).get("arccos")
+        total_est = mc[0] if mc else arccos
         factor = club_factor.get(name, CARRY_FACTOR.get(cat, 0.97))   # wet-aware
         # PREFER a launch-monitor (measured) carry when we have one for this club.
         lm = name in lm_carry
+        modeled = _round5(total_est * factor) if total_est else None
+        arccos_rounded = _round5(arccos) if arccos is not None else None
+        flags = best_third_flags.get(name, {})
         if lm:
             measured = _round5(lm_carry[name])
+            candidate = measured
+            src = "measured"
         else:
-            measured = _round5(total_est * factor) if total_est else None
-        # Trust MEASURED when it's a launch-monitor number, OR enough on-course
-        # samples AND within ~15% of target (else it's noise/mis-tag).
-        confident = lm or (measured is not None and n >= 8
-                           and abs(measured - target) <= 0.15 * target)
-        candidate = _round5(measured if confident else target)
+            measured = modeled
+            # Trust our modeled carry only when the underlying best-third distance is
+            # both sufficiently sampled and monotonic. Otherwise fall back to Arccos
+            # Smart Distance before using the static target.
+            confident = (modeled is not None and not flags.get("suppressed")
+                         and n >= 8 and abs(modeled - target) <= 0.15 * target)
+            if confident:
+                candidate = modeled
+                src = "modeled"
+            elif arccos_rounded is not None:
+                candidate = arccos_rounded
+                src = "arccos"
+            else:
+                candidate = target
+                src = "target"
         # Enforce strictly descending in 5-yard steps: never emit a club carrying
         # >= the one above it. If the candidate would break order, step down by 5.
         if prev_carry is not None and candidate >= prev_carry:
@@ -504,13 +560,14 @@ def compute(store: str) -> dict:
             held = True
         else:
             suggested = candidate
-            held = not confident
+            held = src != "modeled" and src != "measured"
         prev_carry = suggested
         bag.append({
             "club": name, "category": cat, "group": GROUP_OF.get(cat, "Other"),
             "target": target, "measured": measured, "suggested": suggested,
-            "n": n or 0, "held": held, "low_conf": (n or 0) < 5 and not lm,
+            "n": n or 0, "held": held, "low_conf": flags.get("low_sample", False) and not lm,
             "measured_src": lm,   # True = launch-monitor measured
+            "suggested_src": src, "arccos": arccos,
         })
 
     # ---- lateral offsets per club (one pass; shared by dispersion + aim) ----
@@ -550,7 +607,9 @@ def compute(store: str) -> dict:
         # PREFER a launch-monitor (measured) carry over the modeled one
         lm = name in lm_carry
         carry = _round5(lm_carry[name]) if lm else _round5(med * factor)
-        disp_clubs.append({
+        arccos = arccos_clubs.get(name, {})
+        flags = best_third_flags.get(name, {})
+        entry = {
             "club": name, "category": cat, "group": GROUP_OF.get(cat, "Other"),
             # total = real measured distance; carry = LM if measured, else wet-modeled
             "total": _round5(med), "total_lo": _round5(lo), "total_hi": _round5(hi),
@@ -560,7 +619,12 @@ def compute(store: str) -> dict:
             "lateral_sd": _round5(statistics.pstdev(lat)) if len(lat) > 1 else None,
             "n": n,
             "confidence": "high" if n >= 12 else "medium" if n >= 6 else "low",
-        })
+            "best_third_suppressed": flags.get("suppressed", False),
+            "best_third_suppress_reason": flags.get("reason", ""),
+            "clean_n": flags.get("sample_n", n),
+        }
+        entry.update(arccos)
+        disp_clubs.append(entry)
     # Order by the player's bag if they have one; otherwise (no bag.csv) fall back to
     # the canonical club order — never leave clubs in hash order.
     disp_clubs.sort(key=lambda d: bag_order.get(d["club"], 1000 + _club_rank(d["club"])))
@@ -1020,6 +1084,7 @@ def compute(store: str) -> dict:
         "bag": bag,
         # all bag.csv specs (incl. no-carry clubs like the putter, absent from target_bag)
         "bag_specs": list(bag_specs.values()),
+        "arccos_clubs": arccos_clubs,
         "dispersion": disp_clubs,
         "patterns": patterns, "putting_dist": putting_dist, "updown": updown,
         "driving": driving, "pace": pace, "pace_avg18": pace_avg18,
@@ -1243,7 +1308,8 @@ def _svg_sg_by_round(rounds) -> str:
 def _svg_dispersion(disp_clubs) -> str:
     """Inline SVG scatter of carry (x, yds) vs lateral spread (y, yds), with ticks."""
     pts = [(d["carry"], d["lateral_sd"], d["club"], d["confidence"])
-           for d in disp_clubs if d["carry"] and d["lateral_sd"]]
+           for d in disp_clubs if d["carry"] and d["lateral_sd"]
+           and (d.get("measured_src") or not d.get("best_third_suppressed"))]
     if not pts:
         return ""
     cmap = {"high": "var(--green-deep)", "medium": "var(--brass)", "low": "var(--ink-soft)"}
@@ -1373,6 +1439,14 @@ def _num(v, d=1, plus=False):
     return s
 
 
+def _yd(v):
+    return "—" if v is None else f"{v:.0f}"
+
+
+def _yd_range(lo, hi):
+    return "—" if lo is None or hi is None else f"{_yd(lo)}&ndash;{_yd(hi)}"
+
+
 def _esc(s):
     return html.escape(str(s)) if s is not None else ""
 
@@ -1419,17 +1493,28 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
 
     # ---- bag + suggested carry table (merges specs from bag.csv with the suggestion) ----
     specs_by = {s.get("club"): s for s in d.get("bag_specs", [])}
+    def _src_badge(src):
+        if src == "measured":
+            return ' <span class="conf conf-high" title="launch-monitor measured carry">measured</span>'
+        if src == "modeled":
+            return ' <span class="conf conf-medium" title="best-⅓ modeled carry">best-⅓/modeled</span>'
+        if src == "arccos":
+            return ' <span class="conf conf-high" title="Arccos Smart Distance fallback">Arccos</span>'
+        if src == "target":
+            return ' <span class="hold" title="static bag.csv target fallback">target</span>'
+        return ""
+
     bag_rows = ""
     for b in d["bag"]:
-        flag = ' <span class="hold" title="held to keep the bag descending / low sample">hold</span>' if b["held"] else ""
-        ms = ' <span class="conf conf-high" title="launch-monitor measured carry">measured</span>' if b.get("measured_src") else ""
+        flag = ' <span class="hold" title="held to keep the bag strictly descending">hold</span>' if b["held"] else ""
+        src = _src_badge(b.get("suggested_src"))
         s = specs_by.get(b["club"], {})
         loft = f'{_esc(s.get("loft"))}°' if s.get("loft") else "—"
         shaft = _esc(s.get("shaft")) or "—"
         bag_rows += (
             f'<tr><td>{_esc(b["club"])}</td><td>{loft}</td>'
             f'<td class="shaft">{shaft}</td><td>{b["target"]}</td>'
-            f'<td><b>{b["suggested"]}</b>{ms}{flag}</td></tr>')
+            f'<td><b>{b["suggested"]}</b>{src}{flag}</td></tr>')
     # No-carry clubs from bag.csv (e.g. the putter) — show the inventory row with a
     # dash for target/carry so the whole bag is represented, brand included.
     _bagged = {b["club"] for b in d["bag"]}
@@ -1446,16 +1531,32 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
     disp_rows = ""
     for c in d["dispersion"]:
         # Monte-Carlo 80% band on the total — shows how (un)certain the estimate is
-        rng = (f' <span class="rng" title="Monte-Carlo 80% range from your shots">'
-               f'{_num(c.get("total_lo"),0)}–{_num(c.get("total_hi"),0)}</span>'
-               if c.get("total_lo") is not None else "")
+        if c.get("best_third_suppressed"):
+            reason = _esc(c.get("best_third_suppress_reason") or "low confidence")
+            best = f'<span title="Suppressed: {reason}">—</span>'
+            carry = (f'{_num(c["carry"],0)}'
+                     if c.get("measured_src") else f'<span title="Suppressed: {reason}">—</span>')
+        else:
+            rng = (f' <span class="rng" title="Monte-Carlo 80% range from your shots">'
+                   f'{_num(c.get("total_lo"),0)}–{_num(c.get("total_hi"),0)}</span>'
+                   if c.get("total_lo") is not None else "")
+            best = f'<b>{_num(c["total"],0)}</b>{rng}'
+            carry = _num(c["carry"],0)
         ms = ' <span class="conf conf-high" title="launch-monitor measured">measured</span>' if c.get("measured_src") else ""
         disp_rows += (
             f'<tr data-group="{_esc(c["group"])}"><td>{_esc(c["club"])}</td>'
-            f'<td><b>{_num(c["total"],0)}</b>{rng}</td><td>{_num(c["carry"],0)}{ms}</td>'
+            f'<td><b>{_yd(c.get("arccos"))}</b></td><td>{best}</td><td>{carry}{ms}</td>'
             f'<td>±{_num(c["carry_sd"],0)}</td>'
-            f'<td>±{_num(c["lateral_sd"],0)}</td><td>{c["n"]}</td>'
+            f'<td>±{_num(c["lateral_sd"],0)}</td><td>{c.get("clean_n", c["n"])}</td>'
             f'<td><span class="conf conf-{_esc(c["confidence"])}">{_esc(c["confidence"])}</span></td></tr>')
+    lie_rows = ""
+    for c in d["dispersion"]:
+        lie_rows += (
+            f'<tr data-group="{_esc(c["group"])}"><td>{_esc(c["club"])}</td>'
+            f'<td>{_yd(c.get("tee"))}</td><td>{_yd(c.get("fairway"))}</td>'
+            f'<td>{_yd(c.get("rough"))}</td><td>{_yd(c.get("sand"))}</td>'
+            f'<td>{_yd(c.get("longest"))}</td>'
+            f'<td>{_yd_range(c.get("range_lo"), c.get("range_hi"))}</td></tr>')
 
     # ---- aim table ----
     if d["aim"]:
@@ -1723,21 +1824,30 @@ from.</span></div></section>"""
 <table><thead><tr><th>Club</th><th>Loft</th><th>Shaft</th><th>Target</th>
 <th>Carry to use</th></tr></thead><tbody>{bag_rows}</tbody></table>
 <p class="note">Your bag (from <code>bag.csv</code>) with the <b>"Carry to use"</b> &mdash;
-the single number to punch into your apps: your measured carry when there's enough of it,
-else your target, always kept <b>strictly descending</b> ("hold" = a noisy point would
-have broken club order; "measured" = a launch-monitor number).</p>
+the single number to punch into your apps: launch-monitor carry when present, otherwise
+your <b>best-⅓/modeled</b> carry only when it has enough monotonic signal. Low-confidence
+or non-monotonic modeled carries fall back to <b>Arccos Smart Distance</b>, then the row is
+capped if needed to keep the bag <b>strictly descending</b>.</p>
 <h3 class="sub">Measured distances &amp; dispersion</h3>
 {disp_svg}
 <div class="tabs" id="disp-tabs" style="margin:12px 0 8px">
  <button class="on" data-g="all">All</button><button data-g="Woods">Woods</button>
  <button data-g="Irons">Irons</button><button data-g="Wedges">Wedges</button></div>
-<table><thead><tr><th>Club</th><th>Total (best ⅓)</th><th>Carry</th><th>Carry ±SD</th>
+<table><thead><tr><th>Club</th><th>Arccos</th><th>Best-⅓</th><th>Carry (modeled)</th><th>Carry ±SD</th>
 <th>Lateral ±SD</th><th>Shots</th><th>Confidence</th></tr></thead>
 <tbody id="disp-body">{disp_rows}</tbody></table>
-<p class="note"><b>Total</b> = real measured distance (carry + roll) from Arccos &mdash;
-best-third strike, recency-weighted, Monte-Carlo bootstrapped (grey range = 80% band).
-<b>Carry</b> = total × a condition-aware roll factor (you play wet, so carry sits just
-under total). Modeled until <i>launch-monitor carries (Tee Box, July)</i> take over.</p></section>"""
+<p class="note"><b>Arccos</b> = Smart Distance from <code>clubs.csv</code>, the primary
+distance to compare with the app. <b>Best-⅓</b> is your clean-strike ceiling: recency-
+weighted top-third total distance, expected to read a bit long vs the app. It is dashed
+for low samples or non-monotonic club gaps. <b>Carry (modeled)</b> = Best-⅓ × a condition-
+aware roll factor unless launch-monitor carries take over. Shots = Arccos
+<code>usage_count</code> when available, otherwise the cleaned shot count.</p>
+<h3 class="sub">Distance by lie</h3>
+<table><thead><tr><th>Club</th><th>Tee</th><th>Fairway</th><th>Rough</th><th>Sand</th>
+<th>Longest</th><th>Typical range</th></tr></thead>
+<tbody id="lie-body">{lie_rows or '<tr><td colspan=7>—</td></tr>'}</tbody></table>
+<p class="note">Per-lie totals are Arccos values already ingested from
+<code>clubs.csv</code>; blanks stay dashed.</p></section>"""
 
     club_shots = f"""
 <section data-tab="club"><h2>Where your shots go</h2>
@@ -2088,7 +2198,7 @@ document.querySelectorAll('#disp-tabs button').forEach(function(b){{
  b.onclick=function(){{
   document.querySelectorAll('#disp-tabs button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); var g=b.dataset.g;
-  document.querySelectorAll('#disp-body tr').forEach(function(tr){{
+  document.querySelectorAll('#disp-body tr,#lie-body tr').forEach(function(tr){{
    tr.style.display=(g==='all'||tr.dataset.group===g)?'':'none';}});
  }};}});
 

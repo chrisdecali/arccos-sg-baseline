@@ -299,6 +299,27 @@ def test_build_does_not_crash_on_empty_store(tmpdirless="."):
     assert d["meta"]["n_rounds"] == 0
 
 
+def test_distance_reconcile_and_monotonic_suppression():
+    # Reconcile-vs-Arccos: every club carries the Arccos Smart Distance as the primary
+    # reference, and our best-third is suppressed when it's low-sample or would create a
+    # VISIBLE inversion (the 9-iron-reads-185 bug). Shown best-thirds never invert.
+    d = _compute()
+    disp = d["dispersion"]
+    assert disp, "expected club dispersion rows"
+    assert all("arccos" in c for c in disp), "Arccos reference missing on a club"
+    assert all("best_third_suppressed" in c for c in disp), "suppression flag missing"
+    prev = None
+    for c in disp:  # displayed longest -> shortest
+        if c.get("best_third_suppressed") or c.get("total") is None:
+            continue
+        if prev is not None:
+            assert c["total"] <= prev, (
+                f'{c["club"]} best-third {c["total"]} exceeds {prev} shown above it')
+        prev = c["total"]
+    # Cole's thin-sample irons must be suppressed (best-third hidden, Arccos still shown)
+    assert any(c.get("best_third_suppressed") for c in disp), "expected some suppression"
+
+
 # --------------------------------------------------------------------- runner
 def _run():
     tests = [(n, f) for n, f in sorted(globals().items())
