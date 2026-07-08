@@ -37,6 +37,40 @@ def test_whs_index_known_values():
     assert g.whs_index([12.0, 15.0]) is None
 
 
+def test_sg_benchmark_interpolates_monotonic_and_clamps():
+    assert g._sg_benchmark(-4) == g._sg_benchmark(0)
+    assert g._sg_benchmark(40) == g._sg_benchmark(25)
+    mid = g._sg_benchmark(7.5)
+    assert mid["drive"] == -0.95
+    assert mid["approach"] == -2.3
+    assert mid["short"] == -0.95
+    assert mid["putt"] == -0.75
+    prev = g._sg_benchmark(0)
+    for hcp in [1, 5, 7.5, 10, 15, 18, 20, 25]:
+        cur = g._sg_benchmark(hcp)
+        for facet in ("drive", "approach", "short", "putt"):
+            assert cur[facet] <= prev[facet]
+        prev = cur
+
+
+def test_round_story_from_round_data_contains_score():
+    r = {
+        "course": "Test Links", "date": "2026-07-01", "score": 82, "to_par": 10,
+        "sg_off_tee": 1.2, "sg_approach": -4.4, "sg_short": -0.5,
+        "sg_putting": 0.3, "gir": 39.0, "fairway": 57.0,
+    }
+    holes = [
+        {"hole": 1, "to_par": -1, "putts": 1, "penalties": 0, "sg": 1.6, "drive": 268},
+        {"hole": 2, "to_par": 2, "putts": 3, "penalties": 1, "sg": -2.2, "drive": 242},
+    ]
+    story = g._round_story(r, holes)
+    assert story
+    assert "82" in story
+    assert "off the tee" in story
+    assert "approach" in story
+    assert "#1" in story and "#2" in story
+
+
 def test_clean_third_best_strike():
     # best third = the longest third, averaged
     assert g._clean_third([100, 200, 300]) == 300          # top 1 of 3

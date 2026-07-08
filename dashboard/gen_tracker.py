@@ -162,6 +162,126 @@ def _cid(name):
     return "".join(c for c in str(name or "") if c.isalnum()) or "x"
 
 
+def _sg_benchmark(hcp) -> dict:
+    """Estimated per-round SG vs scratch for a target handicap."""
+    h = _f(hcp)
+    if h is None:
+        h = 0.0
+    anchors = sorted(SG_BENCHMARKS)
+    h = min(max(h, anchors[0]), anchors[-1])
+    lo = max(a for a in anchors if a <= h)
+    hi = min(a for a in anchors if a >= h)
+    if lo == hi:
+        return dict(SG_BENCHMARKS[lo])
+    frac = (h - lo) / (hi - lo)
+    return {
+        k: round(SG_BENCHMARKS[lo][k] + (SG_BENCHMARKS[hi][k] - SG_BENCHMARKS[lo][k]) * frac, 2)
+        for _label, k in SG_BENCHMARK_FACETS
+    }
+
+
+def _default_target_hcp(index) -> int:
+    """Largest selector tier below the current index; scratch if already low/missing."""
+    tiers = [0, 5, 10, 15, 18, 20, 25]
+    idx = _f(index)
+    if idx is None:
+        return 0
+    below = [t for t in tiers if t < idx]
+    return below[-1] if below else tiers[0]
+
+
+def _score_label(to_par) -> str:
+    v = _i(to_par)
+    if v is None:
+        return ""
+    if v <= -3:
+        return f"{abs(v)} under par"
+    if v == -2:
+        return "eagle"
+    if v == -1:
+        return "birdie"
+    if v == 0:
+        return "par"
+    if v == 1:
+        return "bogey"
+    if v == 2:
+        return "double bogey"
+    if v == 3:
+        return "triple bogey"
+    return f"{v} over par"
+
+
+def _round_story(r: dict, holes: list[dict]) -> str:
+    """Deterministic round narrative from recorded round/hole data only."""
+    sentences = []
+    course = r.get("course")
+    dt = r.get("date")
+    score = r.get("score")
+    parts = [str(x) for x in (course, dt) if x]
+    if score is not None:
+        score_txt = str(score)
+        if r.get("to_par") is not None:
+            score_txt += f" ({_num(r.get('to_par'), 0, True)})"
+        if parts:
+            sentences.append(f"{', '.join(parts)} — {score_txt}.")
+        else:
+            sentences.append(f"Score {score_txt}.")
+
+    facets = [
+        ("off the tee", r.get("sg_off_tee")),
+        ("approach", r.get("sg_approach")),
+        ("short game", r.get("sg_short")),
+        ("putting", r.get("sg_putting")),
+    ]
+    facets = [(name, sg) for name, sg in facets if sg is not None]
+    if len(facets) >= 2:
+        strong = max(facets, key=lambda x: x[1])
+        weak = min(facets, key=lambda x: x[1])
+        if strong != weak:
+            verb = "carried it" if strong[1] > 0 else "held up best"
+            sentences.append(
+                f"Your {strong[0]} {verb} ({_num(strong[1], 1, True)}); "
+                f"{weak[0]} cost you ({_num(weak[1], 1, True)}).")
+    elif len(facets) == 1:
+        name, sg = facets[0]
+        sentences.append(f"Your only recorded SG facet was {name} ({_num(sg, 1, True)}).")
+
+    sg_holes = [h for h in holes if h.get("hole") is not None and h.get("sg") is not None]
+    if sg_holes:
+        best = max(sg_holes, key=lambda h: h["sg"])
+        worst = min(sg_holes, key=lambda h: h["sg"])
+        best_label = _score_label(best.get("to_par"))
+        worst_label = _score_label(worst.get("to_par"))
+        best_txt = f"Best hole #{best['hole']}" + (f" ({best_label})" if best_label else "")
+        if worst != best:
+            turn_txt = f"the round turned on #{worst['hole']}" + (f" ({worst_label})" if worst_label else "")
+            sentences.append(f"{best_txt}; {turn_txt}.")
+        else:
+            sentences.append(f"{best_txt}.")
+
+    stats = []
+    three_putts = sum(1 for h in holes if (h.get("putts") or 0) >= 3)
+    penalties = sum(h.get("penalties") or 0 for h in holes)
+    longest = max((h.get("drive") for h in holes if h.get("drive") is not None), default=None)
+    if three_putts:
+        stats.append((100 + three_putts, f"{three_putts} three-putt{'s' if three_putts != 1 else ''}"))
+    if penalties:
+        stats.append((95 + penalties, f"{penalties} penalty stroke{'s' if penalties != 1 else ''}"))
+    if r.get("gir") is not None:
+        gir = r["gir"]
+        stats.append((abs(gir - 50), f"{_pct(gir, 0)} GIR"))
+    if r.get("fairway") is not None:
+        fw = r["fairway"]
+        stats.append((abs(fw - 50), f"{_pct(fw, 0)} fairways"))
+    if longest is not None:
+        stats.append((min(longest / 10, 40), f"longest drive {_num(longest, 0)} yards"))
+    if stats:
+        notable = [txt for _score, txt in sorted(stats, key=lambda x: x[0], reverse=True)[:2]]
+        sentences.append("Notable: " + "; ".join(notable) + ".")
+
+    return " ".join(sentences[:4])
+
+
 # ----------------------------------------------------------------------- WHS
 # Number of posted scores -> (how many lowest differentials count, adjustment).
 # This is the USGA WHS allotment for fewer than 20 scores. The index is the mean
@@ -197,6 +317,20 @@ TARGET_BAG = [
     ("5 Iron", 170), ("6 Iron", 165), ("7 Iron", 155), ("8 Iron", 145),
     ("9 Iron", 135), ("Pitching Wedge", 120), ("50 Wedge", 105),
     ("54 Wedge", 90), ("58 Wedge", 80),
+]
+SG_BENCHMARKS = {
+    0: {"drive": 0.0, "approach": 0.0, "short": 0.0, "putt": 0.0},
+    5: {"drive": -0.6, "approach": -1.5, "short": -0.6, "putt": -0.5},
+    10: {"drive": -1.3, "approach": -3.1, "short": -1.3, "putt": -1.0},
+    15: {"drive": -2.0, "approach": -4.7, "short": -2.1, "putt": -1.5},
+    20: {"drive": -2.7, "approach": -6.2, "short": -2.9, "putt": -2.0},
+    25: {"drive": -3.4, "approach": -7.6, "short": -3.7, "putt": -2.4},
+}
+SG_BENCHMARK_FACETS = [
+    ("Off the tee", "drive"),
+    ("Approach", "approach"),
+    ("Short game", "short"),
+    ("Putting", "putt"),
 ]
 # Modeled total->carry haircut by category. CONDITION-AWARE: firm/dry ground rolls
 # out (DRY); wet ground (rain/drizzle) barely rolls so carry ~= total (WET). The
@@ -1490,6 +1624,17 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
     diffs_json = json.dumps([g["diff"] for g in d["posted"]
                              if g["diff"] is not None and g.get("holes") == 18])
     official_json = json.dumps(d["player"]["index"])
+    reach_bench_json = json.dumps(SG_BENCHMARKS, sort_keys=True)
+    # Roadmap is benchmark-to-benchmark (both on the same Broadie scale): the typical SG
+    # for the player's OWN handicap vs the target's. We do NOT mix in the player's measured
+    # Arccos SG here — Arccos's vs-scratch numbers run on a different (more negative) scale,
+    # so subtracting them from a Broadie benchmark would be nonsense.
+    reach_from_hcp_json = json.dumps(p["index"] if p.get("index") is not None else 15.0)
+    reach_facets_json = json.dumps(SG_BENCHMARK_FACETS)
+    reach_default = _default_target_hcp(p["index"])
+    reach_options = "".join(
+        f'<option value="{t}"{" selected" if t == reach_default else ""}>{t}</option>'
+        for t in [0, 5, 10, 15, 18, 20, 25])
 
     # ---- bag + suggested carry table (merges specs from bag.csv with the suggestion) ----
     specs_by = {s.get("club"): s for s in d.get("bag_specs", [])}
@@ -2062,6 +2207,21 @@ generated {_esc(m['generated_at'])}</div>
 <section data-tab="stats"><h2>Key numbers</h2><div class="kpis">{kpi_html}</div>
 <p class="note">{('Targets for ' + html.escape(GOLF_EVENT) + '. ') if GOLF_EVENT else ''}All strokes-gained is
 Arccos, measured vs scratch — large negatives are normal for a mid-handicap.</p></section>
+<section data-tab="stats"><h2>Reach your number</h2>
+<div class="slider-row">
+  <label>Play like a
+  <select id="reach-target">{reach_options}</select>
+  handicap</label>
+</div>
+<table class="reach"><thead><tr><th>Facet</th><th>Your level (SG)</th>
+<th id="reach-target-head">Target (SG)</th><th>Gain needed</th></tr></thead>
+<tbody id="reach-body"><tr><td colspan="4">—</td></tr></tbody></table>
+<p class="note">A level-to-level roadmap: the <i>typical</i> strokes-gained for your handicap
+(<b>{_num(p['index'],1)}</b>) vs the target, so "Gain needed" is how many strokes/round a
+golfer at your level typically has to find in each facet to get there. Estimated Broadie-style
+benchmarks from public strokes-gained research (not tour ShotLink), NOT your measured Arccos SG
+— those run on a different scale and live in the cards above. Approach is usually the biggest
+lever.</p></section>
 {coach_overall}
 {club_bag}
 {club_shots}
@@ -2193,6 +2353,42 @@ document.getElementById('dslider').addEventListener('input',proj);
 document.getElementById('nposts').addEventListener('change',proj);
 proj();
 
+// ---- selectable strokes-gained benchmark ----
+var REACH_BENCH = {reach_bench_json};
+var REACH_FROM_HCP = {reach_from_hcp_json};
+var REACH_FACETS = {reach_facets_json};
+function reachBenchmark(h){{
+ h=Math.max(0,Math.min(25,parseFloat(h)||0));
+ var anchors=Object.keys(REACH_BENCH).map(Number).sort(function(a,b){{return a-b;}});
+ var lo=anchors[0], hi=anchors[anchors.length-1];
+ for(var i=0;i<anchors.length;i++){{if(anchors[i]<=h)lo=anchors[i];
+  if(anchors[i]>=h){{hi=anchors[i];break;}}}}
+ if(lo===hi) return REACH_BENCH[lo];
+ var frac=(h-lo)/(hi-lo), out={{}};
+ REACH_FACETS.forEach(function(f){{var k=f[1];
+  out[k]=Math.round((REACH_BENCH[lo][k]+(REACH_BENCH[hi][k]-REACH_BENCH[lo][k])*frac)*100)/100;}});
+ return out;
+}}
+function sgfmt(v){{if(v==null||!isFinite(v))return '—'; return (v>=0?'+':'')+Number(v).toFixed(1);}}
+function renderReach(){{
+ var sel=document.getElementById('reach-target'); if(!sel)return;
+ var target=parseFloat(sel.value), bench=reachBenchmark(target), from=reachBenchmark(REACH_FROM_HCP);
+ document.getElementById('reach-target-head').textContent=target+'-hcp (SG)';
+ var rows=REACH_FACETS.map(function(f){{var label=f[0], k=f[1], you=from[k];
+  var b=bench[k], gap=(you==null||!isFinite(you))?null:(b-you);
+  return {{label:label,you:you,bench:b,gap:gap}};}});
+ rows.sort(function(a,b){{var ag=a.gap==null?-999:a.gap, bg=b.gap==null?-999:b.gap;
+  return bg-ag;}});
+ document.getElementById('reach-body').innerHTML=rows.map(function(r){{
+  var gain=r.gap==null?'—':(r.gap<=0?'already there ✓':'+'+r.gap.toFixed(1));
+  var cls=r.gap==null?'':(r.gap>0?'neg':'pos');
+  return '<tr><td>'+r.label+'</td><td>'+sgfmt(r.you)+'</td><td>'+sgfmt(r.bench)+
+   '</td><td class="'+cls+'"><b>'+gain+'</b></td></tr>';
+ }}).join('');
+}}
+var reachTarget=document.getElementById('reach-target');
+if(reachTarget){{reachTarget.addEventListener('change',renderReach);renderReach();}}
+
 // ---- dispersion group filter ----
 document.querySelectorAll('#disp-tabs button').forEach(function(b){{
  b.onclick=function(){{
@@ -2310,6 +2506,9 @@ def render_round_page(d: dict, r: dict, font_prefix: str = "../assets/fonts") ->
         weather = (f' · {_num(r["temp_f"],0)}°F'
                    f'{" · wind "+_num(r["wind_mph"],0)+" mph" if r.get("wind_mph") else ""}'
                    f'{" · "+_esc(r["weather"]) if r.get("weather") else ""}')
+    story = _round_story(r, holes)
+    story_html = (f'<section><h2>Round story</h2><p class="story">{_esc(story)}</p></section>'
+                  if story else "")
 
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2361,6 +2560,7 @@ th:first-child,td:first-child{{text-align:left;padding-left:2px}}
 th:last-child,td:last-child{{padding-right:2px}}
 tbody tr:hover{{background:var(--paper-deep)}}
 #map{{height:480px;border:1px solid var(--rule);border-radius:2px;background:var(--paper-deep)}}
+.story{{font:600 1.04rem/1.55 var(--serif);max-width:760px;margin:0;color:var(--ink)}}
 .note{{color:var(--ink-soft);font-size:.8rem}}
 .holenav{{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}}
 .holenav button{{background:transparent;color:var(--ink-soft);border:0;border-bottom:2px solid transparent;
@@ -2390,6 +2590,7 @@ code{{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size
 </header>
 <main>
 <section><h2>Round</h2><div class="kpis">{kpi_html}</div></section>
+{story_html}
 <section><h2>Strokes gained (vs scratch)</h2><div class="kpis">{sg_html}</div></section>
 <section><h2>Shot map — explore hole by hole</h2>
 <div class="holenav" id="holenav"></div>
