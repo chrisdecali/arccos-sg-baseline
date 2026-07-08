@@ -86,10 +86,15 @@ python tests/test_gen_tracker.py     # the weekly refresh runs these before publ
 * **`club_map.json`** — fixes Arccos mis-tags at ingest (`map`: wrong→right, e.g.
   `4 Iron`→`Hybrid`, `54 Wedge`→`56 Wedge`, `58 Wedge`→`60 Wedge`). Applied to every
   shot/club row before analysis.
-* **`launch_monitor.csv`** — measured carries (date, club, chs_mph, ball_mph, smash,
-  launch_deg, spin_rpm, carry_yd). When a club has a row, its carry_yd is used as the
-  carry (PREFERRED over the modeled wet-aware value) and tagged **"measured"**. Empty
-  template for now — fill it after Tee Box (July).
+* **`launch_monitor.csv`** — measured shots. Schema (read by name, extras ignored):
+  `date, club, carry_yd, total_yd, club_mph, ball_mph, smash, launch_deg,
+  launch_dir_deg, spin_rpm, spin_axis_deg, attack_deg, club_path_deg, face_angle_deg,
+  face_to_path_deg, notes`. When a club has rows, its `carry_yd` becomes the carry
+  (PREFERRED over the modeled wet-aware value) tagged **"measured"**, and the swing
+  metrics (`face_to_path_deg` etc.) sharpen the pattern coaching. **Don't hand-edit** —
+  run `import_launch_monitor.py <vendor_export.csv> . [--date YYYY-MM-DD] [--append]`,
+  which fuzzy-maps ANY launch monitor's columns (Trackman/Foresight/Uneekor/Garmin/
+  SkyTrak/Rapsodo) and auto-converts units. Empty until Tee Box (July).
 * **`validate.py`** — data-health check (missing GPS, schema drift, out-of-range, stale
   >10 days, empty weather). Warnings only, never crashes the build.
 * **`backfill_weather.py`** — fills empty temp_f/wind_mph/weather from Open-Meteo.

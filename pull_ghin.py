@@ -225,8 +225,10 @@ def fetch(token: str, ghin: str) -> dict:
     prof = ghin_get("/golfers/search.json", token,
                     {"golfer_id": ghin, "status": "Active", "per_page": "10", "page": "1"}, soft=True)
     scores = ghin_get(f"/golfers/{ghin}/scores.json", token, soft=True)
+    # rev_count must be a positive count of revisions to return; "0" 400s. 50 covers
+    # well over a year of index revisions (soft: never fatal if the endpoint still errors).
     hist = ghin_get(f"/golfers/{ghin}/handicap_history.json", token,
-                    {"rev_count": "0", "include_hidden": "false"}, soft=True)
+                    {"rev_count": "50", "include_hidden": "false"}, soft=True)
     _save("profile.json", prof)
     _save("scores.json", scores)
     _save("handicap_history.json", hist)
