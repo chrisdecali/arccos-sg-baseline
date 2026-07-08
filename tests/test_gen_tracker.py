@@ -252,6 +252,50 @@ def test_mc_best_third_band_and_determinism():
     assert g._mc_best_third([], seed=1) is None
 
 
+def test_gapping_ladder_flags_overlap_and_gap():
+    bag = [
+        {"club": "Driver", "category": "Driver", "group": "Woods", "carry": 250,
+         "total": 250, "total_lo": 242, "total_hi": 260, "confidence": "high"},
+        {"club": "3 Wood", "category": "Wood", "group": "Woods", "carry": 225,
+         "total": 225, "total_lo": 218, "total_hi": 232, "confidence": "medium"},
+        {"club": "5 Iron", "category": "Iron", "group": "Irons", "carry": 180,
+         "total": 180, "total_lo": 176, "total_hi": 184, "confidence": "high"},
+        {"club": "6 Iron", "category": "Iron", "group": "Irons", "carry": 178,
+         "total": 178, "total_lo": 172, "total_hi": 183, "confidence": "high"},
+        {"club": "9 Iron", "category": "Iron", "group": "Irons", "carry": 140,
+         "total": 140, "total_lo": 136, "total_hi": 144, "confidence": "low"},
+    ]
+    rows = g._gapping_ladder_rows(bag)
+    by_club = {r["club"]: r for r in rows}
+    assert "9 Iron" not in by_club
+    assert "GAP" in by_club["3 Wood"]["flags"]
+    assert "OVERLAP" in by_club["5 Iron"]["flags"]
+
+
+def test_standout_shots_pick_best_worst_and_format_putt_feet():
+    rows = [
+        {"round_id": "r1", "hole_id": "4", "shot_num": "2", "club": "Putter",
+         "club_category": "Putter", "start_dist_to_pin_yd": "8.0",
+         "end_dist_to_pin_yd": "0.0", "is_putt": "1", "is_tee": "0",
+         "penalties": "0", "category_approx": "putting", "sg_shot_approx": "0.82"},
+        {"round_id": "r1", "hole_id": "7", "shot_num": "2", "club": "7 Iron",
+         "club_category": "Iron", "start_dist_to_pin_yd": "168",
+         "end_dist_to_pin_yd": "1.3", "is_putt": "0", "is_tee": "0",
+         "penalties": "0", "category_approx": "approach", "sg_shot_approx": "0.72"},
+        {"round_id": "r1", "hole_id": "12", "shot_num": "1", "club": "Driver",
+         "club_category": "Driver", "start_dist_to_pin_yd": "420",
+         "end_dist_to_pin_yd": "0", "is_putt": "0", "is_tee": "1",
+         "penalties": "1", "category_approx": "off_tee", "sg_shot_approx": "-2.10"},
+        {"round_id": "r2", "hole_id": "1", "sg_shot_approx": ""},
+    ]
+    by_round = g._standout_shots_by_round(rows)
+    assert by_round["r1"]["best"]["sg"] == 0.82
+    assert "24 ft putt" in by_round["r1"]["best"]["desc"]
+    assert by_round["r1"]["worst"]["sg"] == -2.10
+    assert by_round["r1"]["worst"]["desc"] == "Hole 12 — tee shot, penalty"
+    assert "r2" not in by_round
+
+
 def test_dashboard_is_deterministic():
     # same data in -> identical Monte-Carlo output (no churn, reproducible)
     d1 = g.compute(REPO)

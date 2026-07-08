@@ -474,6 +474,176 @@ def _iqr_bounds(vals):
     return (q[0] - 1.5 * iqr, q[2] + 1.5 * iqr)
 
 
+SOLID_CONFIDENCE = {"high", "medium"}
+GAPPING_COLORS = {
+    "Woods": "var(--green-deep)",
+    "Irons": "var(--green)",
+    "Wedges": "var(--brass)",
+    "Other": "var(--ink-soft)",
+}
+
+
+def _solid_dispersion(c: dict) -> bool:
+    """Confidence gate for club visuals: high/medium rows only."""
+    return c.get("confidence") in SOLID_CONFIDENCE
+
+
+def _dispersion_carry_band(c: dict):
+    """Carry median + 80% band from an existing dispersion row.
+
+    The Monte-Carlo distribution already lives on the row as total/total_lo/total_hi.
+    When explicit carry bounds are absent, scale that existing band by the same
+    total->carry factor used for the row's carry median. This reuses the distribution
+    without resampling or revisiting raw shot distances.
+    """
+    med = _f(c.get("carry"))
+    lo = _f(c.get("carry_lo"))
+    hi = _f(c.get("carry_hi"))
+    if med is None:
+        return None
+    if lo is not None and hi is not None:
+        return (med, min(lo, hi), max(lo, hi))
+
+    total = _f(c.get("total"))
+    total_lo = _f(c.get("total_lo"))
+    total_hi = _f(c.get("total_hi"))
+    if total and total_lo is not None and total_hi is not None:
+        factor = med / total
+        lo, hi = total_lo * factor, total_hi * factor
+    else:
+        lo = hi = med
+    return (med, min(lo, hi), max(lo, hi))
+
+
+def _gapping_ladder_rows(disp_clubs: list[dict]) -> list[dict]:
+    """Normalize dispersion rows into carry bands and adjacent gap/overlap flags."""
+    rows = []
+    for c in disp_clubs:
+        if not _solid_dispersion(c):
+            continue
+        band = _dispersion_carry_band(c)
+        if not band:
+            continue
+        med, lo, hi = band
+        cat = c.get("group") or GROUP_OF.get(c.get("category") or _club_cat(c.get("club") or ""), "Other")
+        rows.append({
+            "club": c.get("club") or "",
+            "category": c.get("category") or "",
+            "group": cat if cat in GAPPING_COLORS else "Other",
+            "med": int(round(med)),
+            "lo": int(round(lo)),
+            "hi": int(round(hi)),
+            "flags": [],
+        })
+
+    gaps = [rows[i]["med"] - rows[i + 1]["med"] for i in range(len(rows) - 1)]
+    positive_gaps = [g for g in gaps if g > 0]
+    typical_gap = statistics.median(positive_gaps) if positive_gaps else None
+    for i, gap in enumerate(gaps):
+        cur, nxt = rows[i], rows[i + 1]
+        overlap = min(cur["hi"], nxt["hi"]) - max(cur["lo"], nxt["lo"])
+        narrow_band = max(1, min(cur["hi"] - cur["lo"], nxt["hi"] - nxt["lo"]))
+        big_overlap = overlap >= max(5, 0.25 * narrow_band)
+        out_of_order = cur["med"] <= nxt["med"]
+        if big_overlap or out_of_order:
+            cur["flags"].append("OVERLAP")
+        if gap > 20 or (typical_gap is not None and gap > 1.5 * typical_gap):
+            cur["flags"].append("GAP")
+    return rows
+
+
+def _shot_sg_text(v) -> str:
+    sg = _f(v)
+    return "—" if sg is None else f"{sg:+.2f}"
+
+
+def _feet_from_yards(v):
+    y = _f(v)
+    return None if y is None else int(round(y * 3))
+
+
+def _standout_shot_description(row: dict) -> str:
+    """Plain-language one-shot summary from a shots.csv row."""
+    hole = _i(row.get("hole_id"))
+    prefix = f"Hole {hole}" if hole is not None else "Hole ?"
+    start_yd = _f(row.get("start_dist_to_pin_yd"))
+    end_yd = _f(row.get("end_dist_to_pin_yd"))
+    penalties = _i(row.get("penalties")) or 0
+    is_tee = _truthy(row.get("is_tee"))
+
+    if _truthy(row.get("is_putt")):
+        start_ft = _feet_from_yards(start_yd)
+        end_ft = _feet_from_yards(end_yd)
+        if start_ft is None:
+            action = "putt"
+        elif end_ft is not None and end_ft <= 1:
+            action = f"{start_ft} ft putt, holed"
+        elif end_ft is not None:
+            action = f"{start_ft} ft putt to {end_ft} ft"
+        else:
+            action = f"{start_ft} ft putt"
+    else:
+        cat = (row.get("category_approx") or "").lower()
+        club_cat = row.get("club_category") or _club_cat(row.get("club") or "")
+        is_full_tee = cat == "off_tee" or (is_tee and club_cat in ("Driver", "Wood", "Hybrid"))
+        if is_full_tee:
+            action = "tee shot"
+        else:
+            dist = start_yd if start_yd is not None else _f(row.get("shot_distance_yd"))
+            end_ft = _feet_from_yards(end_yd)
+            kind = "chip" if cat == "short_game" or (dist is not None and dist <= 50) else "approach"
+            action = f"{int(round(dist))} yd {kind}" if dist is not None else kind
+            if end_ft is not None:
+                action += f" to {end_ft} ft"
+            if is_tee:
+                action += ", from tee"
+        if penalties:
+            action += ", penalty" if action else "penalty"
+    return f"{prefix} — {action}"
+
+
+def _standout_shots(rows: list[dict]):
+    scored = [(r, _f(r.get("sg_shot_approx"))) for r in rows]
+    scored = [(r, sg) for r, sg in scored if sg is not None]
+    if not scored:
+        return None
+
+    def shot_key(item):
+        r, sg = item
+        return (sg, -(_i(r.get("hole_id")) or 0), -(_i(r.get("shot_num")) or 0))
+
+    best_row, best_sg = max(scored, key=shot_key)
+    worst_row, worst_sg = min(scored, key=shot_key)
+
+    def item(label, row, sg):
+        return {
+            "label": label,
+            "desc": _standout_shot_description(row),
+            "sg": round(sg, 2),
+            "sg_txt": _shot_sg_text(sg),
+            "class": "pos" if sg >= 0 else "neg",
+        }
+
+    return {
+        "best": item("Shot of the round", best_row, best_sg),
+        "worst": item("Costliest", worst_row, worst_sg),
+    }
+
+
+def _standout_shots_by_round(shots: list[dict]) -> dict:
+    by_round: dict[str, list[dict]] = {}
+    for s in shots:
+        rid = s.get("round_id")
+        if rid:
+            by_round.setdefault(rid, []).append(s)
+    out = {}
+    for rid, rows in by_round.items():
+        standouts = _standout_shots(rows)
+        if standouts:
+            out[rid] = standouts
+    return out
+
+
 # --------------------------------------------------------------------- compute
 def compute(store: str) -> dict:
     rounds = _read_csv(os.path.join(store, "rounds_summary.csv"))
@@ -1190,6 +1360,7 @@ def compute(store: str) -> dict:
         })
     for hid in holes_by_round:
         holes_by_round[hid].sort(key=lambda x: x["hole"] or 0)
+    standouts_by_round = _standout_shots_by_round(shots)
 
     return {
         "meta": {
@@ -1235,6 +1406,7 @@ def compute(store: str) -> dict:
         } for g in sorted(ghin, key=lambda g: g.get("played_at") or "", reverse=True)],
         "career": career,
         "holes_by_round": holes_by_round,
+        "standouts_by_round": standouts_by_round,
         # map payload: per round -> per hole -> shot polyline
         "map": _map_payload(shots, holes),
         # per-shot detail (club/dist/lie/GPS) for the hole-by-hole shot explorer
@@ -1437,6 +1609,86 @@ def _svg_sg_by_round(rounds) -> str:
         lx += 95
     p.append("</svg>")
     return "".join(p)
+
+
+def _svg_gapping_ladder(disp_clubs) -> str:
+    """Inline SVG gapping ladder from the existing per-club dispersion distribution."""
+    rows = _gapping_ladder_rows(disp_clubs)
+    if len(rows) < 2:
+        return ""
+    max_hi = max(r["hi"] for r in rows)
+    tick_step = 25 if max_hi <= 175 else 50
+    axis_max = max(tick_step * 4, int(math.ceil(max_hi / tick_step) * tick_step))
+    W, rowH, padL, padR, padT, padB = 760, 28, 116, 122, 44, 38
+    H = padT + padB + rowH * len(rows)
+    plotW = W - padL - padR
+
+    def xf(v):
+        return padL + max(0, min(v, axis_max)) / axis_max * plotW
+
+    p = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '
+         f'role="img" aria-label="Gapping ladder carry bands" '
+         f'style="width:100%;height:auto;background:var(--paper);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)">']
+    p.append(f'<text x="{W/2:.0f}" y="16" font-size="12" font-weight="bold" '
+             f'fill="var(--ink)" text-anchor="middle">Best-third carry gapping ladder</text>')
+
+    axis_y0, axis_y1 = padT - 8, H - padB + 2
+    for xv in _nice_ticks(0, axis_max, tick_step):
+        x = xf(xv)
+        p.append(f'<line x1="{x:.1f}" y1="{axis_y0}" x2="{x:.1f}" y2="{axis_y1}" '
+                 f'stroke="var(--rule)"/>')
+        p.append(f'<text x="{x:.1f}" y="{H-11}" font-size="9" fill="var(--ink-soft)" '
+                 f'text-anchor="middle">{xv}</text>')
+    p.append(f'<text x="{(padL + W - padR)/2:.0f}" y="{H-2}" font-size="9.5" '
+             f'fill="var(--ink-soft)" text-anchor="middle">carry yards</text>')
+
+    for i, r in enumerate(rows):
+        y = padT + i * rowH + rowH / 2
+        color = GAPPING_COLORS.get(r["group"], "var(--ink-soft)")
+        x1, x2, xm = xf(r["lo"]), xf(r["hi"]), xf(r["med"])
+        bar_w = max(2, x2 - x1)
+        p.append(f'<line x1="{padL}" y1="{y:.1f}" x2="{W-padR}" y2="{y:.1f}" '
+                 f'stroke="var(--paper-deep)" stroke-width="1"/>')
+        p.append(f'<text x="{padL-8}" y="{y+3:.1f}" font-size="10" fill="var(--ink)" '
+                 f'text-anchor="end">{_esc(r["club"])}</text>')
+        p.append(f'<rect x="{x1:.1f}" y="{y-4:.1f}" width="{bar_w:.1f}" height="8" '
+                 f'rx="2" fill="{color}"><title>{_esc(r["club"])}: '
+                 f'{r["lo"]}-{r["hi"]} yd, median {r["med"]} yd</title></rect>')
+        p.append(f'<line x1="{xm:.1f}" y1="{y-9:.1f}" x2="{xm:.1f}" y2="{y+9:.1f}" '
+                 f'stroke="var(--ink)" stroke-width="1.5"/>')
+        p.append(f'<text x="{min(xm + 5, W - padR - 2):.1f}" y="{y-7:.1f}" '
+                 f'font-size="8.5" fill="var(--ink-soft)">{r["med"]}</text>')
+        fx = W - padR + 10
+        for flag in r["flags"]:
+            fw = 54 if flag == "OVERLAP" else 30
+            p.append(f'<rect x="{fx}" y="{y-8:.1f}" width="{fw}" height="16" rx="2" '
+                     f'fill="var(--brass-soft)" stroke="var(--rule)"/>')
+            p.append(f'<text x="{fx + fw/2:.1f}" y="{y+3:.1f}" font-size="8" '
+                     f'font-weight="700" fill="var(--ink)" text-anchor="middle">{flag}</text>')
+            fx += fw + 4
+    p.append("</svg>")
+    return "".join(p)
+
+
+def _gapping_ladder_html(disp_clubs) -> str:
+    svg = _svg_gapping_ladder(disp_clubs)
+    if not svg:
+        return ""
+    chips = "".join(
+        f'<span class="lchip"><i style="background:{color}"></i>{_esc(group)}</span>'
+        for group, color in (("Woods", GAPPING_COLORS["Woods"]),
+                             ("Irons", GAPPING_COLORS["Irons"]),
+                             ("Wedges", GAPPING_COLORS["Wedges"]))
+    )
+    return (
+        '<h3 class="sub">Gapping ladder</h3>'
+        f'<div class="legend">{chips}'
+        '<span class="lchip"><span class="hold">OVERLAP</span> bands collide</span>'
+        '<span class="lchip"><span class="hold">GAP</span> yardage hole</span></div>'
+        f'{svg}'
+        '<p class="note">Only medium/high confidence clubs are shown. '
+        '<b>OVERLAP</b> means adjacent clubs cover too much of the same carry window; '
+        '<b>GAP</b> means the next shorter club leaves a carry yardage uncovered.</p>')
 
 
 def _svg_dispersion(disp_clubs) -> str:
@@ -1792,6 +2044,7 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
     # ---- SG-by-round chart + map payload ----
     sg_svg = _svg_sg_by_round(d["rounds"]) if d["rounds"] else ""
     disp_svg = _svg_dispersion(d["dispersion"]) if d["dispersion"] else ""
+    gap_ladder = _gapping_ladder_html(d["dispersion"]) if d["dispersion"] else ""
     map_json = json.dumps(d["map"])
 
     # ---- shot patterns (approach + chip, vs green center) ----
@@ -1973,6 +2226,7 @@ the single number to punch into your apps: launch-monitor carry when present, ot
 your <b>best-⅓/modeled</b> carry only when it has enough monotonic signal. Low-confidence
 or non-monotonic modeled carries fall back to <b>Arccos Smart Distance</b>, then the row is
 capped if needed to keep the bag <b>strictly descending</b>.</p>
+{gap_ladder}
 <h3 class="sub">Measured distances &amp; dispersion</h3>
 {disp_svg}
 <div class="tabs" id="disp-tabs" style="margin:12px 0 8px">
@@ -2073,6 +2327,9 @@ th:last-child,td:last-child{{padding-right:2px}}
 tbody tr:hover{{background:var(--paper-deep)}}
 td b{{color:var(--green-deep)}}
 .note{{color:var(--ink-soft);font-size:.82rem;margin:10px 0 0}}
+.legend{{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 8px;font-size:11.5px;color:var(--ink-soft)}}
+.lchip{{display:inline-flex;align-items:center;gap:4px}}
+.lchip i{{width:11px;height:11px;border-radius:2px;display:inline-block}}
 h3.sub{{font:700 .74rem/1 var(--sans);letter-spacing:.11em;text-transform:uppercase;
 color:var(--brass);margin:24px 0 8px}}
 h3.sub .note{{display:inline;font-weight:400}}
@@ -2509,6 +2766,17 @@ def render_round_page(d: dict, r: dict, font_prefix: str = "../assets/fonts") ->
     story = _round_story(r, holes)
     story_html = (f'<section><h2>Round story</h2><p class="story">{_esc(story)}</p></section>'
                   if story else "")
+    standouts = d.get("standouts_by_round", {}).get(r["round_id"])
+    standout_html = ""
+    if standouts:
+        standout_cards = ""
+        for key in ("best", "worst"):
+            s = standouts[key]
+            standout_cards += (
+                f'<div class="standout"><div class="standout-l">{_esc(s["label"])}</div>'
+                f'<div class="standout-d">{_esc(s["desc"])}</div>'
+                f'<div class="standout-sg {s["class"]}">{_esc(s["sg_txt"])}</div></div>')
+        standout_html = f'<section><h2>Standout shots</h2><div class="standouts">{standout_cards}</div></section>'
 
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2562,6 +2830,15 @@ tbody tr:hover{{background:var(--paper-deep)}}
 #map{{height:480px;border:1px solid var(--rule);border-radius:2px;background:var(--paper-deep)}}
 .story{{font:600 1.04rem/1.55 var(--serif);max-width:760px;margin:0;color:var(--ink)}}
 .note{{color:var(--ink-soft);font-size:.8rem}}
+.standouts{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
+.standout{{position:relative;background:var(--paper);border-top:1px solid var(--rule);
+border-bottom:1px solid var(--rule);padding:12px 54px 12px 2px;min-height:74px}}
+.standout-l{{font:700 .72rem/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;
+color:var(--brass)}}
+.standout-d{{font:600 1rem/1.35 var(--serif);margin-top:7px;color:var(--ink)}}
+.standout-sg{{position:absolute;right:2px;top:12px;font-weight:700;font-size:13px;
+padding:2px 6px;border-radius:2px;background:var(--brass-soft)}}
+@media(max-width:640px){{.standouts{{grid-template-columns:1fr}}}}
 .holenav{{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}}
 .holenav button{{background:transparent;color:var(--ink-soft);border:0;border-bottom:2px solid transparent;
 border-radius:0;min-width:30px;padding:4px 8px;cursor:pointer;font-size:12.5px;font-weight:700}}
@@ -2591,6 +2868,7 @@ code{{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size
 <main>
 <section><h2>Round</h2><div class="kpis">{kpi_html}</div></section>
 {story_html}
+{standout_html}
 <section><h2>Strokes gained (vs scratch)</h2><div class="kpis">{sg_html}</div></section>
 <section><h2>Shot map — explore hole by hole</h2>
 <div class="holenav" id="holenav"></div>
