@@ -36,6 +36,7 @@ import random
 import shutil
 import statistics
 import sys
+import unicodedata
 
 PLAYER_NAME = os.environ.get("GOLF_PLAYER_NAME", "Chris Cole")
 # Optional per-player context — set for the owner's own build, left empty for others so
@@ -146,10 +147,13 @@ def _swing_fault(side: str, right_handed: bool) -> dict:
 
 def _slug(course: str, date: str) -> str:
     """Stable filename slug for a round, e.g. 'WindRose_GC_2026-06-06'."""
-    base = "".join(c if c.isalnum() else "_" for c in (course or "round"))
+    folded = unicodedata.normalize("NFKD", course or "round").encode(
+        "ascii", "ignore").decode()
+    base = "".join(c if c.isalnum() else "_" for c in folded)
     while "__" in base:
         base = base.replace("__", "_")
-    return f"{base.strip('_')}_{date or 'x'}"
+    base = base.strip("_") or "round"
+    return f"{base}_{date or 'x'}"
 
 
 def _round5(x):
@@ -745,11 +749,15 @@ def compute(store: str) -> dict:
     # ---- per-round (newest last) ----
     rounds_sorted = sorted(rounds, key=lambda r: r.get("date") or "")
     round_rows = []
+    seen_slugs: dict[str, int] = {}
     for r in rounds_sorted:
+        base_slug = _slug(r.get("course"), r.get("date"))
+        seen_slugs[base_slug] = seen_slugs.get(base_slug, 0) + 1
+        slug = base_slug if seen_slugs[base_slug] == 1 else f"{base_slug}_{seen_slugs[base_slug]}"
         round_rows.append({
             "round_id": r.get("round_id"), "date": r.get("date"),
             "course": r.get("course"), "tee": r.get("tee_name"),
-            "slug": _slug(r.get("course"), r.get("date")),
+            "slug": slug,
             "yards": _i(r.get("tee_yards")), "par": _i(r.get("par")),
             "score": _i(r.get("score")), "to_par": _i(r.get("score_to_par")),
             "putts": _i(r.get("putts")), "gir": _f(r.get("gir_pct")),

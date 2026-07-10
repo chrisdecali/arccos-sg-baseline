@@ -71,6 +71,29 @@ def test_round_story_from_round_data_contains_score():
     assert "#1" in story and "#2" in story
 
 
+def test_slug_ascii_folds_accented_course_names():
+    assert g._slug("Café São João", "2026-07-10") == "Cafe_Sao_Joao_2026-07-10"
+    assert g._slug("東京", "2026-07-10") == "round_2026-07-10"
+
+
+def test_round_slugs_are_unique_for_same_course_and_date():
+    import shutil
+    import tempfile
+    tmp = tempfile.mkdtemp()
+    try:
+        with open(os.path.join(tmp, "rounds_summary.csv"), "w", encoding="utf-8") as fh:
+            fh.write("round_id,date,course,score,score_to_par\n")
+            fh.write("r1,2026-07-04,Same Course,78,6\n")
+            fh.write("r2,2026-07-04,Same Course,80,8\n")
+        data = g.compute(tmp)
+        assert [r["slug"] for r in data["rounds"]] == [
+            "Same_Course_2026-07-04",
+            "Same_Course_2026-07-04_2",
+        ]
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def test_clean_third_best_strike():
     # best third = the longest third, averaged
     assert g._clean_third([100, 200, 300]) == 300          # top 1 of 3
