@@ -1909,6 +1909,32 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
             return ' <span class="hold" title="static bag.csv target fallback">target</span>'
         return ""
 
+    disp_by = {c["club"]: c for c in d["dispersion"]}
+
+    def _total_cell(club, carry_val):
+        """The TOTAL number to plan with — only where roll genuinely matters (tee clubs).
+        Irons/wedges stop fast, so their total ≈ carry and we say exactly that instead of
+        inventing a second number. Candidates (Arccos Smart Distance = typical total,
+        app-learned; best-⅓ total = clean-strike ceiling) must be ≥ the carry-to-use —
+        Arccos averages include mishits and can undercut a clean carry, and a "total"
+        below the carry is physically nonsense on the page."""
+        c = disp_by.get(club)
+        if not c:
+            return "—"
+        if c.get("group") != "Woods":
+            return ('<span class="note" title="short clubs stop fast — carry and total '
+                    'converge; plan with the carry">≈ carry</span>')
+        floor = _f(carry_val)
+        arccos = c.get("arccos")
+        best3 = None if c.get("best_third_suppressed") else c.get("total")
+        for v, badge, title in ((arccos, "Arccos", "Arccos Smart Distance (typical total)"),
+                                (best3, "best-⅓", "best-⅓ total — clean-strike ceiling, reads long")):
+            if v is not None and (floor is None or v >= floor):
+                return (f'<b>{_yd(v)}</b>'
+                        f' <span class="conf conf-{"high" if badge == "Arccos" else "medium"}"'
+                        f' title="{title}">{badge}</span>')
+        return "—"
+
     bag_rows = ""
     for b in d["bag"]:
         flag = ' <span class="hold" title="held to keep the bag strictly descending">hold</span>' if b["held"] else ""
@@ -1919,7 +1945,8 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
         bag_rows += (
             f'<tr><td>{_esc(b["club"])}</td><td>{loft}</td>'
             f'<td class="shaft">{shaft}</td><td>{b["target"]}</td>'
-            f'<td><b>{b["suggested"]}</b>{src}{flag}</td></tr>')
+            f'<td><b>{b["suggested"]}</b>{src}{flag}</td>'
+            f'<td>{_total_cell(b["club"], b["suggested"])}</td></tr>')
     # No-carry clubs from bag.csv (e.g. the putter) — show the inventory row with a
     # dash for target/carry so the whole bag is represented, brand included.
     _bagged = {b["club"] for b in d["bag"]}
@@ -1930,27 +1957,24 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
         shaft = _esc(s.get("shaft")) or "—"
         bag_rows += (
             f'<tr><td>{_esc(club)}</td><td>{loft}</td>'
-            f'<td class="shaft">{shaft}</td><td>—</td><td>—</td></tr>')
+            f'<td class="shaft">{shaft}</td><td>—</td><td>—</td><td>—</td></tr>')
 
-    # ---- dispersion table ----
+    # ---- trust & spread table (final carry/total live in the bag table above; this
+    # table's one job is HOW SOLID those numbers are: sample, spread, MC range) ----
     disp_rows = ""
     for c in d["dispersion"]:
         # Monte-Carlo 80% band on the total — shows how (un)certain the estimate is
         if c.get("best_third_suppressed"):
             reason = _esc(c.get("best_third_suppress_reason") or "low confidence")
             best = f'<span title="Suppressed: {reason}">—</span>'
-            carry = (f'{_num(c["carry"],0)}'
-                     if c.get("measured_src") else f'<span title="Suppressed: {reason}">—</span>')
         else:
             rng = (f' <span class="rng" title="Monte-Carlo 80% range from your shots">'
                    f'{_num(c.get("total_lo"),0)}–{_num(c.get("total_hi"),0)}</span>'
                    if c.get("total_lo") is not None else "")
             best = f'<b>{_num(c["total"],0)}</b>{rng}'
-            carry = _num(c["carry"],0)
-        ms = ' <span class="conf conf-high" title="launch-monitor measured">measured</span>' if c.get("measured_src") else ""
         disp_rows += (
             f'<tr data-group="{_esc(c["group"])}"><td>{_esc(c["club"])}</td>'
-            f'<td><b>{_yd(c.get("arccos"))}</b></td><td>{best}</td><td>{carry}{ms}</td>'
+            f'<td>{best}</td>'
             f'<td>±{_num(c["carry_sd"],0)}</td>'
             f'<td>±{_num(c["lateral_sd"],0)}</td><td>{c.get("clean_n", c["n"])}</td>'
             f'<td><span class="conf conf-{_esc(c["confidence"])}">{_esc(c["confidence"])}</span></td></tr>')
@@ -1958,6 +1982,7 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
     for c in d["dispersion"]:
         lie_rows += (
             f'<tr data-group="{_esc(c["group"])}"><td>{_esc(c["club"])}</td>'
+            f'<td><b>{_yd(c.get("arccos"))}</b></td>'
             f'<td>{_yd(c.get("tee"))}</td><td>{_yd(c.get("fairway"))}</td>'
             f'<td>{_yd(c.get("rough"))}</td><td>{_yd(c.get("sand"))}</td>'
             f'<td>{_yd(c.get("longest"))}</td>'
@@ -2228,37 +2253,61 @@ face/path squares them all up at once.</li>
 rounds in, treat low-sample clubs as directional. "basis" = how many shots it's
 from.</span></div></section>"""
 
-    # ---- By-club tab: bag (top) -> merged stats -> what to try (bottom) ----
+    # ---- By-club tab, rationalized: every number has exactly ONE home ----
+    #   1. Bag table       = THE answers (carry + total per club, badged provenance)
+    #   2. Guidance block  = which number goes into which app (carry vs total)
+    #   3. Gapping ladder  = the gaps BETWEEN clubs (visual)
+    #   4. Trust table     = how solid the numbers are (best-⅓, MC range, SDs, n, conf)
+    #   5. By-lie table    = what Arccos itself thinks (Smart Distance + per-lie totals)
     club_bag = f"""
 <section data-tab="club"><h2>Your bag &amp; distances</h2>
 <table><thead><tr><th>Club</th><th>Loft</th><th>Shaft</th><th>Target</th>
-<th>Carry to use</th></tr></thead><tbody>{bag_rows}</tbody></table>
-<p class="note">Your bag (from <code>bag.csv</code>) with the <b>"Carry to use"</b> &mdash;
-the single number to punch into your apps: launch-monitor carry when present, otherwise
-your <b>best-⅓/modeled</b> carry only when it has enough monotonic signal. Low-confidence
-or non-monotonic modeled carries fall back to <b>Arccos Smart Distance</b>, then the row is
-capped if needed to keep the bag <b>strictly descending</b>.</p>
+<th>Carry to use</th><th>Total to plan with</th></tr></thead><tbody>{bag_rows}</tbody></table>
+<p class="note"><b>"Carry to use"</b> is the single flight number to punch into your apps:
+launch-monitor carry when present, otherwise your <b>best-⅓/modeled</b> carry when it has
+enough monotonic signal, else <b>Arccos Smart Distance</b>, then the row is capped to keep
+the bag <b>strictly descending</b>. <b>"Total to plan with"</b> = carry + roll, shown
+only for tee clubs where roll genuinely matters: Arccos Smart Distance (your typical
+total) when it clears the carry, else the best-⅓ total. Irons and wedges stop fast, so
+their total ≈ carry &mdash; that's the answer, not a missing number.</p>
+<div class="key"><b>Carry or total &mdash; which number goes into a golf app?</b>
+<ul>
+<li><b>Carry</b> is the flight-only number. It answers <i>"can I get there?"</i> &mdash; use
+it for every club you hit into greens, for forced carries (water, bunkers, false fronts),
+for gapping, and for any app or rangefinder showing <i>distance to the flag</i>. If an app
+takes one number per club, give it the <b>carry</b> for wedges through hybrids.</li>
+<li><b>Total</b> is carry + roll. It answers <i>"where will it finish?"</i> &mdash; use it
+off the tee and for position play (run-out past a corner, laying up short of trouble).
+Arccos Smart Distance is a total-style number, so compare totals with the Arccos app, not
+carries.</li>
+<li>Wedges &amp; short irons stop fast: carry ≈ total, either works. Driver &amp; woods
+roll out 10&ndash;30y: the two numbers genuinely differ &mdash; know both, and never lay up
+with a total when the trouble is a carry problem.</li>
+</ul></div>
 {gap_ladder}
-<h3 class="sub">Measured distances &amp; dispersion</h3>
+<h3 class="sub">How solid are these numbers?</h3>
 {disp_svg}
 <div class="tabs" id="disp-tabs" style="margin:12px 0 8px">
  <button class="on" data-g="all">All</button><button data-g="Woods">Woods</button>
  <button data-g="Irons">Irons</button><button data-g="Wedges">Wedges</button></div>
-<table><thead><tr><th>Club</th><th>Arccos</th><th>Best-⅓</th><th>Carry (modeled)</th><th>Carry ±SD</th>
+<table><thead><tr><th>Club</th><th>Best-⅓ total <span class="rng">(80% range)</span></th><th>Carry ±SD</th>
 <th>Lateral ±SD</th><th>Shots</th><th>Confidence</th></tr></thead>
 <tbody id="disp-body">{disp_rows}</tbody></table>
-<p class="note"><b>Arccos</b> = Smart Distance from <code>clubs.csv</code>, the primary
-distance to compare with the app. <b>Best-⅓</b> is your clean-strike ceiling: recency-
-weighted top-third total distance, expected to read a bit long vs the app. It is dashed
-for low samples or non-monotonic club gaps. <b>Carry (modeled)</b> = Best-⅓ × a condition-
-aware roll factor unless launch-monitor carries take over. Shots = Arccos
-<code>usage_count</code> when available, otherwise the cleaned shot count.</p>
-<h3 class="sub">Distance by lie</h3>
-<table><thead><tr><th>Club</th><th>Tee</th><th>Fairway</th><th>Rough</th><th>Sand</th>
+<p class="note">The evidence behind the bag table above &mdash; spread and sample size, not
+another set of distances. <b>Best-⅓</b> is your clean-strike ceiling: recency-weighted
+top-third total, expected to read a bit long vs the app; dashed for low samples or
+non-monotonic club gaps. The modeled carry above = Best-⅓ × a condition-aware roll factor
+unless launch-monitor carries take over. Shots = Arccos <code>usage_count</code> when
+available, otherwise the cleaned shot count. Wide ±SD or a low-confidence tag means treat
+that club's number as directional, not gospel.</p>
+<h3 class="sub">What Arccos thinks &mdash; distance by lie</h3>
+<table><thead><tr><th>Club</th><th>Smart Dist</th><th>Tee</th><th>Fairway</th><th>Rough</th><th>Sand</th>
 <th>Longest</th><th>Typical range</th></tr></thead>
-<tbody id="lie-body">{lie_rows or '<tr><td colspan=7>—</td></tr>'}</tbody></table>
-<p class="note">Per-lie totals are Arccos values already ingested from
-<code>clubs.csv</code>; blanks stay dashed.</p></section>"""
+<tbody id="lie-body">{lie_rows or '<tr><td colspan=8>—</td></tr>'}</tbody></table>
+<p class="note"><b>Smart Dist</b> and the per-lie totals are Arccos's own numbers from
+<code>clubs.csv</code> &mdash; the app's view, kept here for comparison with the bag table
+(all totals, so they run longer than carry). The lie split is the practical part: the
+rough/fairway gap is your real-world distance penalty from missing the short grass.</p></section>"""
 
     club_shots = f"""
 <section data-tab="club"><h2>Where your shots go</h2>
