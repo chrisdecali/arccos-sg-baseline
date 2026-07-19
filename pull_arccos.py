@@ -593,7 +593,7 @@ def shot_lie(idx: int, n_shots: int, n_putts: int, hole: dict,
 # ---------------------------------------------------------------------------
 
 ROUND_COLS = [
-    "round_id", "date", "course", "tee_name", "tee_yards", "slope", "rating",
+    "round_id", "source", "date", "course", "tee_name", "tee_yards", "slope", "rating",
     "holes", "score", "par", "score_to_par", "pace_of_play",
     "putts", "one_putts", "three_putts", "putts_per_gir",
     "gir_hits", "gir_pct", "fairway_hits", "fairway_chances", "fairway_pct",
@@ -612,14 +612,14 @@ ROUND_COLS = [
     "temp_f", "wind_mph", "wind_dir_deg", "wind_dir", "weather",
 ]
 HOLE_COLS = [
-    "round_id", "date", "course", "hole_id", "par", "par_source", "shots", "net_score",
+    "round_id", "source", "date", "course", "hole_id", "par", "par_source", "shots", "net_score",
     "score_to_par", "putts", "penalties", "gir", "fairway_hit", "fw_miss_left",
     "fw_miss_right", "updown_chance_native", "updown_native", "sand_chance_native",
     "sand_save_native", "hole_len_yd", "drive_yd", "approach_proximity_yd",
     "pin_lat", "pin_lng", "scramble_chance", "scramble_save", "sg_hole_broadie",
 ]
 SHOT_COLS = [
-    "round_id", "date", "hole_id", "shot_num", "club", "club_category",
+    "round_id", "source", "date", "hole_id", "shot_num", "club", "club_category",
     "shot_distance_yd", "start_dist_to_pin_yd", "end_dist_to_pin_yd",
     "start_lat", "start_lng", "end_lat", "end_lng",
     # Elevation in metres (terrain altitude, NOT a locating coordinate — always published
@@ -1157,6 +1157,15 @@ def build(pulled_at: str) -> dict:
     round_rows.sort(key=lambda r: r.get("date") or "")
     hole_rows.sort(key=lambda r: (r.get("date") or "", r.get("round_id"), r.get("hole_id")))
     shot_rows.sort(key=lambda r: (r.get("date") or "", r.get("round_id"), r.get("hole_id"), r.get("shot_num")))
+
+    # Provenance: tag every native Arccos row so multi-source merge (import_external_rounds.py)
+    # can dedup and label. Additive column; downstream reads by name and tolerates its absence.
+    for _r in round_rows:
+        _r["source"] = "arccos"
+    for _r in hole_rows:
+        _r["source"] = "arccos"
+    for _r in shot_rows:
+        _r["source"] = "arccos"
 
     write_csv(os.path.join(OUT_DIR, "rounds_summary.csv"), ROUND_COLS, round_rows)
     write_csv(os.path.join(OUT_DIR, "holes.csv"), public_cols(HOLE_COLS), hole_rows)

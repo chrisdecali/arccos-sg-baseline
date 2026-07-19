@@ -2029,7 +2029,8 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
         cards = ""
         for r in rs:
             sg = _num(r["sg_total"], 1, True)
-            sgcls = "pos" if (r["sg_total"] or 0) >= 0 else "neg"
+            # Non-Arccos (merged) rounds have no SG -> neutral styling + "—", never green 0.
+            sgcls = "" if r["sg_total"] is None else ("pos" if r["sg_total"] >= 0 else "neg")
             tp = r["to_par"]
             tps = f"{tp:+d}" if tp is not None else "—"
             pdf_link = (f'<a class="rc-pdf" href="rounds/{r["pdf"]}">⬇ shot-map PDF</a>'
@@ -2050,7 +2051,10 @@ def render_html(d: dict, font_prefix: str = "assets/fonts") -> str:
                      f'<div class="rcards">{cards}</div></div>')
 
     # ---- SG-by-round chart + map payload ----
-    sg_svg = _svg_sg_by_round(d["rounds"]) if d["rounds"] else ""
+    # Only rounds that carry strokes-gained (Arccos) belong on the SG chart; merged
+    # rounds from other sources have blank SG and would plot as misleading zero bars.
+    _sg_rounds = [r for r in d["rounds"] if r.get("sg_total") is not None]
+    sg_svg = _svg_sg_by_round(_sg_rounds) if _sg_rounds else ""
     disp_svg = _svg_dispersion(d["dispersion"]) if d["dispersion"] else ""
     gap_ladder = _gapping_ladder_html(d["dispersion"]) if d["dispersion"] else ""
     map_json = json.dumps(d["map"])
