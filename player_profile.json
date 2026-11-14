@@ -1,6 +1,6 @@
 {
   "userId": "c4b47c10450d11f19a642f37566c07f3",
-  "userVersion": 8,
+  "userVersion": 10,
   "handicap": -15,
   "isRightStance": "T",
   "yearsPlaying": null,
@@ -24,18 +24,18 @@
     "country": "US"
   },
   "preferredBall": {
-    "ballMakeId": 7,
-    "ballMakeName": "Maxfli",
-    "ballModelId": 30,
-    "ballModelName": "Tour X"
+    "ballMakeId": 19,
+    "ballMakeName": "Titleist",
+    "ballModelId": 220,
+    "ballModelName": "Pro V1x"
   },
   "bag": [
     {
       "bagId": 1030119,
       "bagName": "flagship",
-      "startDate": "2026-05-23T22:45:11.320000Z",
-      "noOfClubs": 14,
-      "bagVersion": 29
+      "startDate": "2026-11-02T00:13:15.139000Z",
+      "noOfClubs": 18,
+      "bagVersion": 98
     }
   ],
   "subscription": {

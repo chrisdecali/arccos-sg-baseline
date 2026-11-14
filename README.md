@@ -7,9 +7,13 @@ endpoint, then derives these public outputs. Shot GPS coordinates ARE included
 (shots.csv/holes.csv + maps/); only identity (name, email, DOB, GHIN number) is
 kept out.
 
-Owner is a ~12 handicap; **biggest leak = chipping / short game** — the data confirms
-it (career chip-save 0/7, sand-save 0/3, SG short −6.1). Short-game columns are the
-focus.
+The data files were last refreshed on 2026-11-14 from the owner's weekly Arccos + GHIN
+pull (same schema, plus the columns in *Column notes*). `maps/`, `docs/`, `reports/` and
+`dispersion.json` were last rebuilt in July 2026 and cover the June–July rounds only.
+
+Owner is a ~12 handicap; **biggest leak = chipping / short game** (live rates:
+`career_stats.json` → `key_rates` and `strokes_gained_arccos`). Short-game columns are
+the focus.
 
 ## Files
 
@@ -56,6 +60,23 @@ mid-handicap.
   NOT USGA; approach/chip floor at −30).
 - **`clubs.csv`** names come from the paired sensors (make/model real); the generic
   type label (e.g. "Wedge") plus distance disambiguates lofts. Never fabricated.
+- **`source`** (rounds_summary/holes/shots) — `arccos` = tracked with sensors (shots,
+  GPS, SG); `manual` = an 18Birdies import or a scorecard photo (round score and
+  per-hole strokes only: no putts, GIR, fairways, shots or SG). Count them for scoring,
+  leave them out of everything else.
+- **Partial rounds** (`holes` < 18, e.g. 9 or 15): Arccos SG is the raw total for the
+  holes played, not scaled to 18. Scale by 18 / `holes` before averaging rounds.
+- **`club_id`** (shots/clubs/club_distances) — Arccos's id for the physical club; group
+  by it, since a name can be reused after a bag change. `clubs.csv` `status` is
+  `active` or `retired`; `start_date` is when the club entered the bag.
+- **`bag.csv` / `club_map.json`** are hand-edited dashboard config from July and may not
+  match the current bag. `clubs.csv` (from Arccos) is the current bag.
+- **Every round** is in `rounds_summary.csv` (Arccos-tracked + manual) or
+  `ghin_scores.csv` (every posted score, including rounds Arccos never tracked).
+- **`ghin_scores.differential`** is the official WHS value: a 10–17-hole round is scaled
+  to 18 (`played_holes` says how many were played). `unadjusted_differential` is the
+  raw figure and makes a partial round look like a career best; don't use it for the
+  index.
 
 ## Reproduce
 
@@ -81,10 +102,10 @@ GHIN.com DevTools — never your password). This consolidates **every posted rou
 Arccos auto-posts **plus** the 18Birdies rounds posted manually. It gives the real
 **WHS Handicap Index** (vs Arccos's proprietary `-20.x` scale).
 
-Current index: **NH** — Not enough scores yet (WHS establishes after 54 holes / 3
-scores; once enough post, the index appears here and `ghin_handicap_history.csv`
-fills in). Refresh anytime with `python3 pull_ghin.py`. Outputs are redacted —
-name, email, and GHIN number are stripped.
+Current index: `ghin_profile.json` → `handicap_index` (revision date in `rev_date`),
+refreshed with each weekly pull. `ghin_handicap_history.csv` is empty; for the trend,
+use the `ghin_scores.csv` differentials. Outputs are redacted — name, email, and GHIN
+number are stripped.
 
 ## 18Birdies → GHIN
 
