@@ -69,8 +69,11 @@ mid-handicap.
 - **`club_id`** (shots/clubs/club_distances) — Arccos's id for the physical club; group
   by it, since a name can be reused after a bag change. `clubs.csv` `status` is
   `active` or `retired`; `start_date` is when the club entered the bag.
-- **`bag.csv` / `club_map.json`** are hand-edited dashboard config from July and may not
-  match the current bag. `clubs.csv` (from Arccos) is the current bag.
+- **`bag.csv`** is the current Arccos bag (make, model, loft, lie, length), longest club
+  first. `shaft` and `target_carry` are blank: Arccos carries neither, and the owner
+  dropped the hand-typed club data. Arccos club names are correct, so `club_map.json`
+  is empty. The Srixon/Cleveland bag and the 54→56 / 58→60 renames in older commits
+  were wrong.
 - **Every round** is in `rounds_summary.csv` (Arccos-tracked + manual) or
   `ghin_scores.csv` (every posted score, including rounds Arccos never tracked).
 - **`ghin_scores.differential`** is the official WHS value: a 10–17-hole round is scaled

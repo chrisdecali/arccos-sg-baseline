@@ -1,15 +1,15 @@
-club,loft,lie,shaft,length,target_carry
-Driver,9,,Cobra DS-Adapt LS graphite X,45.5,250
-3 Wood,15,,Cobra DS-Adapt graphite X,43.0,225
-5 Wood,18,,Cobra DS-Adapt Max graphite X,42.0,200
-Hybrid,21,,Cobra DS-Adapt 4H graphite X,40.0,185
-5 Iron,24,61.5,Srixon ZX7 · SteelFiber i110 S,38.0,170
-6 Iron,27,62.0,Srixon ZX7 · SteelFiber i110 S,37.5,165
-7 Iron,31,62.5,Srixon ZX7 · SteelFiber i110 S,37.0,155
-8 Iron,35,63.0,Srixon ZX7 · SteelFiber i110 S,36.5,145
-9 Iron,39,63.5,Srixon ZX7 · SteelFiber i110 S,36.0,135
-Pitching Wedge,43,64.0,Srixon ZX7 · SteelFiber i110 S,35.75,120
-50 Wedge,50,64.0,Cleveland RTX6 · SteelFiber FC115 S,35.5,105
-56 Wedge,56,64.0,Cleveland RTX6 · SteelFiber FC115 S,35.25,90
-60 Wedge,60,64.0,Cleveland RTX6 · SteelFiber FC115 S,35.0,80
-Putter,,,Tour Edge ZT-4,,
+club,brand,model,loft,lie,shaft,length,target_carry
+Driver,Cobra,DS-ADAPT MAX-K,10.5,58,,45.5,
+3 Wood,Cobra,DS-ADAPT LS,15,58.5,,43,
+5 Wood,Cobra,DS-ADAPT MAX,18,59,,42.5,
+Driving Iron,Mizuno,JPX ONE,20,60,,39.5,
+5 Iron,Cobra,KING LTD,25,61,,38,
+6 Iron,Cobra,KING LTD,28,61.5,,37.5,
+7 Iron,Cobra,KING LTD,32,62,,37,
+8 Iron,Cobra,KING LTD,36,62.5,,36.5,
+9 Iron,Cobra,KING LTD,40,63,,36,
+Pitching Wedge,Cobra,KING LTD,44,63.5,,35.75,
+50 Wedge,Cobra,King Wedges (2025),50,64,,35.5,
+54 Wedge,Mizuno,Pro T-3,54,64,,35.25,
+58 Wedge,Mizuno,Pro T-3,58,64,,35,
+Putter,Odyssey,Ai-DUAL Square 2 Square #7,,70,,34,

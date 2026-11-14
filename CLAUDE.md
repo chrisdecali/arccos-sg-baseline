@@ -19,6 +19,14 @@ improvement.
 > it is NOT in this repo. Per-round HTML+PDF already produced are committed under
 > `reports/`.
 
+> **Update 2026-11-14.** The data files now mirror the owner's golfpals store, and
+> golfpals treats Arccos as the club record: `bag.csv` is the Arccos bag with no
+> target carries, and `club_map.json` is empty. `dashboard/gen_tracker.py` predates
+> that. With no targets its bag card comes out empty, and 5 tests in
+> `tests/test_gen_tracker.py` fail (2 of them assert the old 54→56 / 58→60 renames and
+> Driver 250 targets). `docs/` was last built in July. Update the generator before
+> rebuilding `docs/` from it; the maintained generator lives in golfpals.
+
 ## Data contract (read by column name; never assume position)
 
 * `rounds_summary.csv` — one row per Arccos round. Columns include: `round_id, date,
