@@ -27,6 +27,17 @@ improvement.
 > Driver 250 targets). `docs/` was last built in July. Update the generator before
 > rebuilding `docs/` from it; the maintained generator lives in golfpals.
 
+> **Update 2026-11-17.** Arccos retired `GET /users/{u}/handicaps`,
+> `/handicaps/latest` and `/users/{u}/achievements` (HTTP 410, "This endpoint has been
+> retired"). The golfpals store therefore has an empty `handicap_history.csv` and blank
+> `*_hcp` columns for every round. When mirroring the store here, carry the published
+> values forward instead of blanking them: keep the `handicap_history.csv` rows the
+> store lacks, and fill a `rounds_summary.csv` row whose six `*_hcp` cells are all
+> blank from the published row with the same `round_id`. Store values win when present.
+> Rounds after 2026-11-01 have no category handicaps. `tourAnalyticsSummary` still
+> returns the current ones (`overall.userHcp`, `drive.driveHcp`, ...), which a puller
+> could use for the newest round.
+
 ## Data contract (read by column name; never assume position)
 
 * `rounds_summary.csv` — one row per Arccos round. Columns include: `round_id, date,

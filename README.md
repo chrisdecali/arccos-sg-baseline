@@ -7,7 +7,7 @@ endpoint, then derives these public outputs. Shot GPS coordinates ARE included
 (shots.csv/holes.csv + maps/); only identity (name, email, DOB, GHIN number) is
 kept out.
 
-The data files were last refreshed on 2026-11-14 from the owner's weekly Arccos + GHIN
+The data files were last refreshed on 2026-11-17 from the owner's weekly Arccos + GHIN
 pull (same schema, plus the columns in *Column notes*). `maps/`, `docs/`, `reports/` and
 `dispersion.json` were last rebuilt in July 2026 and cover the June–July rounds only.
 
@@ -24,7 +24,7 @@ the focus.
 | `shots.csv` | shot | club, shot distance, **distance-to-pin (start/end)**, **start/end GPS**, approx lie, category, per-shot SG |
 | `holes.csv` (geo) / `maps/` | — | per-hole **pin GPS**; `maps/round_*.kml` + `.geojson` + `shots_geo.csv` for Google Earth → PDF |
 | `clubs.csv` | club | **make/model**, smart distance, terrain splits (tee/fairway/rough/sand), GIR%, **dispersion** |
-| `handicap_history.csv` | round | Arccos category handicaps over time |
+| `handicap_history.csv` | round | Arccos category handicaps over time (ends at the 2026-11-01 round, see `*_hcp` below) |
 | `career_stats.json` | aggregate | **Arccos career stats** — SG, chip/sand save %, GIR, fairways, putting, score-by-par, caddie insights |
 | `player_profile.json` | — | redacted profile, bag, ball, home course, subscription |
 | `arccos_sg_baseline.xlsx` | — | tabs: Rounds, Holes, Shots, Clubs, Handicap History, **Career Stats**, **Baseline Summary** (short-game highlighted) |
@@ -57,7 +57,12 @@ mid-handicap.
   rate**, **sand save %** (from `tourAnalyticsSummary`).
 - **`avg_approach_proximity_yd`** — distance-to-pin of the last non-putt shot.
 - **`*_hcp`** — Arccos' proprietary per-category handicap metric (negative scale,
-  NOT USGA; approach/chip floor at −30).
+  NOT USGA; approach/chip floor at −30). Arccos retired the per-round handicap
+  endpoint (HTTP 410, first seen 2026-11-17), so the history stops at the 2026-11-01
+  round: later rounds have blank `*_hcp` and no `handicap_history.csv` row. Blank
+  means not available, not zero. The values up to 2026-11-01 are the ones Arccos
+  reported while the endpoint was live. The workbook is rebuilt from the current pull,
+  so its Handicap History tab and `*_hcp` columns are empty; use the CSVs.
 - **`clubs.csv`** names come from the paired sensors (make/model real); the generic
   type label (e.g. "Wedge") plus distance disambiguates lofts. Never fabricated.
 - **`source`** (rounds_summary/holes/shots) — `arccos` = tracked with sensors (shots,

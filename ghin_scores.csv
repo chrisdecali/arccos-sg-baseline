@@ -1,9 +1,10 @@
 played_at,course_name,holes,adjusted_gross_score,course_rating,slope_rating,differential,score_type,status,used,exceptional,posted_at,score_id,played_holes,unadjusted_differential
+2026-11-15,Loch/Pines,18,85,72.9,134,10.2,H,Validated,1,0,2026-11-15,1217315578,18,10.2
 2026-11-01,Loch/Pines,18,91,72.9,134,15.3,H,Validated,0,0,2026-11-02,1214849931,18,15.3
 2026-11-01,Gleann/Loch,18,92,71.3,126,18.6,H,Validated,0,0,2026-11-01,1214795507,18,18.6
 2026-08-22,Pines/Gleann,18,90,72.2,132,15.2,H,Validated,0,0,2026-08-22,1195991468,18,15.2
 2026-07-18,Augusta Pines Golf Club,18,72,71.4,125,13.6,H,Validated,1,0,2026-07-18,1183657622,15,0.5
-2026-06-26,WindRose Golf Club,18,89,72.1,127,15.0,H,Validated,1,0,2026-06-27,1175586139,18,15.0
+2026-06-26,WindRose Golf Club,18,89,72.1,127,15.0,H,Validated,0,0,2026-06-27,1175586139,18,15.0
 2026-06-19,WindRose Golf Club,9,47,37.3,135,8.1,NH,Validated,0,0,2026-06-19,1172826456,9,8.1
 2026-06-14,WindRose Golf Club,18,92,72.1,127,17.7,H,Validated,0,0,2026-06-14,1170854129,18,17.7
 2026-06-06,WindRose Golf Club,18,96,72.1,127,21.3,H,Validated,0,0,2026-06-06,1167864949,18,21.3
