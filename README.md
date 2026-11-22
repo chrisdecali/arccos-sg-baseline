@@ -7,7 +7,7 @@ endpoint, then derives these public outputs. Shot GPS coordinates ARE included
 (shots.csv/holes.csv + maps/); only identity (name, email, DOB, GHIN number) is
 kept out.
 
-The data files were last refreshed on 2026-11-17 from the owner's weekly Arccos + GHIN
+The data files were last refreshed on 2026-11-22 from the owner's weekly Arccos + GHIN
 pull (same schema, plus the columns in *Column notes*). `maps/`, `docs/`, `reports/` and
 `dispersion.json` were last rebuilt in July 2026 and cover the June–July rounds only.
 
