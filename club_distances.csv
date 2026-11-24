@@ -1,17 +1,17 @@
 club,category,total_yd,total_lo_yd,total_hi_yd,carry_yd,carry_sd_yd,lateral_sd_yd,shots,confidence,club_id,status
-Driver,Driver,285,285,290,240,25,35,110,high,1,active
+Driver,Driver,290,285,295,240,25,40,122,high,1,active
 3 Wood,Wood,225,215,240,185,30,25,14,high,2,active
-Driving Iron,Iron,200,110,200,150,45,15,3,low,18,active
+Driving Iron,Iron,180,170,195,160,15,30,8,medium,18,active
 4 Iron,Iron,130,130,130,125,0,,1,low,,active
-5 Iron,Iron,185,180,190,165,20,25,40,high,5,active
-6 Iron,Iron,160,160,165,160,10,35,12,high,6,active
-7 Iron,Iron,160,155,165,145,15,20,27,high,7,active
+5 Iron,Iron,180,175,185,160,20,25,41,high,5,active
+6 Iron,Iron,170,165,175,155,10,30,14,high,6,active
+7 Iron,Iron,175,165,180,150,15,20,31,high,7,active
 8 Iron,Iron,150,140,160,130,20,10,12,high,8,active
-9 Iron,Iron,125,115,145,115,35,15,18,high,9,active
-Pitching Wedge,Wedge,120,115,120,115,15,5,26,high,10,active
-50 Wedge,Wedge,105,95,115,85,20,10,22,high,11,active
-54 Wedge,Wedge,60,55,65,45,15,5,94,high,12,active
-58 Wedge,Wedge,90,85,90,80,20,5,34,high,13,active
+9 Iron,Iron,135,125,145,130,30,15,19,high,9,active
+Pitching Wedge,Wedge,115,110,120,115,15,10,27,high,10,active
+50 Wedge,Wedge,100,95,110,90,20,10,24,high,11,active
+54 Wedge,Wedge,65,60,70,45,20,5,106,high,12,active
+58 Wedge,Wedge,85,80,90,80,20,5,35,high,13,active
 5 Wood,Wood,180,145,180,145,20,15,5,low,3,retired
 Hybrid,Hybrid,210,195,220,190,20,10,12,high,4,retired
 Driving Iron Mizuno JPX ONE,Iron,210,200,220,185,15,35,10,medium,17,retired

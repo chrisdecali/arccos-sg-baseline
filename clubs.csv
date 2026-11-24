@@ -1,18 +1,18 @@
 club,club_category,club_make,club_model,smart_distance_yd,normalized_yd,tee_yd,fairway_yd,rough_yd,sand_yd,longest_yd,range_low_yd,range_high_yd,dispersion_yd,gir_pct,usage_count,club_id,status,start_date
-Driver,Driver,Cobra,DS-ADAPT MAX-K,272.8,272.8,275.0,,,,302.8,268.763,275.203,6.4,,110,1,active,2026-05-23
-Club 13,?,Cobra,King Tec Mini Driver,240.8,,,,,,,,,,,0,19,active,2026-11-15
+Driver,Driver,Cobra,DS-ADAPT MAX-K,269.1,269.1,288.0,,,,317.0,265.418,290.697,25.3,,124,1,active,2026-05-23
+Club 13,?,Cobra,King Tec Mini Driver,240.1,,,,,,,,,,,0,19,active,2026-11-15
 3 Wood,Wood,Mizuno,JPX ONE,238.5,238.5,258.7,205.0,202.0,,272.7,213.171,238.387,25.2,33.3,14,2,active,2026-05-23
 Hybrid,Hybrid,Cobra,DS-ADAPT LS,207.4,207.4,195.1,192.4,221.8,,223.9,194.287,215.303,21.0,20.0,12,4,retired,2026-05-23
 Driving Iron,Iron,Mizuno,JPX ONE,203.6,203.6,,197.2,202.9,,222.2,189.305,207.497,18.2,0.0,10,17,retired,2026-10-17
-Driving Iron,Iron,,,197.8,197.8,,200.5,,,200.5,200.502,200.502,0.0,,3,18,active,2026-11-02
+Driving Iron,Iron,,,193.8,193.8,,200.5,175.7,,200.5,186.853,194.298,7.4,0.0,8,18,active,2026-11-02
 5 Wood,Wood,Cobra,DS-ADAPT MAX,181.5,181.5,,,170.5,,180.7,161.97,172.196,10.2,0.0,4,3,retired,2026-05-23
-5 Iron,Iron,Cobra,King Cobra,174.9,174.9,183.8,168.1,174.8,,193.4,165.667,178.472,12.8,30.0,40,5,active,2026-05-23
-6 Iron,Iron,Cobra,King Cobra,159.5,159.5,162.9,170.6,157.3,,185.0,160.808,163.265,2.5,16.7,12,6,active,2026-05-23
+5 Iron,Iron,Cobra,King Cobra,174.9,174.9,179.0,168.1,174.8,,193.4,165.667,178.472,12.8,30.0,42,5,active,2026-05-23
+6 Iron,Iron,Cobra,King Cobra,162.1,162.1,166.2,170.6,157.3,,185.0,161.088,167.926,6.8,28.6,14,6,active,2026-05-23
+7 Iron,Iron,Cobra,King Cobra,156.1,156.1,161.2,155.5,152.0,163.0,190.4,151.204,161.208,10.0,41.7,32,7,active,2026-05-23
 8 Iron,Iron,Cobra,King Cobra,154.7,154.7,156.7,160.1,135.1,,176.1,143.7,156.858,13.2,50.0,12,8,active,2026-05-23
-7 Iron,Iron,Cobra,King Cobra,153.5,153.5,161.2,152.9,142.7,163.0,177.1,149.911,157.333,7.4,41.7,27,7,active,2026-05-23
-9 Iron,Iron,Cobra,King Cobra,138.5,138.5,142.0,189.4,144.1,,219.6,135.961,150.486,14.5,30.0,18,9,active,2026-05-23
-Pitching Wedge,Wedge,Cobra,King Cobra,116.1,116.1,126.8,115.3,115.8,,143.1,110.624,122.252,11.6,50.0,27,10,active,2026-05-23
-50 Wedge,Wedge,Cobra,King Cobra,99.6,99.6,,118.4,98.3,,120.2,92.4422,105.577,13.1,33.3,22,11,active,2026-05-23
-Wedge,Wedge,Mizuno,Pro T-3,93.6,,,,,,,,,,,0,20,active,2026-11-22
-58 Wedge,Wedge,Mizuno,Pro T-3,84.7,84.7,,88.6,88.0,,98.2,81.7184,90.8301,9.1,0.0,35,13,active,2026-05-23
-54 Wedge,Wedge,Mizuno,Pro T-3,67.4,67.4,,62.8,73.9,,89.7,62.6287,71.7073,9.1,75.0,100,12,active,2026-05-23
+9 Iron,Iron,Cobra,King Cobra,137.4,137.4,142.0,189.4,140.9,,219.6,134.815,149.012,14.2,36.4,19,9,active,2026-05-23
+Pitching Wedge,Wedge,Cobra,King Cobra,116.1,116.1,126.8,115.3,115.8,,143.1,110.624,122.252,11.6,50.0,28,10,active,2026-05-23
+50 Wedge,Wedge,Cobra,King Cobra,98.9,98.9,,118.4,99.1,,120.2,94.957,105.219,10.3,28.6,24,11,active,2026-05-23
+Wedge,Wedge,Mizuno,Pro T-3,94.8,,,,,,,,,,,0,20,active,2026-11-22
+58 Wedge,Wedge,Mizuno,Pro T-3,83.5,83.5,,85.8,88.0,,98.2,80.7175,89.8272,9.1,25.0,37,13,active,2026-05-23
+54 Wedge,Wedge,Mizuno,Pro T-3,75.4,75.4,,62.8,77.6,,89.7,63.3469,78.2464,14.9,100.0,115,12,active,2026-05-23

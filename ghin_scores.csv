@@ -1,5 +1,6 @@
 played_at,course_name,holes,adjusted_gross_score,course_rating,slope_rating,differential,score_type,status,used,exceptional,posted_at,score_id,played_holes,unadjusted_differential
-2026-11-22,Loch/Pines,18,87,72.9,134,11.9,H,Validated,0,0,2026-11-22,1218364421,18,11.9
+2026-11-23,Augusta Pines Golf Club,18,93,71.4,125,19.5,H,Validated,0,0,2026-11-24,1218541475,18,19.5
+2026-11-22,Loch/Pines,18,87,72.9,134,11.9,H,Validated,1,0,2026-11-22,1218364421,18,11.9
 2026-11-15,Loch/Pines,18,85,72.9,134,10.2,H,Validated,1,0,2026-11-15,1217315578,18,10.2
 2026-11-01,Loch/Pines,18,91,72.9,134,15.3,H,Validated,0,0,2026-11-02,1214849931,18,15.3
 2026-11-01,Gleann/Loch,18,92,71.3,126,18.6,H,Validated,0,0,2026-11-01,1214795507,18,18.6
